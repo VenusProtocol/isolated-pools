@@ -155,9 +155,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       reserveFactor,
     ];
 
-    // `VToken_<symbol>` as the isolated markets use, where the symbol carries the pool id as its suffix. That suffix is
-    // what tells `VToken_vUSDT_HubSpoke` from `VToken_vUSDT_Stablecoins`, the same way `Comptroller_HubSpoke` is told
-    // from `Comptroller_Stablecoins`. The `Spoke` prefix is reserved for the pool-wide singletons.
+    // `VToken_<symbol>` as the isolated markets use, where the symbol carries a pool suffix. That suffix is what tells
+    // `VToken_vUSDT_bStockIndex` from `VToken_vUSDT_Stablecoins`. The `Spoke` prefix is reserved for the pool-wide
+    // singletons.
     const args = [
       spokeVTokenBeacon.address,
       (await ethers.getContractFactory("VToken")).interface.encodeFunctionData("initialize", initArgs),

@@ -11,11 +11,15 @@ import { convertToUnit } from "./utils";
 // liquidation threshold and incentive, the supply allowlist and forced liquidation, is set on `SpokeComptroller` after
 // `addMarket` and is not deployment input.
 
-// Names the pool in every per-pool deployment record: `Comptroller_HubSpoke` from `025-deploy-spoke-comptroller.ts`,
-// and the `_HubSpoke` suffix each vToken symbol below carries. Deployment naming across the spoke scripts follows one
+// Names the pool's comptroller record, `Comptroller_HubSpoke` from `025-deploy-spoke-comptroller.ts`, which
+// `028-deploy-spoke-vtokens.ts` reads back to build the markets. Deployment naming across the spoke scripts follows one
 // rule: pool-wide singletons take a `Spoke` prefix (`SpokePoolRegistry`, `SpokeComptrollerImpl`, `SpokeVTokenBeacon`,
-// `SpokePoolLens`), per-pool instances take this id as a suffix, exactly as the isolated pools distinguish
-// `Comptroller_Stablecoins` from `VToken_vUSDT_Stablecoins`.
+// `SpokePoolLens`), per-pool instances take a pool suffix, as the isolated pools distinguish `Comptroller_Stablecoins`
+// from `VToken_vUSDT_Stablecoins`.
+//
+// Each market's record is `VToken_<symbol>`, so the vToken symbol carries the suffix that tells its markets apart. On
+// the test networks that suffix is this id. On `bscmainnet` it is the pool's own name, `bStockIndex`: the symbol is
+// on-chain metadata users see, and the comptroller record was already named before the pool was.
 export const SPOKE_POOL_ID = "HubSpoke";
 
 // On `hardhat` and `bsctestnet`, risk parameters copy the isolated pools' Stablecoins pool on `bsctestnet`: its
@@ -134,7 +138,7 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
       {
         name: "Venus USDT (bStock index)",
         asset: "USDT",
-        symbol: `vUSDT_${SPOKE_POOL_ID}`,
+        symbol: "vUSDT_bStockIndex",
         rateModel: InterestRateModels.JumpRate.toString(),
         baseRatePerYear: "14888916156458044",
         multiplierPerYear: "37459988156559232",
@@ -152,7 +156,7 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
       {
         name: "Venus USDC (bStock index)",
         asset: "USDC",
-        symbol: `vUSDC_${SPOKE_POOL_ID}`,
+        symbol: "vUSDC_bStockIndex",
         rateModel: InterestRateModels.JumpRate.toString(),
         baseRatePerYear: "14888916156458044",
         multiplierPerYear: "37459988156559232",
@@ -170,7 +174,7 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
       {
         name: "Venus U (bStock index)",
         asset: "U",
-        symbol: `vU_${SPOKE_POOL_ID}`,
+        symbol: "vU_bStockIndex",
         rateModel: InterestRateModels.JumpRate.toString(),
         baseRatePerYear: "14888916156458044",
         multiplierPerYear: "37459988156559232",
@@ -193,7 +197,7 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
       {
         name: "Venus QQQB (bStock index)",
         asset: "QQQB",
-        symbol: `vQQQB_${SPOKE_POOL_ID}`,
+        symbol: "vQQQB_bStockIndex",
         rateModel: InterestRateModels.WhitePaper.toString(),
         baseRatePerYear: "0",
         multiplierPerYear: "0",
@@ -211,7 +215,7 @@ export const spokePoolConfig: Record<string, PoolConfig> = {
       {
         name: "Venus SPYB (bStock index)",
         asset: "SPYB",
-        symbol: `vSPYB_${SPOKE_POOL_ID}`,
+        symbol: "vSPYB_bStockIndex",
         rateModel: InterestRateModels.WhitePaper.toString(),
         baseRatePerYear: "0",
         multiplierPerYear: "0",
