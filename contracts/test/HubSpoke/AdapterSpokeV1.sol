@@ -199,12 +199,27 @@ contract AdapterSpokeV1 is IResourceAdapter {
     ///      YieldGroup, where `totalAssets` counts it and the next withdrawal consumes it
     ///      idle-first — the same treatment `AdapterCoreV1` gives its gross-up surplus, and what
     ///      keeps the YieldGroup's `received == requested` invariant true.
+    ///
+    ///      Burns the whole balance instead when the vTokens left after the burn would be worth 0
+    ///      underlying and the market's payable cash covers the full redeem. Below a rate of `1e18`
+    ///      a few vTokens can be worth less than one unit, and the market refuses to redeem them on
+    ///      their own, so a drain would otherwise leave them stuck. The extra payout is at most one
+    ///      unit and stays idle like the surplus above.
     function withdraw(address resource, uint256 amount, address to) external override onlyDelegateCall {
         IERC20 assetToken = IERC20(IVTokenIsolated(resource).underlying());
 
+        // Settle first so the rate and cash read below are the ones the redeem will use.
+        IVTokenIsolated(resource).accrueInterest();
         uint256 exchangeRate = IVTokenIsolated(resource).exchangeRateStored();
+        uint256 tokens = _burnFor(exchangeRate, amount);
+        uint256 vBal = IVTokenIsolated(resource).balanceOf(address(this));
+        if (tokens < vBal && ((vBal - tokens) * exchangeRate) / EXP_SCALE == 0) {
+            uint256 payableCash = IVTokenIsolated(resource).getCash() - IVTokenIsolated(resource).totalReserves();
+            if ((vBal * exchangeRate) / EXP_SCALE <= payableCash) tokens = vBal;
+        }
+
         uint256 preBal = assetToken.balanceOf(address(this));
-        IVTokenIsolated(resource).redeem(_burnFor(exchangeRate, amount));
+        IVTokenIsolated(resource).redeem(tokens);
         uint256 received = assetToken.balanceOf(address(this)) - preBal;
         if (received < amount) revert VTokenUnderfilled(resource, amount, received);
 
