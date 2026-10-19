@@ -89,12 +89,17 @@ The `Comptroller` also includes two functions `liquidateAccount()` and `healAcco
 
 - NodeJS - 12.x
 - Solc - v0.8.25 (https://github.com/ethereum/solidity/releases/tag/v0.8.25)
+- Foundry - v1.5.1 (https://getfoundry.sh)
 
 ## Installing
 
 ```bash
 
 yarn install
+
+git submodule update --init --recursive
+
+foundryup --install v1.5.1
 
 ```
 
@@ -205,8 +210,8 @@ https://github.com/compound-finance/compound-protocol/tree/a3214f67b73310d547e00
 # Links
 
 - Website : https://venus.io
-- Twitter : https://twitter.com/venusprotocol
+- X/Twitter : https://x.com/venusprotocol
 - Telegram : https://t.me/venusprotocol
-- Discord : https://discord.com/invite/pTQ9EBHYtF
+- Discord : https://discord.com/invite/venus-protocol-912811548651708448
 - Github: https://github.com/VenusProtocol
 - Youtube: https://www.youtube.com/@venusprotocolofficial

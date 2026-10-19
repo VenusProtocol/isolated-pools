@@ -1,3 +1,38 @@
+## 4.4.0-dev.10 (2026-09-29)
+
+* Merge pull request #563 from VenusProtocol/feat/storage-layout-check ([7acf887](https://github.com/VenusProtocol/isolated-pools/commit/7acf887)), closes [#563](https://github.com/VenusProtocol/isolated-pools/issues/563)
+* fix: fail storage layout check on missing or unlisted networks ([cdc1966](https://github.com/VenusProtocol/isolated-pools/commit/cdc1966))
+* feat: check storage layout and upgrade safety in ci ([653843f](https://github.com/VenusProtocol/isolated-pools/commit/653843f))
+* chore: annotate WUSDMLiquidator constructor as upgrade-safe ([f6fbc3d](https://github.com/VenusProtocol/isolated-pools/commit/f6fbc3d))
+
+## 4.4.0-dev.9 (2026-09-29)
+
+* Merge pull request #564 from VenusProtocol/feat/foundry-setup ([c4780b1](https://github.com/VenusProtocol/isolated-pools/commit/c4780b1)), closes [#564](https://github.com/VenusProtocol/isolated-pools/issues/564)
+* test: add a foundry base listing a vtoken on a real comptroller ([de8af87](https://github.com/VenusProtocol/isolated-pools/commit/de8af87))
+* test: add explicit vtoken solvency and liquidity-bound borrows ([1b7e42c](https://github.com/VenusProtocol/isolated-pools/commit/1b7e42c))
+* test: add vtoken cash, exchange rate and solvency invariants ([c551936](https://github.com/VenusProtocol/isolated-pools/commit/c551936))
+* test: fix the vtoken invariants and add foundry setup steps ([e8897b6](https://github.com/VenusProtocol/isolated-pools/commit/e8897b6))
+* test: fuzz vtoken mint and redeem rounding in foundry ([5ee6134](https://github.com/VenusProtocol/isolated-pools/commit/5ee6134))
+* test: group the vtoken foundry tests under tests/foundry/VToken ([e68ef14](https://github.com/VenusProtocol/isolated-pools/commit/e68ef14))
+* test: trim foundry to the vtoken suite, decouple forge from yarn ([00d27fa](https://github.com/VenusProtocol/isolated-pools/commit/00d27fa))
+* chore: drop redundant foundry config and forge build from compile ([222424e](https://github.com/VenusProtocol/isolated-pools/commit/222424e))
+* chore: drop the foundry failure dirs and unused invariant config ([0011c2d](https://github.com/VenusProtocol/isolated-pools/commit/0011c2d))
+* feat: add foundry alongside hardhat with forge-std and a ci job ([ad6a653](https://github.com/VenusProtocol/isolated-pools/commit/ad6a653))
+
+## 4.4.0-dev.8 (2026-09-23)
+
+* Merge pull request #549 from Olexandr88/patch-1 ([d3e8670](https://github.com/VenusProtocol/isolated-pools/commit/d3e8670)), closes [#549](https://github.com/VenusProtocol/isolated-pools/issues/549)
+* Merge pull request #561 from VenusProtocol/feat/code-complexity-gates ([32c5ef8](https://github.com/VenusProtocol/isolated-pools/commit/32c5ef8)), closes [#561](https://github.com/VenusProtocol/isolated-pools/issues/561)
+* Update README.md ([21b57be](https://github.com/VenusProtocol/isolated-pools/commit/21b57be))
+* chore: bump eslint to v8 for sonarjs plugin compatibility ([520e2a6](https://github.com/VenusProtocol/isolated-pools/commit/520e2a6))
+* chore: drop four unused eslint plugins ([ff66bbe](https://github.com/VenusProtocol/isolated-pools/commit/ff66bbe))
+* chore: enforce function complexity limits in eslint and sonarjs ([802ec8c](https://github.com/VenusProtocol/isolated-pools/commit/802ec8c))
+* chore: suppress complexity gate on getConfig network switch ([85d91ce](https://github.com/VenusProtocol/isolated-pools/commit/85d91ce))
+* chore: suppress complexity gates on deployVTokenDependencies ([72861f6](https://github.com/VenusProtocol/isolated-pools/commit/72861f6))
+* chore: suppress complexity gates on vtoken deploy script ([10e37d0](https://github.com/VenusProtocol/isolated-pools/commit/10e37d0))
+* refactor: extract rate model and psr resolution from vtoken deploy ([fa66fef](https://github.com/VenusProtocol/isolated-pools/commit/fa66fef))
+* refactor: replace getConfig network switch with a keyed lookup ([3336aff](https://github.com/VenusProtocol/isolated-pools/commit/3336aff))
+
 ## 4.4.0-dev.7 (2026-03-23)
 
 * Merge pull request #551 from VenusProtocol/feat/VPD-808 ([199942a](https://github.com/VenusProtocol/isolated-pools/commit/199942a)), closes [#551](https://github.com/VenusProtocol/isolated-pools/issues/551)

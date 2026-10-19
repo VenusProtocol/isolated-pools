@@ -3,14 +3,15 @@
 # Pointing `src` at the tests compiles only the contracts they import.
 src = "tests/foundry"
 test = "tests/foundry"
+# Not the default here: with Hardhat's artifacts/ present, Foundry would write into it.
 out = "out"
 # `cache/` belongs to Hardhat.
 cache_path = "cache-foundry"
-libs = ["node_modules"]
+libs = ["node_modules", "lib"]
+# forge-std comes from the lib/forge-std submodule, mapped in remappings.txt.
 remappings = [
     "@openzeppelin/=node_modules/@openzeppelin/",
     "@venusprotocol/=node_modules/@venusprotocol/",
-    "forge-std/=node_modules/forge-std/src/",
 ]
 solc_version = "0.8.25"
 optimizer = true
@@ -27,10 +28,39 @@ isolate = true
 # The bounded oracle is deployed from its published artifact.
 fs_permissions = [{ access = "read", path = "./node_modules/@venusprotocol/oracle/artifacts" }]
 
+# The edit-loop budget for invariant suites; CI overrides it below. Set FOUNDRY_INVARIANT_DEPTH for a deeper pass.
+[profile.default.invariant]
+runs = 64
+depth = 100
+
+# Everything not set here is inherited from the default profile.
+[profile.ci]
+fuzz = { runs = 2000 }
+invariant = { runs = 1000, depth = 100 }
+
+[profile.lite]
+fuzz = { runs = 50 }
+invariant = { runs = 10 }
+
+# Keep builds quiet; run the linter on demand with: forge lint
 [lint]
-# Solhint is this repo's linter. Forge's would also report on every imported contract.
 lint_on_build = false
 
-[invariant]
-# Down from the default 500 to keep a local run short. Set FOUNDRY_INVARIANT_DEPTH for a deeper pass.
-depth = 100
+# Fork tests pick an endpoint by name: forge test --fork-url bscmainnet, or
+# vm.createSelectFork("bscmainnet"). The URLs come from the same ARCHIVE_NODE_* variables in
+# .env that the Hardhat fork tests use, and are only resolved when a fork is requested.
+[rpc_endpoints]
+bsctestnet = "${ARCHIVE_NODE_bsctestnet}"
+bscmainnet = "${ARCHIVE_NODE_bscmainnet}"
+sepolia = "${ARCHIVE_NODE_sepolia}"
+ethereum = "${ARCHIVE_NODE_ethereum}"
+opbnbtestnet = "${ARCHIVE_NODE_opbnbtestnet}"
+opbnbmainnet = "${ARCHIVE_NODE_opbnbmainnet}"
+arbitrumsepolia = "${ARCHIVE_NODE_arbitrumsepolia}"
+arbitrumone = "${ARCHIVE_NODE_arbitrumone}"
+opsepolia = "${ARCHIVE_NODE_opsepolia}"
+opmainnet = "${ARCHIVE_NODE_opmainnet}"
+basesepolia = "${ARCHIVE_NODE_basesepolia}"
+basemainnet = "${ARCHIVE_NODE_basemainnet}"
+unichainsepolia = "${ARCHIVE_NODE_unichainsepolia}"
+unichainmainnet = "${ARCHIVE_NODE_unichainmainnet}"
