@@ -27,6 +27,7 @@ import { AddressOne } from "../helpers/utils";
 // belongs to the listing VIP, in the order `024-deploy-spoke-pool-registry.ts` spells out: accept ownership, grant the
 // roles, set both oracles, `addPool`, then `addMarket` per market. Until that runs these markets exist but no
 // comptroller knows them, which is the same state `009-deploy-vtokens.ts` leaves the isolated markets in.
+// eslint-disable-next-line complexity, sonarjs/cognitive-complexity -- predates the complexity gates, tracked for refactor
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;

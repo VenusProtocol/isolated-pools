@@ -21,6 +21,7 @@ const POOL_ID = "HubSpoke";
 // Deployed by `024-deploy-spoke-pool-registry.ts`, which explains why this pool does not share the isolated-pools one.
 const POOL_REGISTRY_NAME = "SpokePoolRegistry";
 
+// eslint-disable-next-line complexity, sonarjs/cognitive-complexity -- predates the complexity gates, tracked for refactor
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
