@@ -86,11 +86,10 @@ contract XVSVaultBondAccount is BondAccount {
     function _requestFromSource(uint256 amount) internal override {
         IXVSVault vault = IXVSVault(source);
         (uint256 staked, , uint256 requested) = vault.getUserInfo(address(asset), XVS_POOL_ID, address(this));
-        if (amount > staked - requested) {
-            amount = staked - requested;
-        }
-        if (amount != 0) {
-            vault.requestWithdrawal(address(asset), XVS_POOL_ID, amount);
+        uint256 free = staked - requested;
+        uint256 toRequest = amount < free ? amount : free;
+        if (toRequest != 0) {
+            vault.requestWithdrawal(address(asset), XVS_POOL_ID, toRequest);
         }
     }
 
