@@ -42,16 +42,6 @@ contract LiquidityHubBondAccount is BondAccount {
         return source_ != address(0) && ILiquidityHub(source_).asset() == asset_;
     }
 
-    /**
-     * @notice Returns the principal the bond still covers: its principal, or what it holds beyond what it owes
-     *   receivers if that is less, after a Hub loss
-     * @return The amount, in the asset
-     */
-    function value() external view override returns (uint256) {
-        uint256 bondAssets = _bondAssets();
-        return bondAssets < principal ? bondAssets : principal;
-    }
-
     /// @inheritdoc IBondAccount
     function sourceType() public pure override returns (ISpokeBondManager.SourceType) {
         return ISpokeBondManager.SourceType.LiquidityHub;
@@ -84,19 +74,6 @@ contract LiquidityHubBondAccount is BondAccount {
     }
 
     /**
-     * @dev Pays `amount` of yield to `receiver` from the Hub, where the yield is held, as far as the Hub is liquid
-     * @param amount The amount
-     * @param receiver The receiver
-     * @return paid The amount paid
-     */
-    function _payYield(uint256 amount, address receiver) internal override returns (uint256 paid) {
-        paid = _withdrawFromSource(amount);
-        if (paid != 0) {
-            _transferOut(receiver, paid);
-        }
-    }
-
-    /**
      * @dev Withdraws `amount` from the Hub into the account, as far as the Hub can pay now; the Hub pays the rest once
      *   it is liquid again, so it needs no request. An amount that covers the whole position redeems its shares
      *   instead, as `maxWithdraw` rounds the exit fee up and would leave a wei behind. `_accrueYield` has already
@@ -118,23 +95,6 @@ contract LiquidityHubBondAccount is BondAccount {
                 hub.withdraw(withdrawn, address(this), address(this));
             }
         }
-    }
-
-    /**
-     * @dev Collects from the Hub what it can pay now: what receivers are owed, and after release everything
-     * @return The amount received
-     */
-    function _collectFromSource() internal override returns (uint256) {
-        return _withdrawFromSource(released ? type(uint256).max : owedToReceivers);
-    }
-
-    /**
-     * @dev Returns what the bond holds beyond what it owes receivers, or zero after a Hub loss leaves it less
-     * @return The amount, in the asset
-     */
-    function _bondAssets() internal view override returns (uint256) {
-        uint256 holdings = asset.balanceOf(address(this)) + _assetsInSource();
-        return holdings > owedToReceivers ? holdings - owedToReceivers : 0;
     }
 
     /**

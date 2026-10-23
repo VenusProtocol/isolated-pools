@@ -21,10 +21,10 @@ import { ISpokeBondManager } from "../../../interfaces/ISpokeBondManager.sol";
  * queued and paid by `payReceivers`, in the order of the seizures and before the bond holder; a later seizure is still
  * paid at once from what is liquid then, ahead of the queue
  * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; `BOND_MANAGER` is an immutable of the
- * implementation, so its clones share it. A source account overrides the source steps (`_depositToSource`,
- * `_accrueYield`, `_payYield`, `_withdrawFromSource`, `_collectFromSource`, `_assetsInSource`), plus `sourceType` and
- * `isValidSource`; the defaults here are those of an asset with no source. A source whose position can lose value
- * also overrides `value` and `_bondAssets`
+ * implementation, so its clones share it. The bond's books are kept here. A source account overrides only the steps
+ * that talk to its source: `_depositToSource`, `_accrueYield` and `_assetsInSource`, then `_withdrawFromSource` for a
+ * source that pays at once, or `_requestFromSource` and `_claimFromSource` for one that pays after a delay, plus
+ * `sourceType` and `isValidSource`. The defaults here are those of an asset with no source
  */
 contract BondAccount is Initializable, IBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -106,7 +106,8 @@ contract BondAccount is Initializable, IBondAccount {
         _accrueYield();
         uint256 bondAssets = _bondAssets();
         if (bondAssets > principal) {
-            paid = _payYield(bondAssets - principal, bondHolder);
+            // The pending deposit is principal, so the yield comes from the rest of the balance, then the source
+            paid = _payNow(bondHolder, bondAssets - principal, asset.balanceOf(address(this)) - pendingDeposit);
         }
     }
 
@@ -127,23 +128,16 @@ contract BondAccount is Initializable, IBondAccount {
 
         // 2. Pay what can be paid now: the account's balance, the pending deposit last, then the source
         uint256 balance = asset.balanceOf(address(this));
-        paidNow = amount < balance ? amount : balance;
-        // The pending deposit is always in the balance
-        uint256 yieldInAccount = balance - pendingDeposit;
-        if (paidNow > yieldInAccount) {
-            pendingDeposit -= paidNow - yieldInAccount;
+        // The pending deposit is always in the balance and spent last, so whatever the payment leaves is still pending
+        if (amount > balance - pendingDeposit) {
+            pendingDeposit = amount < balance ? balance - amount : 0;
         }
-        if (paidNow < amount) {
-            // The source covers the rest, as far as it can now, into the account
-            paidNow += _withdrawFromSource(amount - paidNow);
-        }
-        if (paidNow != 0) {
-            _transferOut(receiver, paidNow);
-        }
+        paidNow = _payNow(receiver, amount, balance);
 
-        // 3. Owe the rest, paid by `payReceivers`
+        // 3. Owe the rest: request it from the source, and pay it by `payReceivers`
         uint256 owed = amount - paidNow;
         if (owed != 0) {
+            _requestFromSource(owed);
             receiverPayments.push(Payment(receiver, owed));
             owedToReceivers += owed;
             emit PaymentQueued(receiver, owed);
@@ -156,6 +150,7 @@ contract BondAccount is Initializable, IBondAccount {
         released = true;
         principal = 0;
         pendingDeposit = 0;
+        _requestFromSource(type(uint256).max);
         paidToBondHolder = _payReceivers();
     }
 
@@ -187,8 +182,9 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function value() external view virtual returns (uint256) {
-        return principal;
+    function value() external view returns (uint256) {
+        uint256 bondAssets = _bondAssets();
+        return bondAssets < principal ? bondAssets : principal;
     }
 
     /// @inheritdoc IBondAccount
@@ -211,7 +207,11 @@ contract BondAccount is Initializable, IBondAccount {
      * @return paidToBondHolder The amount paid to the bond holder
      */
     function _payReceivers() internal returns (uint256 paidToBondHolder) {
-        uint256 funds = _collectFromSource();
+        uint256 needed = released ? type(uint256).max : owedToReceivers;
+        uint256 funds = _claimFromSource();
+        if (funds < needed) {
+            funds += _withdrawFromSource(needed - funds);
+        }
         if (released) {
             funds = asset.balanceOf(address(this));
         }
@@ -243,6 +243,24 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     /**
+     * @dev Pays `receiver` up to `amount` now: from up to `available` of the account's balance, then from what the
+     *   source pays at once
+     * @param receiver The receiver
+     * @param amount The amount
+     * @param available How much of the account's balance the payment can use
+     * @return paid The amount paid
+     */
+    function _payNow(address receiver, uint256 amount, uint256 available) internal returns (uint256 paid) {
+        paid = amount < available ? amount : available;
+        if (paid < amount) {
+            paid += _withdrawFromSource(amount - paid);
+        }
+        if (paid != 0) {
+            _transferOut(receiver, paid);
+        }
+    }
+
+    /**
      * @dev Sends `amount` of the asset to `receiver`
      * @param receiver The receiver
      * @param amount The amount
@@ -266,44 +284,37 @@ contract BondAccount is Initializable, IBondAccount {
     function _accrueYield() internal virtual {}
 
     /**
-     * @dev Pays `amount` of yield to `receiver` from the account's balance, where the yield is held unless the source
-     *   keeps it
-     * @param amount The amount
-     * @param receiver The receiver
-     * @return The amount paid
-     */
-    function _payYield(uint256 amount, address receiver) internal virtual returns (uint256) {
-        _transferOut(receiver, amount);
-        return amount;
-    }
-
-    /**
-     * @dev Takes an amount out of the source into the account, as much as the source can pay now and never more than
-     *   the amount; the rest is collected later by `payReceivers`, after any request the source needs
-     * @return The amount withdrawn now
+     * @dev Withdraws up to an amount from the source into the account, as much as the source pays at once
+     * @return The amount withdrawn
      */
     function _withdrawFromSource(uint256) internal virtual returns (uint256) {
         return 0;
     }
 
+    /// @dev Requests up to an amount from a source that pays only after a delay; `_claimFromSource` collects it
+    // solhint-disable-next-line no-empty-blocks
+    function _requestFromSource(uint256) internal virtual {}
+
     /**
-     * @dev Collects into the account what the source can pay now: what receivers are owed, and after release everything
-     * @return The amount received
+     * @dev Collects into the account what the source pays now for earlier requests
+     * @return The amount collected
      */
-    function _collectFromSource() internal virtual returns (uint256) {
+    function _claimFromSource() internal virtual returns (uint256) {
         return 0;
     }
 
     /**
-     * @dev Returns what the bond holds beyond what it owes receivers: its balance plus its position in the source
+     * @dev Returns what the bond holds beyond what it owes receivers: its balance plus its position in the source, or
+     *   zero after a loss in the source leaves it less
      * @return The amount, in the asset
      */
-    function _bondAssets() internal view virtual returns (uint256) {
-        return asset.balanceOf(address(this)) + _assetsInSource() - owedToReceivers;
+    function _bondAssets() internal view returns (uint256) {
+        uint256 holdings = asset.balanceOf(address(this)) + _assetsInSource();
+        return holdings > owedToReceivers ? holdings - owedToReceivers : 0;
     }
 
     /**
-     * @dev Returns the bond's position in the source, in the asset
+     * @dev Returns the bond's position in the source, in the asset, including what is requested but not collected
      * @return The amount
      */
     function _assetsInSource() internal view virtual returns (uint256) {

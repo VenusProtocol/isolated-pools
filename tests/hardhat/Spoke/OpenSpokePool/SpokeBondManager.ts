@@ -426,6 +426,32 @@ describe("SpokeBondManager", () => {
       expect(await account.value()).to.equal(BOND);
     });
 
+    it("pays what is sent to a Hub account from the account first, even while the Hub is paused", async () => {
+      const account = await createBond(usdt);
+      const shares = await hub.balanceOf(account.address);
+      await sendTo(usdt, account.address, "5");
+      await hub.setPaused(true);
+
+      await expect(bondManager.connect(spokePoolManager).claimYield(comptroller.address))
+        .to.emit(bondManager, "YieldClaimed")
+        .withArgs(comptroller.address, e18("5"));
+      expect(await usdt.balanceOf(bondHolder.address)).to.equal(e18("5"));
+      expect(await hub.balanceOf(account.address)).to.equal(shares);
+      expect(await account.value()).to.equal(BOND);
+    });
+
+    it("pays the yield around a pending deposit, which stays principal", async () => {
+      await hub.setDepositCap(0);
+      const account = await createBond(usdt);
+      await sendTo(usdt, account.address, "5");
+
+      await expect(bondManager.connect(spokePoolManager).claimYield(comptroller.address))
+        .to.emit(bondManager, "YieldClaimed")
+        .withArgs(comptroller.address, e18("5"));
+      expect(await account.pendingDeposit()).to.equal(BOND);
+      expect(await usdt.balanceOf(account.address)).to.equal(BOND);
+    });
+
     it("pays what is sent to an account with no source as yield", async () => {
       const account = await createBond(idleToken);
       await sendTo(idleToken, account.address, "5");

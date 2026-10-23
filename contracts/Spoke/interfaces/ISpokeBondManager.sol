@@ -174,8 +174,9 @@ interface ISpokeBondManager {
 
     /**
      * @notice Pays a pool's bond yield, everything it holds beyond its principal and what it owes receivers, to
-     *   its bond holder; from a Hub, as much as the Hub can pay now. Nothing is paid while a receiver is still owed.
-     *   An asset with no source earns no yield, so normally nothing is paid
+     *   its bond holder: first from its account's balance beyond its pending deposit, then, from a Hub, as much as the
+     *   Hub can pay now. Nothing is paid while a receiver is still owed. An asset with no source earns no yield, so
+     *   normally nothing is paid
      * @param comptroller The pool's comptroller
      * @return amount The amount paid
      * @custom:event Emits YieldClaimed, and the account emits Paid, when something is paid

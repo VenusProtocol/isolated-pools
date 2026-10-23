@@ -76,9 +76,9 @@ interface IBondAccount {
     function deposit(uint256 amount) external;
 
     /**
-     * @notice Pays the yield, everything the bond holds beyond its principal, to the bond holder, as much as the source
-     *   can pay now. Nothing is paid while a receiver is still owed. An asset with no source earns no yield, so
-     *   normally nothing is paid
+     * @notice Pays the yield, everything the bond holds beyond its principal, to the bond holder: first from the
+     *   account's balance beyond its pending deposit, then as much as the source can pay now. Nothing is paid while a
+     *   receiver is still owed. An asset with no source earns no yield, so normally nothing is paid
      * @return paid The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
@@ -143,7 +143,8 @@ interface IBondAccount {
     function isValidSource(address asset_, address source_) external view returns (bool);
 
     /**
-     * @notice Returns the principal the bond still covers
+     * @notice Returns the principal the bond still covers: its principal, or what it holds beyond what it owes
+     *   receivers if that is less, after a loss in the source. Yield is not counted, as the bond holder can claim it
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */

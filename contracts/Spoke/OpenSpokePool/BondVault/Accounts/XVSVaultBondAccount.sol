@@ -80,28 +80,26 @@ contract XVSVaultBondAccount is BondAccount {
     }
 
     /**
-     * @dev Requests `amount` from the XVSVault, which pays it only after its lock period, so nothing is withdrawn now
-     * @param amount The amount, nonzero
-     * @return The amount withdrawn now: none
+     * @dev Requests up to `amount` of the stake not requested yet; the XVSVault pays it after its lock period
+     * @param amount The amount
      */
-    function _withdrawFromSource(uint256 amount) internal override returns (uint256) {
-        IXVSVault(source).requestWithdrawal(address(asset), XVS_POOL_ID, amount);
-        return 0;
+    function _requestFromSource(uint256 amount) internal override {
+        IXVSVault vault = IXVSVault(source);
+        (uint256 staked, , uint256 requested) = vault.getUserInfo(address(asset), XVS_POOL_ID, address(this));
+        if (amount > staked - requested) {
+            amount = staked - requested;
+        }
+        if (amount != 0) {
+            vault.requestWithdrawal(address(asset), XVS_POOL_ID, amount);
+        }
     }
 
     /**
-     * @dev After release, requests the stake not requested yet; then executes the XVSVault's withdrawal requests whose
-     *   lock period has passed
+     * @dev Executes the XVSVault's withdrawal requests whose lock period has passed
      * @return amount The amount received
      */
-    function _collectFromSource() internal override returns (uint256 amount) {
+    function _claimFromSource() internal override returns (uint256 amount) {
         IXVSVault vault = IXVSVault(source);
-        if (released) {
-            (uint256 staked, , uint256 requested) = vault.getUserInfo(address(asset), XVS_POOL_ID, address(this));
-            if (staked > requested) {
-                vault.requestWithdrawal(address(asset), XVS_POOL_ID, staked - requested);
-            }
-        }
         amount = vault.getEligibleWithdrawalAmount(address(asset), XVS_POOL_ID, address(this));
         if (amount != 0) {
             vault.executeWithdrawal(address(asset), XVS_POOL_ID);
