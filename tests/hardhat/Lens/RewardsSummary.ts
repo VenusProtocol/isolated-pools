@@ -1,5 +1,5 @@
 import { FakeContract, MockContract, smock } from "@defi-wonderland/smock";
-import { loadFixture, mineUpTo } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, mineUpTo, time } from "@nomicfoundation/hardhat-network-helpers";
 import chai from "chai";
 import { BigNumber, Signer } from "ethers";
 import { ethers } from "hardhat";
@@ -27,6 +27,7 @@ let rewardToken3: FakeContract<MockToken>;
 let poolLens: MockContract<PoolLens>;
 let account: Signer;
 let startBlock: number;
+let startBlockTimestamp: number;
 let isTimeBased = false; // for block based contracts
 let blocksPerYear = DEFAULT_BLOCKS_PER_YEAR; // for block based contracts
 
@@ -42,6 +43,7 @@ type RewardsFixtire = {
   rewardToken3: FakeContract<MockToken>;
   poolLens: MockContract<PoolLens>;
   startBlock: number;
+  startBlockTimestamp: number;
 };
 
 const rewardsFixture = async (): Promise<RewardsFixtire> => {
@@ -57,7 +59,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
   const poolLensFactory = await smock.mock<PoolLens__factory>("PoolLens");
   poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear);
 
-  const startBlock = await ethers.provider.getBlockNumber();
+  const { number: startBlock, timestamp: startBlockTimestamp } = await ethers.provider.getBlock("latest");
 
   // Fake return values
   comptroller.getAllMarkets.returns([vBUSD.address, vWBTC.address]);
@@ -151,6 +153,7 @@ const rewardsFixture = async (): Promise<RewardsFixtire> => {
     rewardToken3,
     poolLens,
     startBlock,
+    startBlockTimestamp,
   };
 };
 
@@ -170,8 +173,7 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
   blocksPerYear = 0;
   poolLens = await poolLensFactory.deploy(isTimeBased, blocksPerYear);
 
-  const startBlock = (await ethers.provider.getBlock("latest")).number;
-  const startBlockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+  const { number: startBlock, timestamp: startBlockTimestamp } = await ethers.provider.getBlock("latest");
 
   // Fake return values
   comptroller.getAllMarkets.returns([vBUSD.address, vWBTC.address]);
@@ -265,6 +267,7 @@ const timeBasedRewardsFixture = async (): Promise<RewardsFixtire> => {
     rewardToken3,
     poolLens,
     startBlock,
+    startBlockTimestamp,
   };
 };
 
@@ -291,12 +294,22 @@ for (const isTimeBased of [false, true]) {
         rewardToken3,
         poolLens,
         startBlock,
+        startBlockTimestamp,
       } = await setup(isTimeBased));
     });
 
     it("Should get summary for all markets", async () => {
-      // Mine some blocks so deltaBlocks != 0
-      await mineUpTo(startBlock + 1000);
+      // Move 1000 units past the state the fixture recorded, which is what the expected rewards below assume.
+      // The two modes need different units: the block-based lens counts blocks, the time-based one counts
+      // seconds, and only the block count is deterministic here. Hardhat stamps a mined block with the wall
+      // clock whenever that is ahead of the previous block's timestamp, so any real time spent between the
+      // fixture snapshot and this line is added on top of the 1000 seconds `mineUpTo` would otherwise advance.
+      // Pinning the timestamp keeps the time-based expectations exact on a slow machine.
+      if (isTimeBased) {
+        await time.increaseTo(startBlockTimestamp + 1000);
+      } else {
+        await mineUpTo(startBlock + 1000);
+      }
 
       const accountAddress = await account.getAddress();
 
