@@ -12,10 +12,10 @@ import { BondAccount } from "./BondAccount.sol";
 /**
  * @title XVSVaultBondAccount
  * @author Venus
- * @notice A bond account that stakes its XVS in the XVSVault. Rewards are claimed into the account as yield; principal
- * leaves through a withdrawal request, paid by `payReceivers` once the XVSVault's lock period has passed. The
- * account never delegates, so the bond carries no voting power
- * @dev Clones run this implementation's code, so they share its `XVS_POOL_ID` and `BOND_MANAGER`
+ * @notice A bond account that stakes its XVS in the XVSVault, with rewards claimed into it as yield. Principal leaves
+ * through a withdrawal request, paid by `payReceivers` after the lock period. It never delegates, so the bond has no
+ * voting power
+ * @dev Clones share this implementation's `XVS_POOL_ID` and `BOND_MANAGER`
  */
 contract XVSVaultBondAccount is BondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -36,12 +36,7 @@ contract XVSVaultBondAccount is BondAccount {
     // View functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Returns whether `source_` is an XVSVault whose `XVS_POOL_ID` pool stakes `asset_`, which must be its XVS
-     * @param asset_ The asset
-     * @param source_ The XVSVault
-     * @return Whether it fits
-     */
+    /// @inheritdoc IBondAccount
     function isValidSource(address asset_, address source_) external view override returns (bool) {
         if (source_ == address(0) || IXVSVault(source_).xvsAddress() != asset_) {
             return false;
@@ -59,11 +54,7 @@ contract XVSVaultBondAccount is BondAccount {
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @dev Stakes `amount` in the XVSVault; the XVSVault refuses it while paused
-     * @param amount The amount
-     * @return Whether the XVSVault took it
-     */
+    /// @dev Stakes `amount` in the XVSVault, which refuses it while paused
     function _depositToSource(uint256 amount) internal override returns (bool) {
         asset.forceApprove(source, amount);
         try IXVSVault(source).deposit(address(asset), XVS_POOL_ID, amount) {
@@ -79,10 +70,7 @@ contract XVSVaultBondAccount is BondAccount {
         IXVSVault(source).claim(address(this), address(asset), XVS_POOL_ID);
     }
 
-    /**
-     * @dev Requests up to `amount` of the stake not requested yet; the XVSVault pays it after its lock period
-     * @param amount The amount
-     */
+    /// @dev Requests up to `amount` of the stake not requested yet; the XVSVault pays it after its lock period
     function _requestFromSource(uint256 amount) internal override {
         IXVSVault vault = IXVSVault(source);
         (uint256 staked, , uint256 requested) = vault.getUserInfo(address(asset), XVS_POOL_ID, address(this));
@@ -93,10 +81,7 @@ contract XVSVaultBondAccount is BondAccount {
         }
     }
 
-    /**
-     * @dev Executes the XVSVault's withdrawal requests whose lock period has passed
-     * @return amount The amount received
-     */
+    /// @dev Executes the XVSVault's withdrawal requests whose lock period has passed
     function _claimFromSource() internal override returns (uint256 amount) {
         IXVSVault vault = IXVSVault(source);
         amount = vault.getEligibleWithdrawalAmount(address(asset), XVS_POOL_ID, address(this));
@@ -105,10 +90,7 @@ contract XVSVaultBondAccount is BondAccount {
         }
     }
 
-    /**
-     * @dev Returns the XVSVault stake, including requested withdrawals
-     * @return staked The amount, in XVS
-     */
+    /// @dev Returns the XVSVault stake, including requested withdrawals
     function _assetsInSource() internal view override returns (uint256 staked) {
         (staked, , ) = IXVSVault(source).getUserInfo(address(asset), XVS_POOL_ID, address(this));
     }

@@ -16,28 +16,27 @@ import { ISpokeBondManager } from "../../interfaces/ISpokeBondManager.sol";
 /**
  * @title SpokeBondManager
  * @author Venus
- * @notice Manages the bond of every live open spoke pool, the first money used to repay the pool's bad debt. Each bond
- * sits in its own account, a clone of the account implementation of the source type governance sets for its asset:
- * XVS is staked in the XVSVault, a stablecoin is deposited in its Liquidity Hub, and an asset with no source is simply
- * held. Bonds are keyed by the pool's comptroller. A released bond's account is detached from its pool, so a pool
- * that is handed over gets a new bond and account while the old one finishes paying out
+ * @notice Holds the bond of every live open spoke pool, keyed by its comptroller: the first money that repays the
+ * pool's bad debt. Each bond sits in its own account, a clone of its asset's source type implementation, which stakes
+ * XVS in the XVSVault, deposits a stablecoin in its Liquidity Hub or simply holds the asset. A released bond's account
+ * is detached from its pool and keeps paying what it owes through `payReceivers`
  * @dev Only `SPOKE_POOL_MANAGER` moves bonds
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISpokeBondManager {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice The manager that moves bonds
+    /// @inheritdoc ISpokeBondManager
     address public immutable SPOKE_POOL_MANAGER;
 
-    /// @notice The oracle bonds are valued with
+    /// @inheritdoc ISpokeBondManager
     ResilientOracleInterface public immutable RESILIENT_ORACLE;
 
     /// @inheritdoc ISpokeBondManager
     mapping(SourceType => address) public accountImplementations;
 
     /// @inheritdoc ISpokeBondManager
-    mapping(address => AssetSource) public assetSources;
+    mapping(address => AssetConfig) public assetConfigs;
 
     /// @inheritdoc ISpokeBondManager
     mapping(address => address) public bondAccounts;
@@ -100,13 +99,13 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
             revert BondAlreadyExists(comptroller);
         }
 
-        AssetSource memory assetSource = assetSources[asset];
-        address implementation = accountImplementations[assetSource.sourceType];
+        AssetConfig memory assetConfig = assetConfigs[asset];
+        address implementation = accountImplementations[assetConfig.sourceType];
         if (implementation == address(0)) {
-            revert AccountImplementationNotSet(assetSource.sourceType);
+            revert AccountImplementationNotSet(assetConfig.sourceType);
         }
         account = Clones.clone(implementation);
-        IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetSource.source);
+        IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetConfig.source);
         bondAccounts[comptroller] = account;
         isBondAccount[account] = true;
 
@@ -145,13 +144,28 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     }
 
     /// @inheritdoc ISpokeBondManager
-    function release(address comptroller) external onlySpokePoolManager nonReentrant returns (uint256 paidNow) {
+    function release(
+        address comptroller
+    ) external onlySpokePoolManager nonReentrant returns (uint256 paidToBondHolder) {
         IBondAccount account = _ensureBond(comptroller);
         delete bondAccounts[comptroller];
 
-        paidNow = account.release();
+        paidToBondHolder = account.release();
 
-        emit BondReleased(comptroller, address(account), paidNow);
+        emit BondReleased(comptroller, address(account), paidToBondHolder);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Permissionless functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @inheritdoc ISpokeBondManager
+    function payReceivers(address account) external nonReentrant {
+        if (!isBondAccount[account]) {
+            revert NotBondAccount(account);
+        }
+
+        IBondAccount(account).payReceivers();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -165,31 +179,26 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
             revert NotBondAccount(account);
         }
 
-        emit DepositRetried(account, IBondAccount(account).retryDeposit());
+        uint256 amount = IBondAccount(account).retryDeposit();
+
+        emit DepositRetried(account, amount);
     }
 
     /// @inheritdoc ISpokeBondManager
-    function payReceivers(address account) external nonReentrant {
-        _checkAccessAllowed("payReceivers(address)");
-        if (!isBondAccount[account]) {
-            revert NotBondAccount(account);
-        }
-
-        IBondAccount(account).payReceivers();
-    }
-
-    /// @inheritdoc ISpokeBondManager
-    function setAssetSource(address asset, SourceType sourceType, address source) external {
-        _checkAccessAllowed("setAssetSource(address,uint8,address)");
+    function setAssetConfig(address asset, AssetConfig calldata config) external {
+        _checkAccessAllowed("setAssetConfig(address,AssetConfig)");
         ensureNonzeroAddress(asset);
-        address implementation = accountImplementations[sourceType];
-        if (implementation == address(0) || !IBondAccount(implementation).isValidSource(asset, source)) {
-            revert InvalidAssetSource(asset);
+        address implementation = accountImplementations[config.sourceType];
+        if (
+            config.factor == 0 ||
+            implementation == address(0) ||
+            !IBondAccount(implementation).isValidSource(asset, config.source)
+        ) {
+            revert InvalidAssetConfig(asset);
         }
 
-        AssetSource memory newSource = AssetSource(sourceType, source);
-        emit AssetSourceUpdated(asset, assetSources[asset], newSource);
-        assetSources[asset] = newSource;
+        emit AssetConfigUpdated(asset, assetConfigs[asset], config);
+        assetConfigs[asset] = config;
     }
 
     /// @inheritdoc ISpokeBondManager
@@ -202,6 +211,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         ) {
             revert InvalidAccountImplementation(sourceType, implementation);
         }
+
         emit AccountImplementationUpdated(sourceType, accountImplementations[sourceType], implementation);
         accountImplementations[sourceType] = implementation;
     }
@@ -225,24 +235,14 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @dev Pulls `amount` from the caller and lets the bond's account pull it into the bond
-     * @param account The bond's account
-     * @param asset The bond's asset
-     * @param amount The amount, which the caller must have approved
-     */
+    /// @dev Pulls `amount` from the caller and lets the bond's account pull it into the bond
     function _fundBond(IBondAccount account, IERC20Upgradeable asset, uint256 amount) internal {
         asset.safeTransferFrom(msg.sender, address(this), amount);
         asset.forceApprove(address(account), amount);
         account.deposit(amount);
     }
 
-    /**
-     * @dev Returns a pool's live bond account
-     * @param comptroller The pool's comptroller
-     * @return The account
-     * @custom:error BondNotFound is thrown when the pool has no live bond
-     */
+    /// @dev Returns a pool's live bond account
     function _ensureBond(address comptroller) internal view returns (IBondAccount) {
         address account = bondAccounts[comptroller];
         if (account == address(0)) {

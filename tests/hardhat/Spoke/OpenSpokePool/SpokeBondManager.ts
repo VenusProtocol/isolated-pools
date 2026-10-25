@@ -36,6 +36,9 @@ const XVS_POOL_ID = 0;
 const LOCK_PERIOD = 300;
 const BOND = e18("1000");
 
+/// An allowed bond asset config with a factor of 1.
+const assetConfig = (sourceType: number, source: string) => ({ sourceType, source, allowed: true, factor: e18("1") });
+
 describe("SpokeBondManager", () => {
   let owner: SignerWithAddress;
   let spokePoolManager: SignerWithAddress;
@@ -97,8 +100,8 @@ describe("SpokeBondManager", () => {
     await bondManager.setAccountImplementation(SourceType.Idle, idleImplementation.address);
     await bondManager.setAccountImplementation(SourceType.XVSVault, xvsImplementation.address);
     await bondManager.setAccountImplementation(SourceType.LiquidityHub, hubImplementation.address);
-    await bondManager.setAssetSource(xvs.address, SourceType.XVSVault, xvsVault.address);
-    await bondManager.setAssetSource(usdt.address, SourceType.LiquidityHub, hub.address);
+    await bondManager.setAssetConfig(xvs.address, assetConfig(SourceType.XVSVault, xvsVault.address));
+    await bondManager.setAssetConfig(usdt.address, assetConfig(SourceType.LiquidityHub, hub.address));
   });
 
   /// Creates a bond for `comptroller` and returns its account.
@@ -231,20 +234,46 @@ describe("SpokeBondManager", () => {
     });
   });
 
-  describe("setAssetSource", () => {
+  describe("setAssetConfig", () => {
     it("reverts unless the caller is allowed", async () => {
-      await expectUnauthorized(other, "setAssetSource(address,uint8,address)", () =>
-        bondManager.connect(other).setAssetSource(usdt.address, SourceType.LiquidityHub, hub.address),
+      await expectUnauthorized(other, "setAssetConfig(address,AssetConfig)", () =>
+        bondManager.connect(other).setAssetConfig(usdt.address, assetConfig(SourceType.LiquidityHub, hub.address)),
       );
     });
 
-    it("records a source that fits its type and asset", async () => {
-      await expect(bondManager.setAssetSource(usdt.address, SourceType.Idle, constants.AddressZero))
-        .to.emit(bondManager, "AssetSourceUpdated")
-        .withArgs(usdt.address, [SourceType.LiquidityHub, hub.address], [SourceType.Idle, constants.AddressZero]);
-      const source = await bondManager.assetSources(usdt.address);
-      expect(source.sourceType).to.equal(SourceType.Idle);
-      expect(source.source).to.equal(constants.AddressZero);
+    it("records a config whose source fits its type and asset", async () => {
+      const newConfig = {
+        sourceType: SourceType.Idle,
+        source: constants.AddressZero,
+        allowed: false,
+        factor: e18("0.8"),
+      };
+      await expect(bondManager.setAssetConfig(usdt.address, newConfig))
+        .to.emit(bondManager, "AssetConfigUpdated")
+        .withArgs(
+          usdt.address,
+          [SourceType.LiquidityHub, hub.address, true, e18("1")],
+          [SourceType.Idle, constants.AddressZero, false, e18("0.8")],
+        );
+      const config = await bondManager.assetConfigs(usdt.address);
+      expect(config.sourceType).to.equal(SourceType.Idle);
+      expect(config.source).to.equal(constants.AddressZero);
+      expect(config.allowed).to.equal(false);
+      expect(config.factor).to.equal(e18("0.8"));
+    });
+
+    it("rejects a zero factor", async () => {
+      for (const allowed of [true, false]) {
+        await expect(
+          bondManager.setAssetConfig(usdt.address, {
+            ...assetConfig(SourceType.LiquidityHub, hub.address),
+            allowed,
+            factor: 0,
+          }),
+        )
+          .to.be.revertedWithCustomError(bondManager, "InvalidAssetConfig")
+          .withArgs(usdt.address);
+      }
     });
 
     it("rejects a source that does not fit its type or asset", async () => {
@@ -256,8 +285,8 @@ describe("SpokeBondManager", () => {
         [usdt, SourceType.LiquidityHub, constants.AddressZero],
       ];
       for (const [asset, sourceType, source] of cases) {
-        await expect(bondManager.setAssetSource(asset.address, sourceType, source))
-          .to.be.revertedWithCustomError(bondManager, "InvalidAssetSource")
+        await expect(bondManager.setAssetConfig(asset.address, assetConfig(sourceType, source)))
+          .to.be.revertedWithCustomError(bondManager, "InvalidAssetConfig")
           .withArgs(asset.address);
       }
     });
@@ -267,15 +296,15 @@ describe("SpokeBondManager", () => {
       const otherImplementation = await new XVSVaultBondAccount__factory(owner).deploy(bondManager.address, 1);
       await bondManager.setAccountImplementation(SourceType.XVSVault, otherImplementation.address);
 
-      await expect(bondManager.setAssetSource(xvs.address, SourceType.XVSVault, xvsVault.address))
-        .to.be.revertedWithCustomError(bondManager, "InvalidAssetSource")
+      await expect(bondManager.setAssetConfig(xvs.address, assetConfig(SourceType.XVSVault, xvsVault.address)))
+        .to.be.revertedWithCustomError(bondManager, "InvalidAssetConfig")
         .withArgs(xvs.address);
     });
 
     it("rejects a source type with no account implementation", async () => {
       const manager = await deployBondManager();
-      await expect(manager.setAssetSource(usdt.address, SourceType.LiquidityHub, hub.address))
-        .to.be.revertedWithCustomError(manager, "InvalidAssetSource")
+      await expect(manager.setAssetConfig(usdt.address, assetConfig(SourceType.LiquidityHub, hub.address)))
+        .to.be.revertedWithCustomError(manager, "InvalidAssetConfig")
         .withArgs(usdt.address);
     });
   });
@@ -718,14 +747,24 @@ describe("SpokeBondManager", () => {
   });
 
   describe("retryDeposit and payReceivers", () => {
-    it("revert unless the caller is allowed", async () => {
+    it("retryDeposit reverts unless the caller is allowed", async () => {
       const account = await createBond(xvs);
       await expectUnauthorized(other, "retryDeposit(address)", () =>
         bondManager.connect(other).retryDeposit(account.address),
       );
-      await expectUnauthorized(other, "payReceivers(address)", () =>
-        bondManager.connect(other).payReceivers(account.address),
-      );
+    });
+
+    it("payReceivers pays the queue for any caller", async () => {
+      const account = await createBond(xvs);
+      await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address);
+      const owed = await account.owedToReceivers();
+      await time.increase(LOCK_PERIOD);
+      acm.isAllowedToCall.returns(false);
+
+      await expect(bondManager.connect(other).payReceivers(account.address))
+        .to.emit(account, "Paid")
+        .withArgs(recoverer.address, owed);
+      expect(await account.owedToReceivers()).to.equal(0);
     });
 
     it("revert on an account not created here", async () => {

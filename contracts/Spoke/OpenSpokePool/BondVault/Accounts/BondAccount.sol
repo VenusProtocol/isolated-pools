@@ -12,19 +12,14 @@ import { ISpokeBondManager } from "../../../interfaces/ISpokeBondManager.sol";
 /**
  * @title BondAccount
  * @author Venus
- * @notice Holds one open spoke pool bond. This contract holds an asset with no source as it is; the accounts for a
- * source, such as `XVSVaultBondAccount` and `LiquidityHubBondAccount`, inherit it and put the bond to work there. The
- * source sees the account as the staker, so it keeps this bond's rewards, shares and withdrawals apart from every
- * other bond's. The yield is everything the account holds beyond its principal and what it owes receivers, including
- * assets sent to the account directly, and is paid only once no receiver is owed. A seizure takes yield first, then
- * principal; a release gives the bond holder everything the seizures leave. What a seizure cannot pay at once is
- * queued and paid by `payReceivers`, in the order of the seizures and before the bond holder; a later seizure is still
- * paid at once from what is liquid then, ahead of the queue
- * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; `BOND_MANAGER` is an immutable of the
- * implementation, so its clones share it. The bond's books are kept here. A source account overrides only the steps
- * that talk to its source: `_depositToSource`, `_accrueYield` and `_assetsInSource`, then `_withdrawFromSource` for a
- * source that pays at once, or `_requestFromSource` and `_claimFromSource` for one that pays after a delay, plus
- * `sourceType` and `isValidSource`. The defaults here are those of an asset with no source
+ * @notice Holds one open spoke pool bond, kept apart from every other bond in its source; this base holds an asset
+ * with no source. The yield is everything beyond the principal and what is owed to receivers, including assets sent
+ * here directly, and is paid only while no receiver is owed. A seizure takes yield first, pays what is liquid now, even
+ * ahead of the queue, and queues the rest for `payReceivers`, which pays in seizure order and then, after release, the
+ * bond holder
+ * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. The
+ * books are kept here: a source account overrides only the steps that talk to its source, plus `sourceType` and
+ * `isValidSource`
  */
 contract BondAccount is Initializable, IBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -85,7 +80,7 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Bond manager functions
+    // SpokeBondManager functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
@@ -99,7 +94,7 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function claimYield() external onlyBondManager returns (uint256 paid) {
+    function claimYield() external onlyBondManager returns (uint256 amount) {
         if (owedToReceivers != 0) {
             return 0;
         }
@@ -107,7 +102,7 @@ contract BondAccount is Initializable, IBondAccount {
         uint256 bondAssets = _bondAssets();
         if (bondAssets > principal) {
             // The pending deposit is principal, so the yield comes from the rest of the balance, then the source
-            paid = _payNow(bondHolder, bondAssets - principal, asset.balanceOf(address(this)) - pendingDeposit);
+            amount = _payNow(bondHolder, bondAssets - principal, asset.balanceOf(address(this)) - pendingDeposit);
         }
     }
 
@@ -121,7 +116,6 @@ contract BondAccount is Initializable, IBondAccount {
             revert InsufficientFunds(amount, bondAssets);
         }
         uint256 yield = bondAssets > principal ? bondAssets - principal : 0;
-        // If the yield is not enough, take the rest from the principal
         if (amount > yield) {
             principal -= amount - yield;
         }
@@ -167,9 +161,9 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function payReceivers() external onlyBondManager returns (uint256 paidToBondHolder) {
+    function payReceivers() external onlyBondManager {
         _accrueYield();
-        paidToBondHolder = _payReceivers();
+        _payReceivers();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -201,11 +195,7 @@ contract BondAccount is Initializable, IBondAccount {
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @dev Collects what the source can pay now, pays the receivers owed in order, and after release pays the
-     *   bond holder everything left once every receiver is paid
-     * @return paidToBondHolder The amount paid to the bond holder
-     */
+    /// @dev Collects what the source pays now and pays the owed receivers in order, then after release the bond holder
     function _payReceivers() internal returns (uint256 paidToBondHolder) {
         uint256 needed = released ? type(uint256).max : owedToReceivers;
         uint256 funds = _claimFromSource();
@@ -216,10 +206,10 @@ contract BondAccount is Initializable, IBondAccount {
             funds = asset.balanceOf(address(this));
         }
 
-        uint256 count = receiverPayments.length;
+        uint256 paymentCount = receiverPayments.length;
         uint256 i = nextPaymentIndex;
         uint256 paidToReceivers;
-        for (; i < count && funds != 0; ++i) {
+        for (; i < paymentCount && funds != 0; ++i) {
             Payment storage payment = receiverPayments[i];
             uint256 paid = payment.amount < funds ? payment.amount : funds;
             payment.amount -= paid;
@@ -234,7 +224,7 @@ contract BondAccount is Initializable, IBondAccount {
         nextPaymentIndex = i;
         owedToReceivers -= paidToReceivers;
 
-        if (released && i == count) {
+        if (released && i == paymentCount) {
             paidToBondHolder = asset.balanceOf(address(this));
             if (paidToBondHolder != 0) {
                 _transferOut(bondHolder, paidToBondHolder);
@@ -242,14 +232,7 @@ contract BondAccount is Initializable, IBondAccount {
         }
     }
 
-    /**
-     * @dev Pays `receiver` up to `amount` now: from up to `available` of the account's balance, then from what the
-     *   source pays at once
-     * @param receiver The receiver
-     * @param amount The amount
-     * @param available How much of the account's balance the payment can use
-     * @return paid The amount paid
-     */
+    /// @dev Pays `receiver` up to `amount` now: up to `available` of the balance, then what the source pays at once
     function _payNow(address receiver, uint256 amount, uint256 available) internal returns (uint256 paid) {
         paid = amount < available ? amount : available;
         if (paid < amount) {
@@ -260,63 +243,42 @@ contract BondAccount is Initializable, IBondAccount {
         }
     }
 
-    /**
-     * @dev Sends `amount` of the asset to `receiver`
-     * @param receiver The receiver
-     * @param amount The amount
-     */
+    /// @dev Sends `amount` of the asset to `receiver`
     function _transferOut(address receiver, uint256 amount) internal {
         asset.safeTransfer(receiver, amount);
         emit Paid(receiver, amount);
     }
 
-    /**
-     * @dev Puts an amount to work in the source, returning false instead of reverting when the source refuses it. An
-     *   asset with no source is simply held, which counts as deposited
-     * @return Whether the amount was deposited
-     */
+    /// @dev Puts an amount to work in the source, returning false if it refuses; with no source the amount is held
     function _depositToSource(uint256) internal virtual returns (bool) {
         return true;
     }
 
-    /// @dev Brings the bond's yield up to date before the bond is valued or paid out, such as by claiming rewards
+    /// @dev Brings the yield up to date, such as by claiming rewards, before the bond is valued or paid out
     // solhint-disable-next-line no-empty-blocks
     function _accrueYield() internal virtual {}
 
-    /**
-     * @dev Withdraws up to an amount from the source into the account, as much as the source pays at once
-     * @return The amount withdrawn
-     */
+    /// @dev Withdraws up to an amount from the source into the account, as much as the source pays at once
     function _withdrawFromSource(uint256) internal virtual returns (uint256) {
         return 0;
     }
 
-    /// @dev Requests up to an amount from a source that pays only after a delay; `_claimFromSource` collects it
+    /// @dev Requests up to an amount from a source that pays after a delay; `_claimFromSource` collects it
     // solhint-disable-next-line no-empty-blocks
     function _requestFromSource(uint256) internal virtual {}
 
-    /**
-     * @dev Collects into the account what the source pays now for earlier requests
-     * @return The amount collected
-     */
+    /// @dev Collects into the account what the source pays now for earlier requests
     function _claimFromSource() internal virtual returns (uint256) {
         return 0;
     }
 
-    /**
-     * @dev Returns what the bond holds beyond what it owes receivers: its balance plus its position in the source, or
-     *   zero after a loss in the source leaves it less
-     * @return The amount, in the asset
-     */
+    /// @dev Returns what the bond holds beyond what it owes receivers, or zero after a loss in the source leaves less
     function _bondAssets() internal view returns (uint256) {
         uint256 holdings = asset.balanceOf(address(this)) + _assetsInSource();
         return holdings > owedToReceivers ? holdings - owedToReceivers : 0;
     }
 
-    /**
-     * @dev Returns the bond's position in the source, in the asset, including what is requested but not collected
-     * @return The amount
-     */
+    /// @dev Returns the bond's position in the source, in the asset, including what is requested but not collected
     function _assetsInSource() internal view virtual returns (uint256) {
         return 0;
     }

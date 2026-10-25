@@ -8,7 +8,7 @@ import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "
 
 const DEPLOYMENT_NAME = "SpokeBondManager";
 
-// The XVSVault pool that stakes XVS with XVS as its reward token; `setAssetSource` checks it on chain
+// The XVSVault pool that stakes XVS with XVS as its reward token; `setAssetConfig` checks it on chain
 const XVS_POOL_IDS: Record<string, number> = { bscmainnet: 0, bsctestnet: 1 };
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {

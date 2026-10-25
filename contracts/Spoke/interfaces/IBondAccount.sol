@@ -66,8 +66,7 @@ interface IBondAccount {
     function initialize(address bondHolder_, IERC20Upgradeable asset_, address source_) external;
 
     /**
-     * @notice Pulls `amount` from `BOND_MANAGER`, adds it to the principal and deposits it in the source. A refusal
-     *   does not revert: the amount is kept as a pending deposit until `retryDeposit`
+     * @notice Pulls `amount` into the principal and deposits it in the source, or keeps it pending if refused
      * @param amount The amount, which `BOND_MANAGER` must have approved
      * @custom:event Emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
@@ -76,21 +75,19 @@ interface IBondAccount {
     function deposit(uint256 amount) external;
 
     /**
-     * @notice Pays the yield, everything the bond holds beyond its principal, to the bond holder: first from the
-     *   account's balance beyond its pending deposit, then as much as the source can pay now. Nothing is paid while a
-     *   receiver is still owed. An asset with no source earns no yield, so normally nothing is paid
-     * @return paid The amount paid
+     * @notice Pays the yield, everything beyond the principal, to the bond holder: from the balance beyond the pending
+     *   deposit first, then the source; nothing is paid while a receiver is still owed
+     * @return amount The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
-    function claimYield() external returns (uint256 paid);
+    function claimYield() external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from the bond, yield first, then principal, and pays it to `receiver`, from what is liquid
-     *   now, even ahead of earlier seizures still owed. What cannot be paid now is owed and paid by `payReceivers`,
-     *   such as XVS principal during the XVSVault's lock period
+     * @notice Takes `amount` from the bond, yield first, and pays `receiver` what is liquid now, even ahead of earlier
+     *   seizures still owed; the rest, such as XVS principal in its lock period, is owed and paid by `payReceivers`
      * @param amount The amount to take
      * @param receiver The receiver
      * @return paidNow The amount paid now
@@ -103,8 +100,7 @@ interface IBondAccount {
     function seize(uint256 amount, address receiver) external returns (uint256 paidNow);
 
     /**
-     * @notice Releases the bond: what the source can pay now goes to the receivers still owed, then to the bond
-     *   holder, and the bond holder is paid the rest by `payReceivers`
+     * @notice Releases the bond: owed receivers are paid first, then the bond holder, now or by `payReceivers`
      * @return paidToBondHolder The amount paid to the bond holder now
      * @custom:event Emits Paid for every payment
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
@@ -124,15 +120,13 @@ interface IBondAccount {
     function retryDeposit() external returns (uint256 amount);
 
     /**
-     * @notice Pays what the source can pay now to the receivers still owed, in order, and after release the rest to
-     *   the bond holder
-     * @return paidToBondHolder The amount paid to the bond holder
+     * @notice Pays the owed receivers in order, then after release the bond holder, from what the source pays now
      * @custom:event Emits Paid for every payment
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
-    function payReceivers() external returns (uint256 paidToBondHolder);
+    function payReceivers() external;
 
     /**
      * @notice Returns whether `source_` can hold `asset_` for this kind of account; with no source, it must be zero
@@ -143,16 +137,15 @@ interface IBondAccount {
     function isValidSource(address asset_, address source_) external view returns (bool);
 
     /**
-     * @notice Returns the principal the bond still covers: its principal, or what it holds beyond what it owes
-     *   receivers if that is less, after a loss in the source. Yield is not counted, as the bond holder can claim it
+     * @notice Returns the principal the bond still covers: its principal, or less after a loss in the source
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
     function value() external view returns (uint256);
 
     /**
-     * @notice Returns the most a seizure can take: everything the bond holds beyond what it owes receivers. It is
-     *   read before the yield is accrued, so it can differ slightly from what `seize` sees
+     * @notice Returns the most a seizure can take: what the bond holds beyond what it owes receivers. It is read before
+     *   yield accrues, so it may differ from what `seize` sees by dust
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
@@ -166,8 +159,7 @@ interface IBondAccount {
     function BOND_MANAGER() external view returns (address);
 
     /**
-     * @notice Returns the bond holder, in whose name the bond is created; paid the yield and, after release, what is
-     *   left
+     * @notice Returns the bond holder, in whose name the bond is created; paid the yield and, after release, the rest
      * @return The bond holder
      */
     function bondHolder() external view returns (address);
@@ -197,8 +189,7 @@ interface IBondAccount {
     function principal() external view returns (uint256);
 
     /**
-     * @notice Returns the part of the principal the source refused, held in the account until `retryDeposit` deposits
-     *   it or a seizure spends it
+     * @notice Returns the principal the source refused, held here until `retryDeposit` or a seizure spends it
      * @return The amount, in the asset
      */
     function pendingDeposit() external view returns (uint256);
@@ -210,14 +201,13 @@ interface IBondAccount {
     function owedToReceivers() external view returns (uint256);
 
     /**
-     * @notice Returns the index in `receiverPayments` of the next payment to make; every payment before it is fully
-     *   made
+     * @notice Returns the index in `receiverPayments` of the next payment to make; every earlier one is made
      * @return The index
      */
     function nextPaymentIndex() external view returns (uint256);
 
     /**
-     * @notice Returns a payment owed to a seizure receiver, in the order of the seizures; made ones have a zero amount
+     * @notice Returns a payment owed to a seizure receiver, in seizure order; a made payment has a zero amount
      * @param index The payment's index
      * @return receiver The receiver
      * @return amount The amount still owed
