@@ -4,8 +4,7 @@ pragma solidity ^0.8.25;
 /**
  * @title IXVSVault
  * @author Venus
- * @notice The XVSVault functions the Spoke contracts call: staking, used by the XVS bond accounts, and the stake lock,
- * used by SpokePoolManager
+ * @notice The XVSVault functions the XVS bond accounts call
  */
 interface IXVSVault {
     /**
@@ -38,28 +37,6 @@ interface IXVSVault {
      * @param pid The pool index
      */
     function executeWithdrawal(address rewardToken, uint256 pid) external;
-
-    /**
-     * @notice Locks part of an account's XVS stake so it cannot be requested for withdrawal
-     * @param account The account whose stake is locked
-     * @param amount The amount to lock
-     */
-    function lock(address account, uint256 amount) external;
-
-    /**
-     * @notice Unlocks part of an account's locked XVS stake
-     * @param account The account whose stake is unlocked
-     * @param amount The amount to unlock
-     */
-    function unlock(address account, uint256 amount) external;
-
-    /**
-     * @notice Takes locked XVS stake out of the vault
-     * @param account The account whose locked stake is taken
-     * @param amount The amount to take
-     * @param to The receiver of the XVS
-     */
-    function seizeLocked(address account, uint256 amount, address to) external;
 
     /**
      * @notice Returns an account's stake in a pool

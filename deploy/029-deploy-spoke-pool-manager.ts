@@ -4,19 +4,9 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import {
-  readBackAddress,
-  readBackUntil,
-  sameAddress,
-  toAddress,
-  verifyProxyDeployment,
-} from "../helpers/deploymentUtils";
+import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "../helpers/deploymentUtils";
 
 const DEPLOYMENT_NAME = "SpokePoolManager";
-
-// `SpokePoolProposer`'s constructor rejects a manager whose pool-creation proposal with this many markets would not fit
-// GovernorBravo's action limit: 13 at most with 100 actions
-const MAX_POOL_MARKETS = 10;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -26,22 +16,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager);
   const owner = await toAddress(preconfiguredAddresses.NormalTimelock);
-  const governorBravo = await toAddress(preconfiguredAddresses.GovernorBravo);
-  const xvsVault = await toAddress("XVSVaultProxy");
-  const poolRegistry = await toAddress("SpokePoolRegistry");
   const resilientOracle = await toAddress("ResilientOracle");
-  const deviationBoundedOracle = await toAddress("DeviationBoundedOracle");
   const riskOracle = await toAddress(preconfiguredAddresses.RiskOracle);
+  const riskStewardReceiver = await toAddress(preconfiguredAddresses.RiskStewardReceiver);
+  const tierRegistry = await toAddress("TierRegistry");
 
-  const args = [
-    xvsVault,
-    governorBravo,
-    poolRegistry,
-    resilientOracle,
-    deviationBoundedOracle,
-    riskOracle,
-    MAX_POOL_MARKETS,
-  ];
+  const args = [resilientOracle, riskOracle, riskStewardReceiver, tierRegistry];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
@@ -63,16 +43,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
   const manager = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [
-    ["XVS_VAULT", await readBackAddress(() => manager.XVS_VAULT(), xvsVault), xvsVault],
-    ["GOVERNOR_BRAVO", await readBackAddress(() => manager.GOVERNOR_BRAVO(), governorBravo), governorBravo],
-    ["POOL_REGISTRY", await readBackAddress(() => manager.POOL_REGISTRY(), poolRegistry), poolRegistry],
     ["RESILIENT_ORACLE", await readBackAddress(() => manager.RESILIENT_ORACLE(), resilientOracle), resilientOracle],
-    [
-      "DEVIATION_BOUNDED_ORACLE",
-      await readBackAddress(() => manager.DEVIATION_BOUNDED_ORACLE(), deviationBoundedOracle),
-      deviationBoundedOracle,
-    ],
     ["RISK_ORACLE", await readBackAddress(() => manager.RISK_ORACLE(), riskOracle), riskOracle],
+    [
+      "RISK_STEWARD_RECEIVER",
+      await readBackAddress(() => manager.RISK_STEWARD_RECEIVER(), riskStewardReceiver),
+      riskStewardReceiver,
+    ],
+    ["TIER_REGISTRY", await readBackAddress(() => manager.TIER_REGISTRY(), tierRegistry), tierRegistry],
     [
       "access control manager",
       await readBackAddress(() => manager.accessControlManager(), accessControlManager),
@@ -85,17 +63,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     }
     console.log(`Verified ${DEPLOYMENT_NAME} ${label}: ${actual}`);
   }
-  const maxPoolMarkets = await readBackUntil(
-    async () => (await manager.MAX_POOL_MARKETS()).toNumber(),
-    value => value === MAX_POOL_MARKETS,
-  );
-  if (maxPoolMarkets !== MAX_POOL_MARKETS) {
-    throw new Error(
-      `Refusing to transfer ownership: ${DEPLOYMENT_NAME} MAX_POOL_MARKETS is ${maxPoolMarkets}, expected ` +
-        `${MAX_POOL_MARKETS}`,
-    );
-  }
-  console.log(`Verified ${DEPLOYMENT_NAME} MAX_POOL_MARKETS: ${maxPoolMarkets}`);
 
   // `Ownable2Step`: this only nominates; the Normal Timelock accepts in the setup VIP
   if (sameAddress(await manager.owner(), owner) || sameAddress(await manager.pendingOwner(), owner)) {
@@ -114,7 +81,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];
-func.dependencies = ["SpokePoolRegistry"];
+func.dependencies = ["TierRegistry"];
 // GovernorBravo exists on the BSC networks only
 func.skip = async (hre: HardhatRuntimeEnvironment) =>
   !(await getConfig(hre.getNetworkName())).preconfiguredAddresses.GovernorBravo;

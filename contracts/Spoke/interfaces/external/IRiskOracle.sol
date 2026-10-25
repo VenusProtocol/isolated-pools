@@ -4,26 +4,10 @@ pragma solidity ^0.8.25;
 /**
  * @title IRiskOracle
  * @author Venus
- * @notice The RiskOracle functions the open spoke pool contracts use: the manager publishes deployer updates, and the
- * validator reads the ones not applied yet
+ * @notice The RiskOracle functions `SpokePoolManager` uses: it publishes deployer updates and reads each market's
+ * latest one
  */
 interface IRiskOracle {
-    /// @notice A published risk parameter update
-    struct RiskParameterUpdate {
-        string referenceId;
-        uint256 updateId;
-        address market;
-        string updateType;
-        bytes32 updateTypeKey;
-        bytes newValue;
-        bytes previousValue;
-        uint256 timestamp;
-        address publisher;
-        uint96 poolId;
-        uint32 destLzEid;
-        bytes additionalData;
-    }
-
     /**
      * @notice Publishes a new risk parameter update
      * @param referenceId An external reference ID associated with the update
@@ -51,11 +35,4 @@ interface IRiskOracle {
      * @return The latest update ID for the given market and update type, or 0 if none exists
      */
     function getLatestUpdateIdByTypeAndMarket(string memory updateType, address market) external view returns (uint256);
-
-    /**
-     * @notice Fetches the update for a provided updateId
-     * @param updateId Update ID
-     * @return The RiskParameterUpdate for the specified id
-     */
-    function getUpdateById(uint256 updateId) external view returns (RiskParameterUpdate memory);
 }

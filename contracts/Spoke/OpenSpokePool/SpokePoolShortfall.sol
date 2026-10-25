@@ -8,95 +8,42 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { VToken } from "../../VToken.sol";
-import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
+import { IBondAccount } from "../interfaces/IBondAccount.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
-import { SpokePoolManager } from "./SpokePoolManager.sol";
+import { ISpokePoolShortfall } from "../interfaces/ISpokePoolShortfall.sol";
 
 /**
  * @title SpokePoolShortfall
  * @author Venus
- * @notice The `shortfall` of every open spoke pool market, so a market's bad debt is only recovered through it.
- * Whitelisted recoverers repay bad debt with their own funds and are paid XVS from the pool's locked stake, worth the
- * repaid amount times `badDebtRecoveryIncentiveMantissa` at ResilientOracle prices; a recovery whose payout exceeds the
- * stake left reverts, so recoverers recover a smaller amount. Venus can repay what the stake cannot cover with
- * `repayBadDebt`. Repaid bad debt becomes cash in the market, so the Hub's position in it becomes redeemable.
- * @dev Needs the manager's `seizeStake` role
+ * @notice The `shortfall` of every open spoke market. As in Venus's `Shortfall`, bad debt is repaid before anything is
+ * paid out: a recoverer repays it with its own funds, then is paid from the pool's bond; Venus repays what the bond
+ * cannot cover with `repayBadDebt`. Repaid bad debt becomes cash in the market, which the Hub can then redeem
+ * @dev Needs the manager's `seizeBond` role
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
-contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
+contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, ISpokePoolShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
-    /// @notice Highest bad debt recovery incentive, scaled by 1e18: XVS worth 150% of the debt
-    uint256 public constant MAX_BAD_DEBT_RECOVERY_INCENTIVE_MANTISSA = 1.5e18;
-
-    /// @notice The manager whose pools' locked stake pays recoverers
-    SpokePoolManager public immutable SPOKE_POOL_MANAGER;
-
-    /// @notice The XVS token, which pays recoverers
-    address public immutable XVS;
-
-    /// @notice XVS paid per unit of bad debt recovered, relative to its USD value, scaled by 1e18; zero until set, so
-    ///   recoverers are paid nothing before `setBadDebtRecoveryIncentive`
-    uint256 public badDebtRecoveryIncentiveMantissa;
+    /// @inheritdoc ISpokePoolShortfall
+    ISpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 
     /**
-     * @notice Emitted when bad debt is recovered and the recoverer is paid from the pool's locked stake
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @param recoverer The account that repaid the bad debt
-     * @param amount The bad debt repaid, in the underlying
-     * @param xvsAmount The XVS paid to the recoverer
+     * @param spokePoolManager The manager whose pools' bonds pay recoverers
+     * @custom:error ZeroAddressNotAllowed is thrown when the manager is zero
      */
-    event BadDebtRecovered(
-        address indexed comptroller,
-        address indexed vToken,
-        address indexed recoverer,
-        uint256 amount,
-        uint256 xvsAmount
-    );
-
-    /**
-     * @notice Emitted when Venus repays a market's bad debt with its own funds
-     * @param comptroller The pool's comptroller
-     * @param vToken The market
-     * @param payer The account that repaid the bad debt
-     * @param amount The bad debt repaid, in the underlying
-     */
-    event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
-
-    /**
-     * @notice Emitted when the bad debt recovery incentive is changed
-     * @param oldBadDebtRecoveryIncentiveMantissa The previous incentive, scaled by 1e18
-     * @param newBadDebtRecoveryIncentiveMantissa The new incentive, scaled by 1e18
-     */
-    event BadDebtRecoveryIncentiveUpdated(
-        uint256 oldBadDebtRecoveryIncentiveMantissa,
-        uint256 newBadDebtRecoveryIncentiveMantissa
-    );
-
-    /// @notice Thrown when the recovery incentive is below 1e18 or above `MAX_BAD_DEBT_RECOVERY_INCENTIVE_MANTISSA`
-    error InvalidBadDebtRecoveryIncentive();
-
-    /**
-     * @param spokePoolManager The manager whose pools' locked stake pays recoverers
-     * @param xvs The XVS token
-     * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
-     */
-    constructor(SpokePoolManager spokePoolManager, address xvs) {
+    constructor(ISpokePoolManager spokePoolManager) {
         ensureNonzeroAddress(address(spokePoolManager));
-        ensureNonzeroAddress(xvs);
 
         SPOKE_POOL_MANAGER = spokePoolManager;
-        XVS = xvs;
 
         _disableInitializers();
     }
@@ -111,112 +58,65 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable {
         __ReentrancyGuard_init();
     }
 
-    /*** Bad debt recoverer functions ***/
+    // ──────────────────────────────────────────────────────────────────────
+    // Recoverer functions
+    // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Repays bad debt of a market with the caller's funds and pays the caller XVS from the pool's locked stake,
-     *   worth the repaid amount times `badDebtRecoveryIncentiveMantissa` at ResilientOracle prices. A payout that
-     *   rounds to zero, as before the incentive is set, takes nothing from the stake
-     * @param vToken The market with bad debt
-     * @param amount The bad debt to repay, in the market's underlying, which the caller must have approved
-     * @return xvsAmountToSeize The XVS taken from the pool's stake and paid to the caller
-     * @custom:event Emits BadDebtRecovered; the market emits its own BadDebtRecovered, and for a nonzero payout the
-     *   manager emits StakeSeized and the vault Claim and LockedStakeSeized
-     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
-     * @custom:error InsufficientLockedStake is thrown by the manager when the payout exceeds the pool's locked stake
-     * @custom:error The vault's `seizeLocked` errors, such as while the vault is paused
-     * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
-     * @custom:error The market reverts when the amount exceeds its bad debt
-     * @custom:access Controlled by AccessControlManager, granted to the whitelisted bad debt recoverers
-     */
-    function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 xvsAmountToSeize) {
+    /// @inheritdoc ISpokePoolShortfall
+    function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 paidNow) {
         _checkAccessAllowed("recoverBadDebt(address,uint256)");
-
         address comptroller = _ensureListed(vToken);
-        ResilientOracleInterface oracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
-        xvsAmountToSeize =
-            (amount * oracle.getUnderlyingPrice(address(vToken)) * badDebtRecoveryIncentiveMantissa) /
-            (oracle.getPrice(XVS) * EXP_SCALE);
-        if (xvsAmountToSeize != 0) {
-            SPOKE_POOL_MANAGER.seizeStake(comptroller, xvsAmountToSeize, msg.sender);
-        }
-        _repayBadDebt(vToken, amount);
+        uint256 badDebt = vToken.badDebt();
+        amount = amount < badDebt ? amount : badDebt;
+        IBondAccount bondAccount = IBondAccount(SPOKE_POOL_MANAGER.bondManager().bondAccounts(comptroller));
+        ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
+        uint256 seizedAmount = (amount * resilientOracle.getUnderlyingPrice(address(vToken))) /
+            resilientOracle.getPrice(address(bondAccount.asset()));
 
-        emit BadDebtRecovered(comptroller, address(vToken), msg.sender, amount, xvsAmountToSeize);
+        _repayBadDebt(vToken, amount);
+        if (seizedAmount != 0) {
+            paidNow = SPOKE_POOL_MANAGER.seizeBond(comptroller, seizedAmount, msg.sender);
+        }
+
+        emit BadDebtRecovered(comptroller, address(vToken), msg.sender, amount, seizedAmount, paidNow);
     }
 
-    /*** Governance functions ***/
+    // ──────────────────────────────────────────────────────────────────────
+    // Governance functions
+    // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @notice Repays bad debt of a market with Venus's own funds, such as USDT swept from the RiskFund; nothing is paid
-     *   from the pool's stake
-     * @param vToken The market with bad debt
-     * @param amount The bad debt to repay, in the market's underlying, which the caller must have approved
-     * @custom:event Emits BadDebtRepaid; the market emits BadDebtRecovered
-     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
-     * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
-     * @custom:error The market reverts when the amount exceeds its bad debt
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
+    /// @inheritdoc ISpokePoolShortfall
     function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
         _checkAccessAllowed("repayBadDebt(address,uint256)");
-
         address comptroller = _ensureListed(vToken);
+        uint256 badDebt = vToken.badDebt();
+        amount = amount < badDebt ? amount : badDebt;
+
         _repayBadDebt(vToken, amount);
 
         emit BadDebtRepaid(comptroller, address(vToken), msg.sender, amount);
     }
 
-    /**
-     * @notice Sets the XVS paid per unit of bad debt recovered, relative to its USD value
-     * @param newBadDebtRecoveryIncentiveMantissa The new incentive, scaled by 1e18; 1.1e18 pays XVS worth 110% of the
-     *   debt
-     * @custom:event Emits BadDebtRecoveryIncentiveUpdated
-     * @custom:error InvalidBadDebtRecoveryIncentive is thrown when the incentive is below 1e18 or above
-     *   `MAX_BAD_DEBT_RECOVERY_INCENTIVE_MANTISSA`
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setBadDebtRecoveryIncentive(uint256 newBadDebtRecoveryIncentiveMantissa) external {
-        _checkAccessAllowed("setBadDebtRecoveryIncentive(uint256)");
-        if (
-            newBadDebtRecoveryIncentiveMantissa < MANTISSA_ONE ||
-            newBadDebtRecoveryIncentiveMantissa > MAX_BAD_DEBT_RECOVERY_INCENTIVE_MANTISSA
-        ) {
-            revert InvalidBadDebtRecoveryIncentive();
-        }
-        emit BadDebtRecoveryIncentiveUpdated(badDebtRecoveryIncentiveMantissa, newBadDebtRecoveryIncentiveMantissa);
-        badDebtRecoveryIncentiveMantissa = newBadDebtRecoveryIncentiveMantissa;
-    }
+    // ──────────────────────────────────────────────────────────────────────
+    // Internal functions
+    // ──────────────────────────────────────────────────────────────────────
 
-    /*** Internal functions ***/
-
-    /**
-     * @dev Repays a market's bad debt with the caller's funds
-     * @param vToken The market
-     * @param amount The bad debt to repay, in the underlying
-     * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
-     */
+    /// @dev Repays `amount` of a market's bad debt with the caller's funds; callers cap it at the bad debt
     function _repayBadDebt(VToken vToken, uint256 amount) internal {
         IERC20Upgradeable underlying = IERC20Upgradeable(vToken.underlying());
         uint256 balanceBefore = underlying.balanceOf(address(vToken));
         underlying.safeTransferFrom(msg.sender, address(vToken), amount);
         if (underlying.balanceOf(address(vToken)) - balanceBefore != amount) {
-            revert ISpokePoolManager.TransferAmountMismatch(address(underlying));
+            revert TransferAmountMismatch(address(underlying));
         }
         vToken.badDebtRecovered(amount);
     }
 
-    /**
-     * @dev Returns a market's comptroller after checking the market is listed in it, so a fake vToken cannot claim a
-     * pool's stake
-     * @param vToken The market
-     * @return comptroller The market's comptroller
-     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
-     */
+    /// @dev Returns a market's comptroller after checking it lists the market, so only a pool's markets reach its bond
     function _ensureListed(VToken vToken) internal view returns (address comptroller) {
         comptroller = address(vToken.comptroller());
         if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
-            revert ISpokePoolManager.MarketNotListed(address(vToken));
+            revert MarketNotListed(address(vToken));
         }
     }
 }

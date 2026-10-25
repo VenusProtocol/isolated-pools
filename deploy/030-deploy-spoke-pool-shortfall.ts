@@ -17,9 +17,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager);
   const owner = await toAddress(preconfiguredAddresses.NormalTimelock);
   const manager = await toAddress("SpokePoolManager");
-  const xvs = await toAddress("XVS");
 
-  const args = [manager, xvs];
+  const args = [manager];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
@@ -42,7 +41,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const shortfall = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [
     ["SPOKE_POOL_MANAGER", await readBackAddress(() => shortfall.SPOKE_POOL_MANAGER(), manager), manager],
-    ["XVS", await readBackAddress(() => shortfall.XVS(), xvs), xvs],
     [
       "access control manager",
       await readBackAddress(() => shortfall.accessControlManager(), accessControlManager),

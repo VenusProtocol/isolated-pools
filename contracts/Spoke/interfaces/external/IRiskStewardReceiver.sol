@@ -4,8 +4,7 @@ pragma solidity ^0.8.25;
 /**
  * @title IRiskStewardReceiver
  * @author Venus
- * @notice The RiskStewardReceiver functions the open spoke pool validator reads to tell whether a published update is
- * still waiting to be applied
+ * @notice The RiskStewardReceiver functions `SpokePoolManager` uses: it reads the updates not applied yet
  */
 interface IRiskStewardReceiver {
     /// @notice Status of a published update in the receiver
@@ -26,6 +25,13 @@ interface IRiskStewardReceiver {
         address executor;
         uint256 executedAt;
     }
+
+    /**
+     * @notice Returns the RiskOracle the receiver reads updates from
+     * @return The RiskOracle
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function RISK_ORACLE() external view returns (address);
 
     /**
      * @notice Returns a published update's registration in the receiver; an update never processed has status `None`
