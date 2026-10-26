@@ -48,7 +48,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Account implementations, one per source type; each fixes the bond manager its clones answer to, so they are
   // deployed after the proxy. The setup VIP registers them with `setAccountImplementation`
   const implementations: [string, unknown[]][] = [
-    ["BondAccount", [deployment.address]],
+    ["IdleBondAccount", [deployment.address]],
     ["XVSVaultBondAccount", [deployment.address, xvsPoolId]],
     ["LiquidityHubBondAccount", [deployment.address]],
   ];

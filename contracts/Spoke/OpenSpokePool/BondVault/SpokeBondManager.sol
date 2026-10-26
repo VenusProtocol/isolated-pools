@@ -128,6 +128,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         uint256 amount,
         address receiver
     ) external onlySpokePoolManager nonReentrant returns (uint256 paidNow) {
+        ensureNonzeroAddress(receiver);
         paidNow = _ensureBondExists(comptroller).seize(amount, receiver);
 
         emit BondSeized(comptroller, receiver, amount, paidNow);

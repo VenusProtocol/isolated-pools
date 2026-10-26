@@ -8,7 +8,8 @@ import { ISpokeBondManager } from "./ISpokeBondManager.sol";
 /**
  * @title IBondAccount
  * @author Venus
- * @notice Functions, events and errors of `BondAccount`, the account that holds one open spoke pool bond
+ * @notice Functions, events and errors of the bond accounts, each holding one open spoke pool bond: `BaseBondAccount`
+ * and its Idle, XVSVault and Liquidity Hub accounts
  */
 interface IBondAccount {
     /**
@@ -70,8 +71,9 @@ interface IBondAccount {
     function deposit(uint256 amount) external;
 
     /**
-     * @notice Pays the yield, everything beyond the principal, to the bond holder: from the balance first, then the
-     *   source; nothing is paid while a receiver is still owed
+     * @notice Pays the yield, everything beyond the principal and what is owed to receivers, to the bond holder: from
+     *   the balance beyond what it owes, then, for a Liquidity Hub account, the Hub; an XVSVault account pays only from
+     *   that balance
      * @return amount The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`

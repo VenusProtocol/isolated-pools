@@ -162,7 +162,8 @@ interface ISpokeBondManager {
     function topUp(address comptroller, uint256 amount) external;
 
     /**
-     * @notice Pays a pool's bond yield to its bond holder; nothing is paid while a receiver is still owed
+     * @notice Pays a pool's bond yield to its bond holder; an XVSVault account pays it only from its balance beyond what it
+     *   owes receivers
      * @param comptroller The pool's comptroller
      * @return amount The amount paid
      * @custom:event Emits YieldClaimed, and the account emits Paid, when something is paid
@@ -182,6 +183,7 @@ interface ISpokeBondManager {
      * @return paidNow The amount paid now
      * @custom:event Emits BondSeized; the account emits Paid for what is paid now and PaymentQueued for what is owed
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
+     * @custom:error ZeroAddressNotAllowed is thrown when the receiver is zero
      * @custom:error BondNotFound is thrown when the pool has no live bond
      * @custom:error InsufficientFunds is thrown by the account when the bond holds less than `amount` beyond what it
      *   owes receivers
