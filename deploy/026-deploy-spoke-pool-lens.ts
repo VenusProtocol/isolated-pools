@@ -2,6 +2,7 @@ import { DeployResult } from "hardhat-deploy/dist/types";
 import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
+import { getMaxBorrowRateMantissa } from "../helpers/deploymentConfig";
 import { getBlockOrTimestampBasedDeploymentInfo, verifyDeployment } from "../helpers/deploymentUtils";
 
 // Reads a spoke pool the way `PoolLens` reads a pooled one, plus the state particular to a spoke pool. Holds no
@@ -15,10 +16,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployer } = await getNamedAccounts();
 
   const { isTimeBased, blocksPerYear } = getBlockOrTimestampBasedDeploymentInfo(hre.getNetworkName());
+  // Must match the cap 027 deploys `SpokeVTokenImpl` with.
+  const maxBorrowRateMantissa = getMaxBorrowRateMantissa(hre.network.name);
 
   // A redeploy overwrites deployments/<network>/SpokePoolLens.json, and that record is the only one of the revision
   // still live at the old address. Archive it as SpokePoolLensR<n>.json first, next to the source in Lens/legacy.
-  const args = [isTimeBased, blocksPerYear];
+  const args = [isTimeBased, blocksPerYear, maxBorrowRateMantissa];
   const spokePoolLens: DeployResult = await deploy("SpokePoolLens", {
     from: deployer,
     args,

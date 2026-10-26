@@ -673,7 +673,7 @@ contract SpokeInvariantTest is SpokeFuzzBase {
     }
 
     function _deployLens() internal {
-        lens = new SpokePoolLens(true, 0);
+        lens = new SpokePoolLens(true, 0, MAX_BORROW_RATE);
         // `getSpokePoolData` reads metadata from the registry, which has no code in this harness.
         vm.etch(poolRegistry, hex"00");
         vm.mockCall(
