@@ -437,8 +437,8 @@ interface ISpokePoolManager {
     error InvalidPoolParams();
 
     /**
-     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, or two of its
-     *   feeds share an oracle
+     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, two of its
+     *   feeds share an oracle, or it has a fallback feed without a pivot feed
      * @param asset The asset
      */
     error InvalidOracleFeed(address asset);
@@ -539,8 +539,8 @@ interface ISpokePoolManager {
      * @custom:error CoverageTooLow is thrown when the bond is worth less than the tier's minimum coverage ratio of it
      * @custom:error TransferAmountMismatch is thrown when a transfer delivers a different amount
      * @custom:error The `SpokePoolRequestLib._validateMarkets` errors
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live positive answer, or
-     *   two of its feeds share an oracle
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
+     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
@@ -567,8 +567,8 @@ interface ISpokePoolManager {
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
      * @custom:error The `SpokePoolRequestLib._validateMarkets` errors
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live positive answer, or
-     *   two of its feeds share an oracle
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
+     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
@@ -618,8 +618,8 @@ interface ISpokePoolManager {
      * @custom:event Emits OracleFeedsUpdated
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
      * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
-     * @custom:error InvalidOracleFeed is thrown when an unpriced asset's new main feed is missing or has no live positive answer, or
-     *   two of its feeds share an oracle
+     * @custom:error InvalidOracleFeed is thrown when an unpriced asset's new main feed is missing or has no live
+     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when the supply cap, priced again, is worth more than the tier allows
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
@@ -636,8 +636,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
      * @custom:error The `SpokePoolRequestLib._validateMarkets` errors
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live positive answer, or
-     *   two of its feeds share an oracle
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
+     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount

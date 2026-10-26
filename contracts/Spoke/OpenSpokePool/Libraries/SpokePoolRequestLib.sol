@@ -46,11 +46,6 @@ library SpokePoolRequestLib {
     /// @dev Lowest USD value of a market's seed, scaled by 1e18
     uint256 internal constant MIN_SEED_USD = 10e18;
 
-    /// @dev Bounds of a new pool's close factor and liquidation incentive, as the comptroller accepts them
-    uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18;
-    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18;
-    uint256 internal constant MIN_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18;
-
     // ──────────────────────────────────────────────────────────────────────
     // Escrow functions
     // ──────────────────────────────────────────────────────────────────────
@@ -264,7 +259,7 @@ library SpokePoolRequestLib {
      * @param tierId The request's tier
      * @param market The collateral market
      * @custom:error InvalidOracleFeed is thrown when an unpriced asset's main feed is missing or has no live positive
-     *   answer, or two of its feeds share an oracle
+     *   answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when the supply cap is worth more than the tier allows
      */
@@ -275,21 +270,6 @@ library SpokePoolRequestLib {
     ) external view {
         (, , ITierRegistry.PoolLimits memory limits) = contracts.tierRegistry.getTierTerms(tierId);
         _checkSupplyCapUsd(contracts, market, limits.maxCollateralSupplyCapUsd);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Internal functions, inlined in the manager
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @dev Checks a new pool's parameters are within the bounds the comptroller accepts
-    function checkPoolParams(ISpokePoolManager.PoolParams calldata params) internal pure {
-        if (
-            params.closeFactor < MIN_CLOSE_FACTOR_MANTISSA ||
-            params.closeFactor > MAX_CLOSE_FACTOR_MANTISSA ||
-            params.liquidationIncentive < MIN_LIQUIDATION_INCENTIVE_MANTISSA
-        ) {
-            revert ISpokePoolManager.InvalidPoolParams();
-        }
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -506,9 +486,15 @@ library SpokePoolRequestLib {
 
     /**
      * @dev Checks each set feed is on one of the manager's supported oracles, and on its own: one oracle holds one feed
-     *   per asset, so a second feed would replace the first. Reverts with UnsupportedOracle or InvalidOracleFeed
+     *   per asset, so a second feed would replace the first. A fallback feed needs a pivot feed, as the ResilientOracle
+     *   only uses a fallback price it can check against the pivot. Reverts with UnsupportedOracle or InvalidOracleFeed
      */
     function _checkFeedOracles(address asset, ISpokePoolManager.OracleFeed[3] memory feeds) private view {
+        // A fallback without a pivot is never used: the ResilientOracle takes a fallback price only after checking it
+        // against the pivot, so with no pivot a failed main feed has no backup
+        if (feeds[2].feed != address(0) && feeds[1].feed == address(0)) {
+            revert ISpokePoolManager.InvalidOracleFeed(asset);
+        }
         ISpokePoolManager manager = ISpokePoolManager(address(this));
         address[3] memory supportedOracles = [
             manager.supportedOracles(0),

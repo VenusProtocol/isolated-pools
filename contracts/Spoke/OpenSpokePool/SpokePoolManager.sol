@@ -38,6 +38,11 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, SpokePoolManagerStorage {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @dev Bounds of a new pool's close factor and liquidation incentive, as the comptroller accepts them
+    uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18;
+    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18;
+    uint256 internal constant MIN_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18;
+
     /// @inheritdoc ISpokePoolManager
     ResilientOracleInterface public immutable RESILIENT_ORACLE;
 
@@ -103,6 +108,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (activePools[msg.sender] != address(0)) {
             revert ActivePoolExists(msg.sender);
         }
+
         SpokePoolRequestLib.Contracts memory contracts = _contracts();
         SpokePoolRequestLib.validateTierAndBond(contracts, pool.tierId, pool.bondAsset, pool.bondAmount);
 
@@ -115,6 +121,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
         uint256[] memory requiredSeeds = SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
+
         SpokePoolRequestLib.fundSeeds(request, escrowedAmounts, msg.sender, requiredSeeds);
         SpokePoolRequestLib.escrowBond(escrowedAmounts, pool.bondAsset, msg.sender, pool.bondAmount);
 
@@ -128,11 +135,13 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         LoanMarketRequestParams[] calldata loanMarkets
     ) external nonReentrant returns (uint256 requestId) {
         uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
+
         SpokePoolRequestLib.Contracts memory contracts = _contracts();
         SpokePoolRequestLib.validateBond(contracts, comptroller, tierId);
 
         requestId = ++requestCount;
         Request storage request = _newRequest(requestId, RequestType.Markets, comptroller, tierId);
+
         _storeMarkets(request, collateralMarkets, loanMarkets);
         request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
@@ -202,6 +211,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (!_isRequestOpen(request)) {
             revert InvalidRequestStatus(requestId);
         }
+
         RequestType requestType = request.requestType;
         if (requestType != RequestType.Pool) {
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
@@ -229,6 +239,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (request.status != RequestStatus.Built || buildId != request.buildId) {
             revert InvalidBuild(buildId);
         }
+
         address comptroller = request.comptroller;
         RequestType requestType = request.requestType;
         if (requestType != RequestType.Pool) {
@@ -314,7 +325,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     function topUpBond(address comptroller, uint256 amount) external nonReentrant {
         _ensureDeployer(pools[comptroller].deployer);
         IERC20Upgradeable bondAsset = IBondAccount(bondManager.bondAccounts(comptroller)).asset();
-        // Exactly `amount` must arrive, as the bond manager pulls it from the manager, which holds other escrows
+
         uint256 balanceBefore = bondAsset.balanceOf(address(this));
         bondAsset.safeTransferFrom(msg.sender, address(this), amount);
         if (bondAsset.balanceOf(address(this)) - balanceBefore != amount) {
@@ -335,6 +346,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function releaseBond(address comptroller) external {
         _checkAccessAllowed("releaseBond(address)");
+
         // The bond stays after a close or handover, still seizable, until governance accepts the pool's remaining debt
         PoolStatus status = pools[comptroller].status;
         if (status != PoolStatus.Closed && status != PoolStatus.HandedOver) {
@@ -351,6 +363,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function requestExit(address comptroller) external {
         Pool storage pool = _ensureActiveDeployer(comptroller);
+
         // A markets or tier VIP settles only on a live pool
         uint256 latestRequestId = latestRequestIds[msg.sender];
         if (_isRequestOpen(requests[latestRequestId])) {
@@ -513,7 +526,13 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function setPoolParams(PoolParams calldata params) external {
         _checkAccessAllowed("setPoolParams(PoolParams)");
-        SpokePoolRequestLib.checkPoolParams(params);
+        if (
+            params.closeFactor < MIN_CLOSE_FACTOR_MANTISSA ||
+            params.closeFactor > MAX_CLOSE_FACTOR_MANTISSA ||
+            params.liquidationIncentive < MIN_LIQUIDATION_INCENTIVE_MANTISSA
+        ) {
+            revert InvalidPoolParams();
+        }
 
         emit PoolParamsUpdated(poolParams, params);
         poolParams = params;
