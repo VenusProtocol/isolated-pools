@@ -40,7 +40,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18;
     uint256 internal constant MIN_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18;
 
-    /// @dev RiskOracle update types of the deployer controls, which select the Risk Steward that applies them
+    /// @dev The RiskOracle update types the deployer publishes; each one selects the Risk Steward that applies it
     string internal constant COLLATERAL_FACTORS_UPDATE = "collateralFactors";
     string internal constant SUPPLY_CAP_UPDATE = "supplyCap";
     string internal constant PAUSE_ACTIONS_UPDATE = "pauseActions";
@@ -133,8 +133,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         address comptroller,
         DeployerMarketParams[] calldata markets
     ) external nonReentrant returns (uint256 requestId) {
-        _ensureActiveDeployer(comptroller);
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
+        Pool storage pool = _ensureActiveDeployer(comptroller);
         poolBuilder.validateMarkets(comptroller, pool.tierId, markets);
 
         Request storage request;
@@ -148,7 +147,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId) {
         _ensureActiveDeployer(comptroller);
-        _ensurePoolStatus(comptroller, PoolStatus.Live);
         _ensureUpgrade(comptroller, tierId);
 
         (requestId, ) = _newRequest(RequestType.Tier, comptroller, tierId);
@@ -159,9 +157,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function approveRequest(uint256 requestId) external nonReentrant {
         Request storage request = _ensureEditableRequest(requestId);
-        if (msg.sender != request.deployer) {
-            revert NotDeployer(msg.sender);
-        }
+        _ensureDeployer(request.deployer);
 
         if (!request.approved) {
             _pullSeeds(request);
@@ -173,9 +169,10 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function cancelRequest(uint256 requestId) external nonReentrant {
-        Request storage request = _ensureEditableRequest(requestId);
-        if (msg.sender != request.deployer) {
-            revert NotDeployer(msg.sender);
+        Request storage request = requests[requestId];
+        _ensureDeployer(request.deployer);
+        if (request.status != RequestStatus.Pending) {
+            revert InvalidRequestStatus(requestId);
         }
 
         _closeRequest(request, RequestStatus.Canceled);
@@ -193,15 +190,20 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         Pool storage pool = _ensureActiveDeployer(comptroller);
         _ensureCollateralMarket(comptroller, vToken);
         _ensureNoPendingUpdate(COLLATERAL_FACTORS_UPDATE, vToken);
-        (, , uint256 marketLiquidationThreshold) = SpokeComptroller(comptroller).markets(vToken);
+        (, uint256 marketCollateralFactor, uint256 marketLiquidationThreshold) = SpokeComptroller(comptroller).markets(
+            vToken
+        );
         if (collateralFactor > liquidationThreshold || liquidationThreshold < marketLiquidationThreshold) {
-            revert InvalidLiquidationThreshold(vToken);
+            revert InvalidCollateralFactors(vToken);
         }
-        ITierRegistry.PoolLimits memory limits = TIER_REGISTRY.getTier(pool.tierId).limits;
+        if (collateralFactor == marketCollateralFactor && liquidationThreshold == marketLiquidationThreshold) {
+            revert RedundantUpdate(vToken);
+        }
+        (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = TIER_REGISTRY.getTierTerms(pool.tierId);
         if (collateralFactor > limits.maxCollateralFactor || liquidationThreshold > limits.maxLiquidationThreshold) {
             revert ExceedsTierLimit(vToken);
         }
-        _checkCoverage(comptroller, pool.tierId, limits.minCoverageRatio);
+        _checkCoverage(comptroller, minBondUsd, limits.minCoverageRatio);
 
         _publishUpdate(COLLATERAL_FACTORS_UPDATE, vToken, abi.encode(collateralFactor, liquidationThreshold));
     }
@@ -211,12 +213,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         Pool storage pool = _ensureActiveDeployer(comptroller);
         _ensureCollateralMarket(comptroller, vToken);
         _ensureNoPendingUpdate(SUPPLY_CAP_UPDATE, vToken);
-        ITierRegistry.PoolLimits memory limits = TIER_REGISTRY.getTier(pool.tierId).limits;
+        if (supplyCap == SpokeComptroller(comptroller).supplyCaps(vToken)) {
+            revert RedundantUpdate(vToken);
+        }
+        (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = TIER_REGISTRY.getTierTerms(pool.tierId);
         uint256 supplyCapUsd = (supplyCap * RESILIENT_ORACLE.getUnderlyingPrice(vToken)) / EXP_SCALE;
         if (supplyCapUsd > limits.maxCollateralSupplyCapUsd) {
             revert ExceedsTierLimit(vToken);
         }
-        _checkCoverage(comptroller, pool.tierId, limits.minCoverageRatio);
+        _checkCoverage(comptroller, minBondUsd, limits.minCoverageRatio);
 
         _publishUpdate(SUPPLY_CAP_UPDATE, vToken, abi.encode(supplyCap));
     }
@@ -233,18 +238,14 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function claimBondYield(address comptroller) external nonReentrant {
-        if (msg.sender != pools[comptroller].deployer) {
-            revert NotDeployer(msg.sender);
-        }
+        _ensureDeployer(pools[comptroller].deployer);
 
         bondManager.claimYield(comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
     function topUpBond(address comptroller, uint256 amount) external nonReentrant {
-        if (msg.sender != pools[comptroller].deployer) {
-            revert NotDeployer(msg.sender);
-        }
+        _ensureDeployer(pools[comptroller].deployer);
         address bondAsset = address(IBondAccount(bondManager.bondAccounts(comptroller)).asset());
 
         // Not escrowed, as it leaves in this call
@@ -255,8 +256,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function requestExit(address comptroller) external {
-        _ensureActiveDeployer(comptroller);
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
+        Pool storage pool = _ensureActiveDeployer(comptroller);
+        // A markets or tier VIP settles only on a live pool
+        _ensureNoOpenRequest();
 
         pool.status = PoolStatus.ExitRequested;
 
@@ -304,14 +306,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (!request.approved) {
             revert RequestNotApproved(requestId);
         }
-        // A new pool's bond is checked against its tier; a live pool's bond was checked on a tier upgrade
-        if (request.requestType == RequestType.Pool) {
-            _checkBond(request.tierId, request.bondAsset, request.bondAmount);
-        } else {
+        if (request.requestType != RequestType.Pool) {
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
-        }
-        if (request.requestType == RequestType.Tier) {
-            _ensureUpgrade(request.comptroller, request.tierId);
         }
 
         uint256 buildId = ++buildCount;
@@ -335,6 +331,33 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
 
         emit RequestBuilt(requestId, buildId, vTokens);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function settleRequest(uint256 requestId, uint256 buildId) external nonReentrant {
+        _checkAccessAllowed("settleRequest(uint256,uint256)");
+        Request storage request = requests[requestId];
+        if (request.status != RequestStatus.Built || buildId != request.buildId) {
+            revert InvalidBuild(buildId);
+        }
+        address comptroller = request.comptroller;
+        if (request.requestType != RequestType.Pool) {
+            _ensurePoolStatus(comptroller, PoolStatus.Live);
+        }
+
+        request.status = RequestStatus.Settled;
+        if (request.requestType == RequestType.Pool) {
+            _activatePool(requestId, request);
+        } else if (request.requestType == RequestType.Tier) {
+            Pool storage pool = pools[comptroller];
+            emit PoolTierUpgraded(comptroller, pool.tierId, request.tierId);
+            pool.tierId = request.tierId;
+        }
+        // Transfers the seeds to the Normal Timelock, which lists the markets with them in the rest of the VIP. A no-op
+        // for a tier request, whose `markets` is empty
+        _releaseSeeds(request, msg.sender);
+
+        emit RequestSettled(requestId, comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -388,6 +411,20 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
+    function startWindDown(address comptroller, uint256 buildId) external {
+        _checkAccessAllowed("startWindDown(address,uint256)");
+        Pool storage pool = pools[comptroller];
+        if (pool.status != PoolStatus.ExitProposed || buildId != pool.exitBuildId) {
+            revert InvalidBuild(buildId);
+        }
+
+        pool.status = PoolStatus.WindingDown;
+        pool.windDownStartedAt = uint64(block.timestamp);
+
+        emit WindDownStarted(comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
     function buildForceCloseProposal(address comptroller, string calldata description) external {
         _checkAccessAllowed("buildForceCloseProposal(address,string)");
         Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
@@ -398,6 +435,19 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         exitProposals[comptroller] = poolBuilder.buildForceCloseProposal(comptroller, description);
 
         emit ForceCloseBuilt(comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function closePool(address comptroller) external {
+        _checkAccessAllowed("closePool(address)");
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
+        poolBuilder.accrueAndCheckResidualDebt(comptroller);
+
+        pool.status = PoolStatus.Closed;
+        delete activePools[pool.deployer];
+        bondManager.release(comptroller);
+
+        emit PoolClosed(comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -413,60 +463,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         pool.exitBuildId = 0;
 
         emit ExitRejected(comptroller);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function releaseBond(address comptroller) external {
-        _checkAccessAllowed("releaseBond(address)");
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
-        poolBuilder.accrueAndCheckResidualDebt(comptroller);
-
-        pool.status = PoolStatus.Closed;
-        delete activePools[pool.deployer];
-        bondManager.release(comptroller);
-
-        emit PoolClosed(comptroller);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function settleRequest(uint256 requestId, uint256 buildId) external nonReentrant {
-        _checkAccessAllowed("settleRequest(uint256,uint256)");
-        Request storage request = requests[requestId];
-        if (request.status != RequestStatus.Built || buildId != request.buildId) {
-            revert InvalidBuild(buildId);
-        }
-        address comptroller = request.comptroller;
-        if (request.requestType != RequestType.Pool) {
-            _ensurePoolStatus(comptroller, PoolStatus.Live);
-        }
-
-        request.status = RequestStatus.Settled;
-        if (request.requestType == RequestType.Pool) {
-            _activatePool(requestId, request);
-        } else if (request.requestType == RequestType.Tier) {
-            Pool storage pool = pools[comptroller];
-            emit PoolTierUpgraded(comptroller, pool.tierId, request.tierId);
-            pool.tierId = request.tierId;
-        }
-        // Transfers the seeds to the timelock, which lists the markets with them in the rest of the VIP. A no-op for a
-        // tier request, whose `markets` is empty
-        _releaseSeeds(request, msg.sender);
-
-        emit RequestSettled(requestId, comptroller);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function startWindDown(address comptroller, uint256 buildId) external {
-        _checkAccessAllowed("startWindDown(address,uint256)");
-        Pool storage pool = pools[comptroller];
-        if (pool.status != PoolStatus.ExitProposed || buildId != pool.exitBuildId) {
-            revert InvalidBuild(buildId);
-        }
-
-        pool.status = PoolStatus.WindingDown;
-        pool.windDownStartedAt = uint64(block.timestamp);
-
-        emit WindDownStarted(comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -576,7 +572,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _checkAccessAllowed("sweepToken(address,address,uint256)");
         ensureNonzeroAddress(to);
         if (amount > IERC20Upgradeable(token).balanceOf(address(this)) - escrowedAmounts[token]) {
-            revert ExceedsEscrow(token, amount);
+            revert InsufficientAmount(token, amount);
         }
 
         IERC20Upgradeable(token).safeTransfer(to, amount);
@@ -612,17 +608,13 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @dev Opens a pending request from the caller, accepted by it, unless its latest request is still open
+    /// @dev Opens a pending request from the caller, approved by it, unless its latest request is still open
     function _newRequest(
         RequestType requestType,
         address comptroller,
         uint256 tierId
     ) internal returns (uint256 requestId, Request storage request) {
-        uint256 latestRequestId = latestRequestIds[msg.sender];
-        RequestStatus latestStatus = requests[latestRequestId].status;
-        if (latestStatus == RequestStatus.Pending || latestStatus == RequestStatus.Built) {
-            revert OpenRequestExists(latestRequestId);
-        }
+        _ensureNoOpenRequest();
 
         requestId = ++requestCount;
         latestRequestIds[msg.sender] = requestId;
@@ -678,7 +670,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (request.requestType == RequestType.Pool) {
             _releaseEscrow(request.bondAsset, deployer, request.bondAmount);
         }
-        // An unapproved request's seeds were refunded at its edit
+        // An unapproved request's seeds were already refunded at its edit
         if (request.approved) {
             _releaseSeeds(request, deployer);
         }
@@ -734,45 +726,44 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @dev Checks a new pool's tier is enabled, its bond asset allowed and its bond worth what the tier requires
     function _checkBond(uint256 tierId, address bondAsset, uint256 bondAmount) internal view {
-        if (!TIER_REGISTRY.getTier(tierId).enabled) {
-            revert InvalidTier(tierId);
+        (bool enabled, uint256 minBondUsd, ) = TIER_REGISTRY.getTierTerms(tierId);
+        if (!enabled) {
+            revert TierDisabled(tierId);
         }
         (, , bool allowed, ) = bondManager.assetConfigs(bondAsset);
         if (!allowed) {
             revert InvalidBondAsset(bondAsset);
         }
-        _checkBondAmount(tierId, bondAsset, bondAmount);
+        _checkBondAmount(bondAsset, bondAmount, _requiredBondUsd(minBondUsd, bondAsset));
     }
 
     /**
-     * @dev Checks a bond amount is worth the bond a tier requires. The amount is checked, not the bond's value, which
-     *   a Hub's exit fee lowers
+     * @dev Checks a bond amount is worth the required bond. The amount is checked, not the bond's value, which a
+     *   Hub's exit fee lowers
      */
-    function _checkBondAmount(uint256 tierId, address bondAsset, uint256 bondAmount) internal view {
+    function _checkBondAmount(address bondAsset, uint256 bondAmount, uint256 requiredBondUsd) internal view {
         uint256 bondUsd = (bondAmount * RESILIENT_ORACLE.getPrice(bondAsset)) / EXP_SCALE;
-        uint256 requiredBondUsd = _requiredBondUsd(tierId, bondAsset);
         if (bondUsd < requiredBondUsd) {
             revert InsufficientBondValue(bondUsd, requiredBondUsd);
         }
     }
 
-    /**
-     * @dev Checks a tier is an upgrade of a pool's tier that the bond's principal pays for. It is priced at request and
-     *   build, never at settle, so a price move cannot revert the VIP
-     */
+    /// @dev Checks a tier is an upgrade of a pool's tier and the bond's principal pays for it, priced at request only
     function _ensureUpgrade(address comptroller, uint256 tierId) internal view {
         uint256 fromTierId = pools[comptroller].tierId;
         if (!TIER_REGISTRY.isUpgrade(fromTierId, tierId)) {
             revert NotAnUpgrade(fromTierId, tierId);
         }
+        (, uint256 minBondUsd, ) = TIER_REGISTRY.getTierTerms(tierId);
         IBondAccount bondAccount = IBondAccount(bondManager.bondAccounts(comptroller));
-        _checkBondAmount(tierId, address(bondAccount.asset()), bondAccount.principal());
+        address bondAsset = address(bondAccount.asset());
+        _checkBondAmount(bondAsset, bondAccount.principal(), _requiredBondUsd(minBondUsd, bondAsset));
     }
 
     /// @dev Checks a pool's bond is worth at least `minCoverageRatio` of the bond its tier requires
-    function _checkCoverage(address comptroller, uint256 tierId, uint256 minCoverageRatio) internal view {
+    function _checkCoverage(address comptroller, uint256 minBondUsd, uint256 minCoverageRatio) internal view {
         address bondAsset = address(IBondAccount(bondManager.bondAccounts(comptroller)).asset());
-        uint256 requiredBondUsd = _requiredBondUsd(tierId, bondAsset);
+        uint256 requiredBondUsd = _requiredBondUsd(minBondUsd, bondAsset);
         uint256 bondUsd = bondManager.getBondValueUsd(comptroller);
         if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert CoverageTooLow((bondUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);
@@ -780,24 +771,26 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @dev Returns a tier's minimum bond times a bond asset's factor, in USD
-    function _requiredBondUsd(uint256 tierId, address bondAsset) internal view returns (uint256) {
+    function _requiredBondUsd(uint256 minBondUsd, address bondAsset) internal view returns (uint256) {
         (, , , uint256 factor) = bondManager.assetConfigs(bondAsset);
-        return (TIER_REGISTRY.getTier(tierId).minBondUsd * factor) / EXP_SCALE;
+        return (minBondUsd * factor) / EXP_SCALE;
     }
 
     /**
-     * @dev Reverts while an update of a market is still on its way: the latest published one until the receiver
-     *   processes it, or the last registered one while pending, which the receiver still executes after a newer one is
-     *   published. A new update then always lands after the current values, so it is checked against them
+     * @dev Reverts while the latest update of this kind for a market can still be applied: the receiver has not
+     *   processed it, or holds it pending, and it has not expired. A new update then lands after the current values,
+     *   so it is checked against them; an expired one does not block the deployer
      */
     function _ensureNoPendingUpdate(string memory updateType, address vToken) internal view {
-        uint256 publishedId = RISK_ORACLE.getLatestUpdateIdByTypeAndMarket(updateType, vToken);
-        uint256 registeredId = RISK_STEWARD_RECEIVER.getLastRegisteredUpdate(updateType, vToken);
+        uint256 updateId = RISK_ORACLE.getLatestUpdateIdByTypeAndMarket(updateType, vToken);
+        if (updateId == 0) {
+            return;
+        }
+        IRiskStewardReceiver.UpdateStatus status = RISK_STEWARD_RECEIVER.updates(updateId).status;
         if (
-            (publishedId != 0 &&
-                RISK_STEWARD_RECEIVER.updates(publishedId).status == IRiskStewardReceiver.UpdateStatus.None) ||
-            (registeredId != 0 &&
-                RISK_STEWARD_RECEIVER.updates(registeredId).status == IRiskStewardReceiver.UpdateStatus.Pending)
+            (status == IRiskStewardReceiver.UpdateStatus.None || status == IRiskStewardReceiver.UpdateStatus.Pending) &&
+            RISK_ORACLE.getUpdateById(updateId).timestamp + RISK_STEWARD_RECEIVER.UPDATE_EXPIRATION_TIME() >=
+            block.timestamp
         ) {
             revert PreviousUpdatePending(vToken);
         }
@@ -813,18 +806,31 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Returns a pool after checking the caller is its deployer, with its controls in force
+    /// @dev Returns a live pool after checking the caller is its deployer and is not paused
     function _ensureActiveDeployer(address comptroller) internal view returns (Pool storage pool) {
         pool = pools[comptroller];
-        if (pool.deployer != msg.sender) {
-            revert NotDeployer(msg.sender);
-        }
-        PoolStatus status = pool.status;
-        if (status != PoolStatus.Live && status != PoolStatus.ExitRequested) {
+        _ensureDeployer(pool.deployer);
+        if (pool.status != PoolStatus.Live) {
             revert InvalidPoolStatus(comptroller);
         }
         if (pool.deployerPaused) {
             revert DeployerPaused(comptroller);
+        }
+    }
+
+    /// @dev Checks the caller is `deployer`
+    function _ensureDeployer(address deployer) internal view {
+        if (msg.sender != deployer) {
+            revert NotDeployer(msg.sender);
+        }
+    }
+
+    /// @dev Reverts while the caller's latest request is pending or built
+    function _ensureNoOpenRequest() internal view {
+        uint256 latestRequestId = latestRequestIds[msg.sender];
+        RequestStatus status = requests[latestRequestId].status;
+        if (status == RequestStatus.Pending || status == RequestStatus.Built) {
+            revert OpenRequestExists(latestRequestId);
         }
     }
 

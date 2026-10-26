@@ -15,6 +15,10 @@ import { IRiskStewardReceiver } from "./external/IRiskStewardReceiver.sol";
  * @notice Functions, events and errors of `SpokePoolManager`
  */
 interface ISpokePoolManager {
+    // ──────────────────────────────────────────────────────────────────────
+    // Types
+    // ──────────────────────────────────────────────────────────────────────
+
     /// @notice What a request asks for
     enum RequestType {
         Pool,
@@ -79,7 +83,7 @@ interface ISpokePoolManager {
     struct Request {
         RequestType requestType;
         RequestStatus status;
-        // Cleared by every edit until the deployer accepts the request again; the seeds are escrowed only while set
+        // Cleared by every edit until the deployer approves the request again; the seeds are escrowed only while set
         bool approved;
         address deployer;
         // Zero for a pool request until its first build
@@ -111,6 +115,10 @@ interface ISpokePoolManager {
         uint256 exitBuildId;
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Events
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Emitted when a deployer submits a request
      * @param requestId The request
@@ -126,16 +134,28 @@ interface ISpokePoolManager {
     );
 
     /**
+     * @notice Emitted when a deployer approves its request as it stands
+     * @param requestId The request
+     */
+    event RequestApproved(uint256 indexed requestId);
+
+    /**
+     * @notice Emitted when a deployer cancels its request
+     * @param requestId The request
+     */
+    event RequestCanceled(uint256 indexed requestId);
+
+    /**
+     * @notice Emitted when a deployer asks to exit its pool
+     * @param comptroller The pool's comptroller
+     */
+    event ExitRequested(address indexed comptroller);
+
+    /**
      * @notice Emitted when the Venus team edits a request
      * @param requestId The request
      */
     event RequestEdited(uint256 indexed requestId);
-
-    /**
-     * @notice Emitted when a deployer accepts its request as it stands
-     * @param requestId The request
-     */
-    event RequestApproved(uint256 indexed requestId);
 
     /**
      * @notice Emitted when a request's VIP payload is built and stored
@@ -151,18 +171,6 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      */
     event RequestSettled(uint256 indexed requestId, address indexed comptroller);
-
-    /**
-     * @notice Emitted when the Venus team rejects a request
-     * @param requestId The request
-     */
-    event RequestRejected(uint256 indexed requestId);
-
-    /**
-     * @notice Emitted when a deployer cancels its request
-     * @param requestId The request
-     */
-    event RequestCanceled(uint256 indexed requestId);
 
     /**
      * @notice Emitted when a new pool goes live and its deployer's rights start
@@ -181,17 +189,17 @@ interface ISpokePoolManager {
     event PoolTierUpgraded(address indexed comptroller, uint256 oldTierId, uint256 newTierId);
 
     /**
+     * @notice Emitted when the Venus team rejects a request
+     * @param requestId The request
+     */
+    event RequestRejected(uint256 indexed requestId);
+
+    /**
      * @notice Emitted when a pool's deployer is paused or unpaused
      * @param comptroller The pool's comptroller
      * @param paused Whether the deployer is paused
      */
     event DeployerPausedUpdated(address indexed comptroller, bool paused);
-
-    /**
-     * @notice Emitted when a deployer asks to exit its pool
-     * @param comptroller The pool's comptroller
-     */
-    event ExitRequested(address indexed comptroller);
 
     /**
      * @notice Emitted when a pool's exit VIP payload is built and stored
@@ -213,16 +221,16 @@ interface ISpokePoolManager {
     event ForceCloseBuilt(address indexed comptroller);
 
     /**
-     * @notice Emitted when the Venus team turns down a pool's exit request or built exit VIP
-     * @param comptroller The pool's comptroller
-     */
-    event ExitRejected(address indexed comptroller);
-
-    /**
      * @notice Emitted when a winding-down pool is closed and its bond released
      * @param comptroller The pool's comptroller
      */
     event PoolClosed(address indexed comptroller);
+
+    /**
+     * @notice Emitted when the Venus team turns down a pool's exit request or built exit VIP
+     * @param comptroller The pool's comptroller
+     */
+    event ExitRejected(address indexed comptroller);
 
     /**
      * @notice Emitted when a pool is handed over to governance and its bond released
@@ -287,11 +295,15 @@ interface ISpokePoolManager {
      */
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Errors
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Thrown when the caller already has an open request
-     * @param requestId The open request
+     * @notice Thrown when a RiskStewardReceiver reads another RiskOracle
+     * @param receiver The receiver
      */
-    error OpenRequestExists(uint256 requestId);
+    error InvalidRiskStewardReceiver(address receiver);
 
     /**
      * @notice Thrown when a deployer requests a pool while it has an active one
@@ -300,10 +312,16 @@ interface ISpokePoolManager {
     error ActivePoolExists(address deployer);
 
     /**
+     * @notice Thrown when the caller already has an open request
+     * @param requestId The open request
+     */
+    error OpenRequestExists(uint256 requestId);
+
+    /**
      * @notice Thrown when a tier is disabled
      * @param tierId The tier
      */
-    error InvalidTier(uint256 tierId);
+    error TierDisabled(uint256 tierId);
 
     /**
      * @notice Thrown when the bond manager does not allow a bond asset
@@ -324,41 +342,11 @@ interface ISpokePoolManager {
      */
     error TransferAmountMismatch(address token);
 
-    /// @notice Thrown when pool parameters are outside the bounds the comptroller accepts
-    error InvalidPoolParams();
-
-    /// @notice Thrown when market defaults have a zero model or block delta, or a reserve factor above 1e18
-    error InvalidMarketDefaults();
-
-    /**
-     * @notice Thrown when a request is not of a type the function accepts
-     * @param requestId The request
-     */
-    error InvalidRequestType(uint256 requestId);
-
-    /**
-     * @notice Thrown when a request is neither pending nor built
-     * @param requestId The request
-     */
-    error InvalidRequestStatus(uint256 requestId);
-
-    /**
-     * @notice Thrown when a request is built before its deployer accepted it
-     * @param requestId The request
-     */
-    error RequestNotApproved(uint256 requestId);
-
     /**
      * @notice Thrown when the caller is not the deployer of the pool or request
      * @param caller The caller
      */
     error NotDeployer(address caller);
-
-    /**
-     * @notice Thrown when a VIP carries a build that is not the latest
-     * @param buildId The build
-     */
-    error InvalidBuild(uint256 buildId);
 
     /**
      * @notice Thrown when a pool is not in a status the function accepts
@@ -373,6 +361,19 @@ interface ISpokePoolManager {
     error DeployerPaused(address comptroller);
 
     /**
+     * @notice Thrown when a tier is not an upgrade of the pool's tier
+     * @param fromTierId The pool's tier
+     * @param toTierId The target tier
+     */
+    error NotAnUpgrade(uint256 fromTierId, uint256 toTierId);
+
+    /**
+     * @notice Thrown when a request is neither pending nor built
+     * @param requestId The request
+     */
+    error InvalidRequestStatus(uint256 requestId);
+
+    /**
      * @notice Thrown when a market is not listed in the pool
      * @param vToken The market
      */
@@ -385,16 +386,22 @@ interface ISpokePoolManager {
     error InvalidMarketType(address vToken);
 
     /**
-     * @notice Thrown when a collateral factor is above its liquidation threshold, or the threshold would go down
-     * @param vToken The market
-     */
-    error InvalidLiquidationThreshold(address vToken);
-
-    /**
      * @notice Thrown when an earlier update of the same kind for a market is still being applied
      * @param vToken The market
      */
     error PreviousUpdatePending(address vToken);
+
+    /**
+     * @notice Thrown when a collateral factor is above its liquidation threshold, or the threshold would go down
+     * @param vToken The market
+     */
+    error InvalidCollateralFactors(address vToken);
+
+    /**
+     * @notice Thrown when an update would leave a market's values unchanged, which the Risk Steward refuses
+     * @param vToken The market
+     */
+    error RedundantUpdate(address vToken);
 
     /**
      * @notice Thrown when a value is above the limits of the pool's tier
@@ -410,20 +417,34 @@ interface ISpokePoolManager {
     error CoverageTooLow(uint256 coverage, uint256 minCoverageRatio);
 
     /**
-     * @notice Thrown when a tier is not an upgrade of the pool's tier
-     * @param fromTierId The pool's tier
-     * @param toTierId The target tier
+     * @notice Thrown when a request is not of a type the function accepts
+     * @param requestId The request
      */
-    error NotAnUpgrade(uint256 fromTierId, uint256 toTierId);
+    error InvalidRequestType(uint256 requestId);
+
+    /// @notice Thrown when pool parameters are outside the bounds the comptroller accepts
+    error InvalidPoolParams();
+
+    /**
+     * @notice Thrown when a request is built before its deployer approved it
+     * @param requestId The request
+     */
+    error RequestNotApproved(uint256 requestId);
+
+    /**
+     * @notice Thrown when a VIP carries a build that is not the latest
+     * @param buildId The build
+     */
+    error InvalidBuild(uint256 buildId);
+
+    /// @notice Thrown when a force close is built before the wind-down period has elapsed
+    error WindDownPeriodNotElapsed();
 
     /**
      * @notice Thrown when a market has bad debt
      * @param vToken The market
      */
     error BadDebtOutstanding(address vToken);
-
-    /// @notice Thrown when a force close is built before the wind-down period has elapsed
-    error WindDownPeriodNotElapsed();
 
     /// @notice Thrown when the bond manager is already set
     error BondManagerAlreadySet();
@@ -434,18 +455,19 @@ interface ISpokePoolManager {
      */
     error InvalidBondManager(address bondManager);
 
-    /**
-     * @notice Thrown when a RiskStewardReceiver reads another RiskOracle
-     * @param receiver The receiver
-     */
-    error InvalidRiskStewardReceiver(address receiver);
+    /// @notice Thrown when market defaults have a zero model or block delta, or a reserve factor above 1e18
+    error InvalidMarketDefaults();
 
     /**
-     * @notice Thrown when a sweep would take the bonds or seeds of open requests
+     * @notice Thrown when the manager holds less than the amount beyond its escrowed bonds and seeds
      * @param token The token
      * @param amount The amount
      */
-    error ExceedsEscrow(address token, uint256 amount);
+    error InsufficientAmount(address token, uint256 amount);
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Deployer functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Requests a new pool of a tier, pulling the bond and the seeds; both are refunded on reject or cancel
@@ -458,7 +480,7 @@ interface ISpokePoolManager {
      * @custom:event Emits RequestSubmitted
      * @custom:error ActivePoolExists is thrown while the caller has an active pool
      * @custom:error OpenRequestExists is thrown while the caller has an open request
-     * @custom:error InvalidTier is thrown when the tier is disabled
+     * @custom:error TierDisabled is thrown when the tier is disabled
      * @custom:error InvalidBondAsset is thrown when the bond manager does not allow the bond asset
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
      * @custom:error TransferAmountMismatch is thrown when a transfer delivers a different amount
@@ -510,7 +532,7 @@ interface ISpokePoolManager {
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);
 
     /**
-     * @notice Accepts the caller's request as it stands after an edit, pulling its seeds again
+     * @notice Approves the caller's request as it stands after an edit, pulling its seeds again
      * @param requestId The request
      * @custom:event Emits RequestApproved
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
@@ -521,11 +543,11 @@ interface ISpokePoolManager {
     function approveRequest(uint256 requestId) external;
 
     /**
-     * @notice Cancels the caller's request and refunds its bond and seeds; a VIP already built for it then reverts
+     * @notice Cancels the caller's request before it is built, refunding its bond and seeds
      * @param requestId The request
      * @custom:event Emits RequestCanceled
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
      * @custom:error NotDeployer is thrown when the caller is not the request's deployer
+     * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:access Only the request's deployer
      */
     function cancelRequest(uint256 requestId) external;
@@ -538,14 +560,15 @@ interface ISpokePoolManager {
      * @param liquidationThreshold The new liquidation threshold
      * @custom:event The RiskOracle emits UpdatePublished
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live, nor with an exit requested
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error MarketNotListed is thrown when the market is not listed in the pool
      * @custom:error InvalidMarketType is thrown for a loan market
-     * @custom:error PreviousUpdatePending is thrown while an earlier collateral factor update of the market is being
-     *   applied
-     * @custom:error InvalidLiquidationThreshold is thrown when the collateral factor is above the liquidation
-     *   threshold, or the liquidation threshold is below the applied one
+     * @custom:error PreviousUpdatePending is thrown while an earlier collateral factor update of the market can still
+     *   be applied
+     * @custom:error InvalidCollateralFactors is thrown when the collateral factor is above the liquidation threshold,
+     *   or the liquidation threshold is below the applied one
+     * @custom:error RedundantUpdate is thrown when both values equal the applied ones
      * @custom:error ExceedsTierLimit is thrown when either value is above the tier's limits
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:access Only the pool's deployer
@@ -564,11 +587,13 @@ interface ISpokePoolManager {
      * @param supplyCap The new supply cap
      * @custom:event The RiskOracle emits UpdatePublished
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live, nor with an exit requested
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error MarketNotListed is thrown when the market is not listed in the pool
      * @custom:error InvalidMarketType is thrown for a loan market
-     * @custom:error PreviousUpdatePending is thrown while an earlier supply cap update of the market is being applied
+     * @custom:error PreviousUpdatePending is thrown while an earlier supply cap update of the market can still be
+     *   applied
+     * @custom:error RedundantUpdate is thrown when the cap equals the applied one
      * @custom:error ExceedsTierLimit is thrown when the cap is worth more than the tier's limit
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:access Only the pool's deployer
@@ -581,7 +606,7 @@ interface ISpokePoolManager {
      * @param vToken The collateral market
      * @custom:event The RiskOracle emits UpdatePublished
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live, nor with an exit requested
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error MarketNotListed is thrown when the market is not listed in the pool
      * @custom:error InvalidMarketType is thrown for a loan market
@@ -607,24 +632,30 @@ interface ISpokePoolManager {
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error TransferAmountMismatch is thrown when the transfer delivers a different amount
      * @custom:error The bond manager's `topUp` errors
-     * @custom:error Reverts without data once the pool's bond is released
+     * @custom:error Reverts without data when the pool has no live bond, for example once it is released
      * @custom:access Only the pool's deployer
      */
     function topUpBond(address comptroller, uint256 amount) external;
 
     /**
-     * @notice Asks Venus to wind the caller's pool down or take it over; the deployer's rights continue until then
+     * @notice Asks Venus to wind the caller's pool down or hand it over to governance. The deployer's risk controls end
+     *   here; `rejectExit` gives them back
      * @param comptroller The pool's comptroller
      * @custom:event Emits ExitRequested
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
+     * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:access Only the pool's deployer
      */
     function requestExit(address comptroller) external;
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Governance functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
-     * @notice Replaces a pool or markets request's markets, and a pool request's parameters, and clears its acceptance,
+     * @notice Replaces a pool or markets request's markets, and a pool request's parameters, and clears its approval,
      *   refunding its seeds until the deployer approves it again
      * @param requestId The request
      * @param params A pool request's pool parameters; ignored for a markets request
@@ -643,22 +674,30 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Builds an accepted request's VIP under a new build id, checking it against its tier's current terms
+     * @notice Builds an approved request's VIP under a new build id. The bond was priced at request and is not priced
+     *   again
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
-     * @custom:error RequestNotApproved is thrown when the deployer has not accepted it since the last edit
-     * @custom:error InvalidTier is thrown when a pool request's tier is disabled
-     * @custom:error InvalidBondAsset is thrown when the bond manager no longer allows a pool request's bond asset
-     * @custom:error InsufficientBondValue is thrown when a pool request's bond, or a tier request's bond principal, is
-     *   worth less than the tier requires
+     * @custom:error RequestNotApproved is thrown when the deployer has not approved it since the last edit
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
-     * @custom:error NotAnUpgrade is thrown when a tier request's target is no longer an upgrade
      * @custom:error The builder's `buildRequestProposal` errors
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
     function buildRequestProposal(uint256 requestId, string calldata description) external;
+
+    /**
+     * @notice Settles a request from its VIP, sending the seeds to the caller to list the markets with
+     * @param requestId The request
+     * @param buildId The build the VIP carries; only the latest settles
+     * @custom:event Emits PoolActivated for a pool request, PoolTierUpgraded for a tier request, and RequestSettled
+     * @custom:error InvalidBuild is thrown when the request is not built, or not with this build
+     * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error The bond manager's `createBond` errors
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function settleRequest(uint256 requestId, uint256 buildId) external;
 
     /**
      * @notice Rejects a request and refunds its bond and seeds; a VIP already built for it then reverts
@@ -688,13 +727,14 @@ interface ISpokePoolManager {
     function unpauseDeployer(address comptroller) external;
 
     /**
-     * @notice Builds a pool's exit VIP under a new build id, ending the deployer's rights and voiding earlier exit VIPs
+     * @notice Builds a pool's exit VIP under a new build id; this ends the deployer's controls and voids earlier exit
+     *   VIPs
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets
      * @param description The VIP's description
      * @custom:event Emits ExitBuilt
-     * @custom:error InvalidPoolStatus is thrown when the pool is not live, nor with an exit requested or built
+     * @custom:error InvalidPoolStatus is thrown unless the pool is live or its exit is requested or built
      * @custom:error The builder's `buildExitProposal` errors
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
@@ -703,6 +743,16 @@ interface ISpokePoolManager {
         uint256[] calldata liquidationThresholds,
         string calldata description
     ) external;
+
+    /**
+     * @notice Starts a pool's wind-down; the last call of its exit VIP
+     * @param comptroller The pool's comptroller
+     * @param buildId The exit build the VIP carries; only the latest starts it
+     * @custom:event Emits WindDownStarted
+     * @custom:error InvalidBuild is thrown when the pool's exit is not built, or not with this build
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function startWindDown(address comptroller, uint256 buildId) external;
 
     /**
      * @notice Builds a winding-down pool's force-close VIP and stores it in place of the exit VIP
@@ -716,6 +766,17 @@ interface ISpokePoolManager {
     function buildForceCloseProposal(address comptroller, string calldata description) external;
 
     /**
+     * @notice Closes a winding-down pool whose residual debt is within `maxResidualPoolDebtUsd`, releasing its bond
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits PoolClosed; the bond manager emits BondReleased
+     * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
+     * @custom:error The builder's `accrueAndCheckResidualDebt` errors
+     * @custom:error The bond manager's `release` errors
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function closePool(address comptroller) external;
+
+    /**
      * @notice Turns down a pool's exit request or built exit VIP, and makes the pool live again
      * @param comptroller The pool's comptroller
      * @custom:event Emits ExitRejected
@@ -725,40 +786,7 @@ interface ISpokePoolManager {
     function rejectExit(address comptroller) external;
 
     /**
-     * @notice Closes a winding-down pool whose residual debt is within `maxResidualPoolDebtUsd`, releasing its bond
-     * @param comptroller The pool's comptroller
-     * @custom:event Emits PoolClosed; the bond manager emits BondReleased
-     * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
-     * @custom:error The builder's `accrueAndCheckResidualDebt` errors
-     * @custom:error The bond manager's `release` errors
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function releaseBond(address comptroller) external;
-
-    /**
-     * @notice Settles a request from its VIP, sending the seeds to the caller to list the markets with
-     * @param requestId The request
-     * @param buildId The build the VIP carries; only the latest settles
-     * @custom:event Emits PoolActivated for a pool request, PoolTierUpgraded for a tier request, and RequestSettled
-     * @custom:error InvalidBuild is thrown when the request is not built, or not with this build
-     * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
-     * @custom:error The bond manager's `createBond` errors
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function settleRequest(uint256 requestId, uint256 buildId) external;
-
-    /**
-     * @notice Starts a pool's wind-down; the last call of its exit VIP
-     * @param comptroller The pool's comptroller
-     * @param buildId The exit build the VIP carries; only the latest starts it
-     * @custom:event Emits WindDownStarted
-     * @custom:error InvalidBuild is thrown when the pool's exit is not built, or not with this build
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function startWindDown(address comptroller, uint256 buildId) external;
-
-    /**
-     * @notice Hands a pool over to governance: its deployer's rights end and its bond is released; the pool keeps
+     * @notice Hands a pool whose deployer requested an exit over to governance and releases its bond; the pool keeps
      *   running
      * @param comptroller The pool's comptroller
      * @custom:event Emits PoolHandedOver; the bond manager emits BondReleased
@@ -848,16 +876,20 @@ interface ISpokePoolManager {
     function setMaxResidualPoolDebtUsd(uint256 newMaxResidualPoolDebtUsd) external;
 
     /**
-     * @notice Sends tokens the manager holds beyond the bonds and seeds of open requests
+     * @notice Sends tokens the manager holds beyond the escrowed bonds and seeds
      * @param token The token
      * @param to The receiver
      * @param amount The amount
      * @custom:event Emits SweepToken
      * @custom:error ZeroAddressNotAllowed is thrown when the receiver is zero
-     * @custom:error ExceedsEscrow is thrown when the amount would take escrowed tokens
+     * @custom:error InsufficientAmount is thrown when the amount would take escrowed tokens
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function sweepToken(address token, address to, uint256 amount) external;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Returns a request

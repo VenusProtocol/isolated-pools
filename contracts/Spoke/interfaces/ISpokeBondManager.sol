@@ -9,6 +9,10 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
  * @notice Functions, events and errors of `SpokeBondManager`
  */
 interface ISpokeBondManager {
+    // ──────────────────────────────────────────────────────────────────────
+    // Types
+    // ──────────────────────────────────────────────────────────────────────
+
     /// @notice Where a bond's asset earns yield
     enum SourceType {
         Idle,
@@ -26,6 +30,10 @@ interface ISpokeBondManager {
         // Multiplies a tier's minimum bond, scaled by 1e18
         uint256 factor;
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Events
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Emitted when governance sets a bond asset's config
@@ -101,6 +109,10 @@ interface ISpokeBondManager {
         address indexed newImplementation
     );
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Errors
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @param caller The caller
@@ -145,11 +157,16 @@ interface ISpokeBondManager {
      */
     error AccountImplementationNotSet(SourceType sourceType);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // SpokePoolManager functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Creates a pool's bond account and deposits the bond in its source, or keeps it pending if refused
      * @param comptroller The pool's comptroller
      * @param bondHolder The bond holder, in whose name the bond is created
-     * @param asset The bond's asset, an allowed asset that moves exact amounts, with no fee on transfer
+     * @param asset The bond's asset, which the caller checks is allowed; it must move exact amounts, with no fee on
+     *   transfer
      * @param amount The amount, which the caller must have approved
      * @return account The bond's account
      * @custom:event Emits BondCreated; the account emits SourceDepositRefused when the source refuses the deposit
@@ -216,16 +233,9 @@ interface ISpokeBondManager {
      */
     function release(address comptroller) external returns (uint256 paidToBondHolder);
 
-    /**
-     * @notice Deposits a bond's pending deposit in its source, once the source accepts deposits again
-     * @param account The bond's account
-     * @custom:event Emits DepositRetried
-     * @custom:error NotBondAccount is thrown when the account was not created here
-     * @custom:error NothingToRetry is thrown when there is no pending deposit
-     * @custom:error SourceDepositFailed is thrown when the source refuses the deposit
-     * @custom:access Controlled by AccessControlManager
-     */
-    function retryDeposit(address account) external;
+    // ──────────────────────────────────────────────────────────────────────
+    // Permissionless functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Pays a bond's owed receivers in order, then after release its bond holder, from what the source pays now
@@ -236,6 +246,21 @@ interface ISpokeBondManager {
      * @custom:access Anyone; it only pays the queue in order, then the bond holder after release
      */
     function payReceivers(address account) external;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Governance functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Deposits a bond's pending deposit in its source, once the source accepts deposits again
+     * @param account The bond's account
+     * @custom:event Emits DepositRetried
+     * @custom:error NotBondAccount is thrown when the account was not created here
+     * @custom:error NothingToRetry is thrown when there is no pending deposit
+     * @custom:error SourceDepositFailed is thrown when the source refuses the deposit
+     * @custom:access Controlled by AccessControlManager
+     */
+    function retryDeposit(address account) external;
 
     /**
      * @notice Sets a bond asset's config; bonds already deposited keep their source
@@ -263,6 +288,10 @@ interface ISpokeBondManager {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setAccountImplementation(SourceType sourceType, address implementation) external;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Returns the most `seize` can take from a pool's bond; read before yield accrues, it may be off by dust

@@ -10,6 +10,10 @@ import { ISpokePoolManager } from "./ISpokePoolManager.sol";
  * @notice Functions, events and errors of `SpokePoolShortfall`
  */
 interface ISpokePoolShortfall {
+    // ──────────────────────────────────────────────────────────────────────
+    // Events
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Emitted when a recoverer repays bad debt and is paid from the pool's bond
      * @param comptroller The pool's comptroller
@@ -37,6 +41,10 @@ interface ISpokePoolShortfall {
      */
     event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Errors
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Thrown when a market is not listed in its pool
      * @param vToken The market
@@ -48,6 +56,10 @@ interface ISpokePoolShortfall {
      * @param token The token
      */
     error TransferAmountMismatch(address token);
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Recoverer functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Repays a market's bad debt with the caller's funds, then pays the caller its worth in the pool's bond
@@ -65,6 +77,10 @@ interface ISpokePoolShortfall {
      */
     function recoverBadDebt(VToken vToken, uint256 amount) external returns (uint256 paidNow);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Governance functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Repays a market's bad debt with Venus's own funds, once the pool's bond cannot; the bond is not touched
      * @param vToken The market
@@ -76,6 +92,10 @@ interface ISpokePoolShortfall {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function repayBadDebt(VToken vToken, uint256 amount) external;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Returns the manager whose pools' bonds pay recoverers

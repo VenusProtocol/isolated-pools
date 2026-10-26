@@ -7,9 +7,13 @@ pragma solidity ^0.8.25;
  * @notice Functions, events and errors of `TierRegistry`
  */
 interface ITierRegistry {
+    // ──────────────────────────────────────────────────────────────────────
+    // Structs
+    // ──────────────────────────────────────────────────────────────────────
+
     /// @notice A tier's limits on its pools; mantissas are scaled by 1e18
     struct PoolLimits {
-        // Below this bond value to required bond ratio, the deployer's risk setters revert
+        // The least share of the required bond the bond must be worth; below it the deployer's risk setters revert
         uint256 minCoverageRatio;
         uint256 maxCollateralFactor;
         uint256 maxLiquidationThreshold;
@@ -38,6 +42,10 @@ interface ITierRegistry {
         LoanAsset[] loanAssets;
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Events
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Emitted when a tier is set
      * @param tierId The tier
@@ -45,6 +53,10 @@ interface ITierRegistry {
      * @param newTier The new tier
      */
     event TierUpdated(uint256 indexed tierId, Tier oldTier, Tier newTier);
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Errors
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Thrown when a tier's values are zero or inconsistent
@@ -66,6 +78,10 @@ interface ITierRegistry {
      */
     error DuplicateLoanAsset(uint256 tierId, address asset);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Governance functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Sets a tier. Its pools' later deployer changes are checked against it; their live values stay as they are
      * @param tierId The tier
@@ -80,6 +96,10 @@ interface ITierRegistry {
      */
     function setTier(uint256 tierId, Tier calldata tier) external;
 
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Returns a tier
      * @param tierId The tier
@@ -88,13 +108,23 @@ interface ITierRegistry {
     function getTier(uint256 tierId) external view returns (Tier memory);
 
     /**
-     * @notice Returns whether a tier is an upgrade of a pool's tier
-     * @param fromTierId The pool's tier
-     * @param toTierId The new tier
-     * @return Whether the new tier is enabled, requires a higher minimum bond, has max limits at least as loose and
-     *   offers each of the pool tier's loan assets at a supply cap at least as high
+     * @notice Returns a tier's terms without its loan assets
+     * @param tierId The tier
+     * @return enabled Whether the tier takes new requests
+     * @return minBondUsd The bond required before the bond asset's factor, in USD scaled by 1e18
+     * @return limits The tier's pool limits
      */
-    function isUpgrade(uint256 fromTierId, uint256 toTierId) external view returns (bool);
+    function getTierTerms(
+        uint256 tierId
+    ) external view returns (bool enabled, uint256 minBondUsd, PoolLimits memory limits);
+
+    /**
+     * @notice Returns the supply cap a tier gives its pools' loan markets of an asset
+     * @param tierId The tier
+     * @param asset The loan asset
+     * @return The supply cap, in the asset's units; zero when the tier does not offer the asset
+     */
+    function getLoanSupplyCap(uint256 tierId, address asset) external view returns (uint256);
 
     /**
      * @notice Returns whether a tier lets a new loan market of an asset use an interest rate model
@@ -110,10 +140,11 @@ interface ITierRegistry {
     ) external view returns (bool);
 
     /**
-     * @notice Returns the supply cap a tier gives its pools' loan markets of an asset
-     * @param tierId The tier
-     * @param asset The loan asset
-     * @return The supply cap, in the asset's units; zero when the tier does not offer the asset
+     * @notice Returns whether a tier is an upgrade of a pool's tier
+     * @param fromTierId The pool's tier
+     * @param toTierId The new tier
+     * @return Whether the new tier is enabled, requires a higher minimum bond, has max limits at least as loose and
+     *   offers each of the pool tier's loan assets at a supply cap at least as high
      */
-    function getLoanSupplyCap(uint256 tierId, address asset) external view returns (uint256);
+    function isUpgrade(uint256 fromTierId, uint256 toTierId) external view returns (bool);
 }

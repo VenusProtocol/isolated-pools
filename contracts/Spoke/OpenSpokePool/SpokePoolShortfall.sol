@@ -65,15 +65,13 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     /// @inheritdoc ISpokePoolShortfall
     function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 paidNow) {
         _checkAccessAllowed("recoverBadDebt(address,uint256)");
-        address comptroller = _ensureListed(vToken);
-        uint256 badDebt = vToken.badDebt();
-        amount = amount < badDebt ? amount : badDebt;
+        address comptroller;
+        (comptroller, amount) = _repayBadDebt(vToken, amount);
         IBondAccount bondAccount = IBondAccount(SPOKE_POOL_MANAGER.bondManager().bondAccounts(comptroller));
         ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
         uint256 seizedAmount = (amount * resilientOracle.getUnderlyingPrice(address(vToken))) /
             resilientOracle.getPrice(address(bondAccount.asset()));
 
-        _repayBadDebt(vToken, amount);
         if (seizedAmount != 0) {
             paidNow = SPOKE_POOL_MANAGER.seizeBond(comptroller, seizedAmount, msg.sender);
         }
@@ -88,11 +86,8 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     /// @inheritdoc ISpokePoolShortfall
     function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
         _checkAccessAllowed("repayBadDebt(address,uint256)");
-        address comptroller = _ensureListed(vToken);
-        uint256 badDebt = vToken.badDebt();
-        amount = amount < badDebt ? amount : badDebt;
-
-        _repayBadDebt(vToken, amount);
+        address comptroller;
+        (comptroller, amount) = _repayBadDebt(vToken, amount);
 
         emit BadDebtRepaid(comptroller, address(vToken), msg.sender, amount);
     }
@@ -101,15 +96,22 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @dev Repays `amount` of a market's bad debt with the caller's funds; callers cap it at the bad debt
-    function _repayBadDebt(VToken vToken, uint256 amount) internal {
+    /**
+     * @dev Repays up to `amount` of a listed market's bad debt with the caller's funds
+     * @return comptroller The market's comptroller
+     * @return repaid The amount repaid, capped at the market's bad debt
+     */
+    function _repayBadDebt(VToken vToken, uint256 amount) internal returns (address comptroller, uint256 repaid) {
+        comptroller = _ensureListed(vToken);
+        uint256 badDebt = vToken.badDebt();
+        repaid = amount < badDebt ? amount : badDebt;
         IERC20Upgradeable underlying = IERC20Upgradeable(vToken.underlying());
         uint256 balanceBefore = underlying.balanceOf(address(vToken));
-        underlying.safeTransferFrom(msg.sender, address(vToken), amount);
-        if (underlying.balanceOf(address(vToken)) - balanceBefore != amount) {
+        underlying.safeTransferFrom(msg.sender, address(vToken), repaid);
+        if (underlying.balanceOf(address(vToken)) - balanceBefore != repaid) {
             revert TransferAmountMismatch(address(underlying));
         }
-        vToken.badDebtRecovered(amount);
+        vToken.badDebtRecovered(repaid);
     }
 
     /// @dev Returns a market's comptroller after checking it lists the market, so only a pool's markets reach its bond

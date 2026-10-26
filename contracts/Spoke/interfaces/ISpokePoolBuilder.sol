@@ -12,6 +12,10 @@ import { IGovernorBravo } from "./external/IGovernorBravo.sol";
  * @notice Functions and errors of `SpokePoolBuilder`
  */
 interface ISpokePoolBuilder {
+    // ──────────────────────────────────────────────────────────────────────
+    // Errors
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @param caller The caller
@@ -77,6 +81,10 @@ interface ISpokePoolBuilder {
      */
     error ResidualDebtExceeded(uint256 debtUsd);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // SpokePoolManager functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Deploys a request's contracts and builds its VIP, which settles it; a tier request deploys nothing and
      *   its VIP sets the pool's loan market caps to the new tier's
@@ -85,7 +93,7 @@ interface ISpokePoolBuilder {
      * @param description The VIP's description
      * @return comptroller The pool's comptroller, deployed on a pool request's first build
      * @return vTokens The deployed markets, in the request's market order; empty for a tier request
-     * @return proposal The payload
+     * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error The `validateMarkets` errors
      * @custom:error InsufficientSeed is thrown when a seed is worth less than the $10 minimum
@@ -101,6 +109,10 @@ interface ISpokePoolBuilder {
         string calldata description
     ) external returns (address comptroller, address[] memory vTokens, bytes memory proposal);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Permissionless functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Accrues a pool's interest and checks its borrows and bad debt against `maxResidualPoolDebtUsd`
      * @param comptroller The pool's comptroller
@@ -109,6 +121,10 @@ interface ISpokePoolBuilder {
      */
     function accrueAndCheckResidualDebt(address comptroller) external;
 
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Builds a pool's exit VIP, which freezes its markets, sets their thresholds and starts the wind-down
      * @param comptroller The pool's comptroller
@@ -116,8 +132,9 @@ interface ISpokePoolBuilder {
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets
      * @param description The VIP's description
-     * @return proposal The payload
+     * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
      * @custom:error InvalidArrayLength is thrown when the thresholds do not match the pool's listed markets
+     * @custom:access Not restricted
      */
     function buildExitProposal(
         address comptroller,
@@ -130,7 +147,8 @@ interface ISpokePoolBuilder {
      * @notice Builds a pool's force-close VIP: zero collateral factors and thresholds, forced liquidation of borrows
      * @param comptroller The pool's comptroller
      * @param description The VIP's description
-     * @return proposal The payload
+     * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
+     * @custom:access Not restricted
      */
     function buildForceCloseProposal(
         address comptroller,
@@ -152,6 +170,7 @@ interface ISpokePoolBuilder {
      *   asset
      * @custom:error ExceedsTierLimit is thrown when a collateral factor or liquidation threshold is above the
      *   tier's limits
+     * @custom:access Not restricted
      */
     function validateMarkets(
         address comptroller,

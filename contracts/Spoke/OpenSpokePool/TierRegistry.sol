@@ -26,6 +26,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
      */
     uint256[49] private __gap;
 
+    /// @notice Disables initializers on the implementation, so only proxies are initialized
     constructor() {
         _disableInitializers();
     }
@@ -87,6 +88,14 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
     /// @inheritdoc ITierRegistry
     function getTier(uint256 tierId) external view returns (Tier memory) {
         return tiers[tierId];
+    }
+
+    /// @inheritdoc ITierRegistry
+    function getTierTerms(
+        uint256 tierId
+    ) external view returns (bool enabled, uint256 minBondUsd, PoolLimits memory limits) {
+        Tier storage tier = tiers[tierId];
+        return (tier.enabled, tier.minBondUsd, tier.limits);
     }
 
     /// @inheritdoc ITierRegistry

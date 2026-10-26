@@ -11,11 +11,19 @@ import { ISpokeBondManager } from "./ISpokeBondManager.sol";
  * @notice Functions, events and errors of `BondAccount`, the account that holds one open spoke pool bond
  */
 interface IBondAccount {
+    // ──────────────────────────────────────────────────────────────────────
+    // Types
+    // ──────────────────────────────────────────────────────────────────────
+
     /// @notice A payment owed to a seizure's receiver
     struct Payment {
         address receiver;
         uint256 amount;
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Events
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Emitted when the source refuses a deposit and the amount is kept as a pending deposit
@@ -37,6 +45,10 @@ interface IBondAccount {
      */
     event PaymentQueued(address indexed receiver, uint256 amount);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Errors
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Thrown when the caller is not `BOND_MANAGER`
      * @param caller The caller
@@ -56,6 +68,10 @@ interface IBondAccount {
      */
     error InsufficientFunds(uint256 amount, uint256 available);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // Initializer
+    // ──────────────────────────────────────────────────────────────────────
+
     /**
      * @notice Initializes the account
      * @param bondHolder_ The bond holder, in whose name the bond is created
@@ -64,6 +80,10 @@ interface IBondAccount {
      * @custom:access Anyone, once; `BOND_MANAGER` initializes each clone in the transaction that creates it
      */
     function initialize(address bondHolder_, IERC20Upgradeable asset_, address source_) external;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // SpokeBondManager functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Pulls `amount` into the principal and deposits it in the source, or keeps it pending if refused
@@ -127,6 +147,10 @@ interface IBondAccount {
      * @custom:access Only `BOND_MANAGER`
      */
     function payReceivers() external;
+
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Returns whether `source_` can hold `asset_` for this kind of account; with no source, it must be zero

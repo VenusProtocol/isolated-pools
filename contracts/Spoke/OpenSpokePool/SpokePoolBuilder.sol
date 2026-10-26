@@ -309,7 +309,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
             revert InvalidArrayLength();
         }
         ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
-        ITierRegistry.PoolLimits memory limits = tierRegistry.getTier(tierId).limits;
+        (, , ITierRegistry.PoolLimits memory limits) = tierRegistry.getTierTerms(tierId);
         (uint256 poolMarketCount, uint256 collateralMarketCount) = _countPoolMarkets(comptroller);
         poolMarketCount += marketCount;
         if (poolMarketCount > MAX_POOL_MARKETS) {
@@ -331,7 +331,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @dev Deploys a new pool's comptroller with both oracles and nominates the executor, which accepts in the VIP
+    /// @dev Deploys a new pool's comptroller with both oracles; the Normal Timelock accepts its ownership in the VIP
     function _deployComptroller(address executor) internal returns (address comptroller) {
         comptroller = address(new BeaconProxy(COMPTROLLER_BEACON, ""));
         SpokeComptroller(comptroller).initialize(
@@ -356,7 +356,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
         }
     }
 
-    /// @dev Deploys a market owned by the executor; a loan market uses its requested model, collateral the default
+    /// @dev Deploys a market owned by the Normal Timelock, with a loan market's requested model or collateral's default
     function _deployMarket(
         address comptroller,
         ISpokePoolManager.DeployerMarketParams memory market,
@@ -407,7 +407,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
                 )
             );
         }
-        // Settled before the markets are listed: it sends the seeds to the executor, which lists the markets with them
+        // Settled before the listings: it sends the seeds to the Normal Timelock, which lists the markets with them
         _addAction(
             proposal,
             address(SPOKE_POOL_MANAGER),
@@ -525,7 +525,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
 
     /// @dev Runs the checks that need prices, at build, as a new collateral asset's oracle is set after the request
     function _checkMarketPrices(uint256 tierId, ISpokePoolManager.DeployerMarketParams[] memory markets) internal view {
-        ITierRegistry.PoolLimits memory limits = SPOKE_POOL_MANAGER.TIER_REGISTRY().getTier(tierId).limits;
+        (, , ITierRegistry.PoolLimits memory limits) = SPOKE_POOL_MANAGER.TIER_REGISTRY().getTierTerms(tierId);
         ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
         uint256 marketCount = markets.length;
         for (uint256 i; i < marketCount; ++i) {

@@ -8,6 +8,22 @@ pragma solidity ^0.8.25;
  * latest one
  */
 interface IRiskOracle {
+    /// @notice A published risk parameter update
+    struct RiskParameterUpdate {
+        string referenceId;
+        uint256 updateId;
+        address market;
+        string updateType;
+        bytes32 updateTypeKey;
+        bytes newValue;
+        bytes previousValue;
+        uint256 timestamp;
+        address publisher;
+        uint96 poolId;
+        uint32 destLzEid;
+        bytes additionalData;
+    }
+
     /**
      * @notice Publishes a new risk parameter update
      * @param referenceId An external reference ID associated with the update
@@ -35,4 +51,11 @@ interface IRiskOracle {
      * @return The latest update ID for the given market and update type, or 0 if none exists
      */
     function getLatestUpdateIdByTypeAndMarket(string memory updateType, address market) external view returns (uint256);
+
+    /**
+     * @notice Returns a published update
+     * @param updateId The update ID
+     * @return The update
+     */
+    function getUpdateById(uint256 updateId) external view returns (RiskParameterUpdate memory);
 }
