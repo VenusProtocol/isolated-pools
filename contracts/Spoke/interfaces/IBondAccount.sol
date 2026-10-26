@@ -11,19 +11,11 @@ import { ISpokeBondManager } from "./ISpokeBondManager.sol";
  * @notice Functions, events and errors of `BondAccount`, the account that holds one open spoke pool bond
  */
 interface IBondAccount {
-    // ──────────────────────────────────────────────────────────────────────
-    // Types
-    // ──────────────────────────────────────────────────────────────────────
-
     /// @notice A payment owed to a seizure's receiver
     struct Payment {
         address receiver;
         uint256 amount;
     }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Events
-    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Emitted when the source refuses a deposit and the amount is kept as a pending deposit
@@ -45,21 +37,11 @@ interface IBondAccount {
      */
     event PaymentQueued(address indexed receiver, uint256 amount);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Errors
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Thrown when the caller is not `BOND_MANAGER`
      * @param caller The caller
      */
     error NotBondManager(address caller);
-
-    /// @notice Thrown when there is no pending deposit to retry
-    error NothingToRetry();
-
-    /// @notice Thrown when the source refuses the pending deposit
-    error SourceDepositFailed();
 
     /**
      * @notice Thrown when a seizure asks for more than the bond holds beyond what it owes receivers
@@ -68,9 +50,11 @@ interface IBondAccount {
      */
     error InsufficientFunds(uint256 amount, uint256 available);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Initializer
-    // ──────────────────────────────────────────────────────────────────────
+    /// @notice Thrown when there is no pending deposit to retry
+    error NothingToRetry();
+
+    /// @notice Thrown when the source refuses the pending deposit
+    error SourceDepositFailed();
 
     /**
      * @notice Initializes the account
@@ -80,10 +64,6 @@ interface IBondAccount {
      * @custom:access Anyone, once; `BOND_MANAGER` initializes each clone in the transaction that creates it
      */
     function initialize(address bondHolder_, IERC20Upgradeable asset_, address source_) external;
-
-    // ──────────────────────────────────────────────────────────────────────
-    // SpokeBondManager functions
-    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Pulls `amount` into the principal and deposits it in the source, or keeps it pending if refused
@@ -120,14 +100,22 @@ interface IBondAccount {
     function seize(uint256 amount, address receiver) external returns (uint256 paidNow);
 
     /**
-     * @notice Releases the bond: owed receivers are paid first, then the bond holder, now or by `payReceivers`
-     * @return paidToBondHolder The amount paid to the bond holder now
+     * @notice Releases the bond without paying anything, so a refused payment cannot block it; `payReceivers` then pays
+     *   the owed receivers first, then the bond holder
+     * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
+     * @custom:access Only `BOND_MANAGER`
+     */
+    function release() external;
+
+    /**
+     * @notice Pays the owed receivers in order, then after release the bond holder, from what the source pays now.
+     *   After release it also starts withdrawing what is left from a source that pays after a delay
      * @custom:event Emits Paid for every payment
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
-    function release() external returns (uint256 paidToBondHolder);
+    function payReceivers() external;
 
     /**
      * @notice Retries depositing the pending deposit in the source
@@ -140,19 +128,6 @@ interface IBondAccount {
     function retryDeposit() external returns (uint256 amount);
 
     /**
-     * @notice Pays the owed receivers in order, then after release the bond holder, from what the source pays now
-     * @custom:event Emits Paid for every payment
-     * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
-     * @custom:access Only `BOND_MANAGER`
-     */
-    function payReceivers() external;
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
      * @notice Returns whether `source_` can hold `asset_` for this kind of account; with no source, it must be zero
      * @param asset_ The asset
      * @param source_ The source
@@ -161,7 +136,8 @@ interface IBondAccount {
     function isValidSource(address asset_, address source_) external view returns (bool);
 
     /**
-     * @notice Returns the principal the bond still covers: its principal, or less after a loss in the source
+     * @notice Returns the principal the bond still covers: its principal, or less after a loss in the source or net of
+     *   a Hub's exit fee
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
@@ -169,14 +145,15 @@ interface IBondAccount {
 
     /**
      * @notice Returns the most a seizure can take: what the bond holds beyond what it owes receivers. It is read before
-     *   yield accrues, so it may differ from what `seize` sees by dust
+     *   yield accrues, so `seize` may see a different amount, such as more once unclaimed XVS rewards are claimed
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
     function seizableAmount() external view returns (uint256);
 
     /**
-     * @notice Returns the SpokeBondManager, the account's only caller; clones share their implementation's
+     * @notice Returns the SpokeBondManager, the account's only caller. It is an immutable of the implementation, so
+     *   every clone has the same one
      * @return The SpokeBondManager
      */
     // solhint-disable-next-line func-name-mixedcase
@@ -213,7 +190,7 @@ interface IBondAccount {
     function principal() external view returns (uint256);
 
     /**
-     * @notice Returns the principal the source refused, held here until `retryDeposit` or a seizure spends it
+     * @notice Returns the principal the source refused, held here until `retryDeposit`, a seizure or release spends it
      * @return The amount, in the asset
      */
     function pendingDeposit() external view returns (uint256);

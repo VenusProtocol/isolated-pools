@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.25;
 
-import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-
 /**
  * @title ISpokeBondManager
  * @author Venus
  * @notice Functions, events and errors of `SpokeBondManager`
  */
 interface ISpokeBondManager {
-    // ──────────────────────────────────────────────────────────────────────
-    // Types
-    // ──────────────────────────────────────────────────────────────────────
-
     /// @notice Where a bond's asset earns yield
     enum SourceType {
         Idle,
@@ -25,23 +19,12 @@ interface ISpokeBondManager {
         SourceType sourceType;
         // The XVSVault or Hub; zero for an idle asset
         address source;
-        // False stops new pools from using the asset; live pools keep working
+        // False stops new pool requests from using the asset; live pools keep working
         bool allowed;
-        // Multiplies a tier's minimum bond, scaled by 1e18
+        // Multiplier on a tier's minimum USD bond for a bond in this asset, so a volatile asset such as XVS must
+        // cover more than a stablecoin; scaled by 1e18
         uint256 factor;
     }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Events
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Emitted when governance sets a bond asset's config
-     * @param asset The asset
-     * @param oldConfig The previous config
-     * @param newConfig The new config
-     */
-    event AssetConfigUpdated(address indexed asset, AssetConfig oldConfig, AssetConfig newConfig);
 
     /**
      * @notice Emitted when a pool's bond is created
@@ -86,9 +69,8 @@ interface ISpokeBondManager {
      * @notice Emitted when a pool's bond is released and its account detached from the pool
      * @param comptroller The pool's comptroller
      * @param account The bond's account
-     * @param paidToBondHolder The amount paid to the bond holder now; the rest is paid by `payReceivers`
      */
-    event BondReleased(address indexed comptroller, address indexed account, uint256 paidToBondHolder);
+    event BondReleased(address indexed comptroller, address indexed account);
 
     /**
      * @notice Emitted when a bond's pending deposit is retried and deposited in its source
@@ -109,9 +91,13 @@ interface ISpokeBondManager {
         address indexed newImplementation
     );
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Errors
-    // ──────────────────────────────────────────────────────────────────────
+    /**
+     * @notice Emitted when governance sets a bond asset's config
+     * @param asset The asset
+     * @param oldConfig The previous config
+     * @param newConfig The new config
+     */
+    event AssetConfigUpdated(address indexed asset, AssetConfig oldConfig, AssetConfig newConfig);
 
     /**
      * @notice Thrown when the caller is not `SPOKE_POOL_MANAGER`
@@ -138,13 +124,6 @@ interface ISpokeBondManager {
     error NotBondAccount(address account);
 
     /**
-     * @notice Thrown when a source does not fit its type or asset, its type has no account implementation, or the
-     *   factor is zero
-     * @param asset The asset
-     */
-    error InvalidAssetConfig(address asset);
-
-    /**
      * @notice Thrown when an account implementation is for another source type or another bond manager
      * @param sourceType The source type it was set for
      * @param implementation The implementation
@@ -152,14 +131,11 @@ interface ISpokeBondManager {
     error InvalidAccountImplementation(SourceType sourceType, address implementation);
 
     /**
-     * @notice Thrown when a source type has no account implementation yet
-     * @param sourceType The source type
+     * @notice Thrown when a source does not fit its type or asset, its type has no account implementation, or the
+     *   factor is zero
+     * @param asset The asset
      */
-    error AccountImplementationNotSet(SourceType sourceType);
-
-    // ──────────────────────────────────────────────────────────────────────
-    // SpokePoolManager functions
-    // ──────────────────────────────────────────────────────────────────────
+    error InvalidAssetConfig(address asset);
 
     /**
      * @notice Creates a pool's bond account and deposits the bond in its source, or keeps it pending if refused
@@ -172,7 +148,6 @@ interface ISpokeBondManager {
      * @custom:event Emits BondCreated; the account emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondAlreadyExists is thrown when the pool already has a live bond
-     * @custom:error AccountImplementationNotSet is thrown when the asset's source type has no account implementation
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function createBond(
@@ -212,33 +187,30 @@ interface ISpokeBondManager {
      * @param amount The amount to take, in the bond's asset; at most `getSeizableAmount`
      * @param receiver The receiver
      * @return paidNow The amount paid now
-     * @custom:event Emits BondSeized; the account emits Paid and PaymentQueued
+     * @custom:event Emits BondSeized; the account emits Paid for what is paid now and PaymentQueued for what is owed
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondNotFound is thrown when the pool has no live bond
-     * @custom:error InsufficientFunds is thrown by the account when the bond holds less than `amount`
+     * @custom:error InsufficientFunds is thrown by the account when the bond holds less than `amount` beyond what it
+     *   owes receivers
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function seize(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow);
 
     /**
-     * @notice Releases a pool's bond and detaches its account; owed receivers are paid first, then the bond holder
+     * @notice Releases a pool's bond and detaches its account, then pays the owed receivers first and the bond holder
+     *   what it can now. A payment the token or source refuses does not block the release; `payReceivers` retries it
      * @param comptroller The pool's comptroller
-     * @return paidToBondHolder The amount paid to the bond holder now; the rest is paid by `payReceivers`
-     * @custom:event Emits BondReleased; the account emits Paid
+     * @custom:event Emits BondReleased; the account emits Paid for what it pays now
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondNotFound is thrown when the pool has no live bond
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
-    function release(address comptroller) external returns (uint256 paidToBondHolder);
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Permissionless functions
-    // ──────────────────────────────────────────────────────────────────────
+    function release(address comptroller) external;
 
     /**
-     * @notice Pays a bond's owed receivers in order, then after release its bond holder, from what the source pays now
+     * @notice Pays a bond's owed receivers in order, then after release its bond holder, from what the source pays now.
+     *   After release it also starts withdrawing what is left from a source that pays after a delay
      * @param account The bond's account, live or released
      * @custom:event The account emits Paid for every payment
      * @custom:error NotBondAccount is thrown when the account was not created here
@@ -246,10 +218,6 @@ interface ISpokeBondManager {
      * @custom:access Anyone; it only pays the queue in order, then the bond holder after release
      */
     function payReceivers(address account) external;
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
-    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Deposits a bond's pending deposit in its source, once the source accepts deposits again
@@ -261,6 +229,19 @@ interface ISpokeBondManager {
      * @custom:access Controlled by AccessControlManager
      */
     function retryDeposit(address account) external;
+
+    /**
+     * @notice Sets the account implementation new bonds of a source type are cloned from; existing accounts keep theirs
+     * @param sourceType The source type
+     * @param implementation The implementation, whose `sourceType` must be `sourceType` and whose `BOND_MANAGER` must
+     *   be this contract
+     * @custom:event Emits AccountImplementationUpdated
+     * @custom:error ZeroAddressNotAllowed is thrown when the implementation is zero
+     * @custom:error InvalidAccountImplementation is thrown when the implementation is for another source type or
+     *   another bond manager
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function setAccountImplementation(SourceType sourceType, address implementation) external;
 
     /**
      * @notice Sets a bond asset's config; bonds already deposited keep their source
@@ -277,24 +258,8 @@ interface ISpokeBondManager {
     function setAssetConfig(address asset, AssetConfig calldata config) external;
 
     /**
-     * @notice Sets the account implementation new bonds of a source type are cloned from; existing accounts keep theirs
-     * @param sourceType The source type
-     * @param implementation The implementation, whose `sourceType` must be `sourceType` and whose `BOND_MANAGER` must
-     *   be this contract
-     * @custom:event Emits AccountImplementationUpdated
-     * @custom:error ZeroAddressNotAllowed is thrown when the implementation is zero
-     * @custom:error InvalidAccountImplementation is thrown when the implementation is for another source type or
-     *   another bond manager
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setAccountImplementation(SourceType sourceType, address implementation) external;
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Returns the most `seize` can take from a pool's bond; read before yield accrues, it may be off by dust
+     * @notice Returns the most `seize` can take from a pool's bond. It is read before yield accrues, so `seize` may
+     *   see a different amount, such as more once unclaimed XVS rewards are claimed
      * @param comptroller The pool's comptroller
      * @return The amount, in the bond's asset
      * @custom:error BondNotFound is thrown when the pool has no live bond
@@ -303,27 +268,12 @@ interface ISpokeBondManager {
     function getSeizableAmount(address comptroller) external view returns (uint256);
 
     /**
-     * @notice Returns the USD value of the principal a pool's bond still covers, net of a Hub's exit fee
-     * @param comptroller The pool's comptroller
-     * @return The value, scaled by 1e18
-     * @custom:error BondNotFound is thrown when the pool has no live bond
-     * @custom:error The source's errors when it cannot report the bond's position
-     */
-    function getBondValueUsd(address comptroller) external view returns (uint256);
-
-    /**
-     * @notice Returns the SpokePoolManager, the only caller that moves bonds
+     * @notice Returns the SpokePoolManager, the only caller of `createBond`, `topUp`, `claimYield`, `seize` and
+     *   `release`
      * @return The SpokePoolManager
      */
     // solhint-disable-next-line func-name-mixedcase
     function SPOKE_POOL_MANAGER() external view returns (address);
-
-    /**
-     * @notice Returns the oracle bonds are valued with
-     * @return The ResilientOracle
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function RESILIENT_ORACLE() external view returns (ResilientOracleInterface);
 
     /**
      * @notice Returns the account implementation that new bonds of a source type are cloned from
@@ -337,7 +287,7 @@ interface ISpokeBondManager {
      * @param asset The asset
      * @return sourceType The source type; Idle for an asset never set
      * @return source The XVSVault or Liquidity Hub; zero for Idle
-     * @return allowed Whether new pools may use the asset
+     * @return allowed Whether new pool requests may use the asset
      * @return factor The factor that multiplies a tier's minimum bond, scaled by 1e18
      */
     function assetConfigs(

@@ -13,8 +13,8 @@ import { BondAccount } from "./BondAccount.sol";
  * @title LiquidityHubBondAccount
  * @author Venus
  * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. The Hub pays as far as it is
- * liquid, and `payReceivers` pays the rest later. The position is valued net of the Hub's exit fee, and a Hub loss
- * lowers the bond's value until a recovery refills it, before any yield is paid
+ * liquid, and `payReceivers` pays the rest later. The position is valued net of the Hub's exit fee. A Hub loss lowers
+ * the bond's value, and no yield is paid until the position grows back above the principal
  * @dev Clones share this implementation's `BOND_MANAGER`
  */
 contract LiquidityHubBondAccount is BondAccount {
@@ -64,13 +64,13 @@ contract LiquidityHubBondAccount is BondAccount {
     }
 
     /**
-     * @dev Withdraws up to `amount` from the Hub as far as it is liquid; no request is needed. The whole position is
-     *   redeemed by shares, as `maxWithdraw` rounds the exit fee up and would leave a wei. The Hub's fees were accrued
-     *   this block by `_accrueYield`, so the limits read here hold
+     * @dev Withdraws up to `amount` from the Hub as far as it is liquid; no request is needed. When the whole position
+     *   is wanted, it is redeemed by shares, as `maxWithdraw` rounds the exit fee up and would leave a wei. The Hub's
+     *   fees were accrued this block by `_accrueYield`, so the limits read here hold
      */
-    function _withdrawFromSource(uint256 amount) internal override returns (uint256 withdrawn) {
+    function _withdrawFromSource(uint256 amount, uint256 inSource) internal override returns (uint256 withdrawn) {
         ILiquidityHub hub = ILiquidityHub(source);
-        if (amount >= _assetsInSource()) {
+        if (amount >= inSource) {
             uint256 shares = hub.maxRedeem(address(this));
             if (shares != 0) {
                 withdrawn = hub.redeem(shares, address(this), address(this));

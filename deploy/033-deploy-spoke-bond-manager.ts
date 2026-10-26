@@ -20,13 +20,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager);
   const owner = await toAddress(preconfiguredAddresses.NormalTimelock);
   const manager = await toAddress("SpokePoolManager");
-  const resilientOracle = await toAddress("ResilientOracle");
   const xvsPoolId = XVS_POOL_IDS[hre.getNetworkName()];
   if (xvsPoolId === undefined) {
     throw new Error(`No XVSVault pool id for XVS on ${hre.getNetworkName()}`);
   }
 
-  const args = [manager, resilientOracle];
+  const args = [manager];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
@@ -66,7 +65,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const bondManager = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [
     ["SPOKE_POOL_MANAGER", await readBackAddress(() => bondManager.SPOKE_POOL_MANAGER(), manager), manager],
-    ["RESILIENT_ORACLE", await readBackAddress(() => bondManager.RESILIENT_ORACLE(), resilientOracle), resilientOracle],
     [
       "access control manager",
       await readBackAddress(() => bondManager.accessControlManager(), accessControlManager),

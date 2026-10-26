@@ -14,9 +14,9 @@ import { ISpokeBondManager } from "../../../interfaces/ISpokeBondManager.sol";
  * @author Venus
  * @notice Holds one open spoke pool bond, kept apart from every other bond in its source; this base holds an asset
  * with no source. The yield is everything beyond the principal and what is owed to receivers, including assets sent
- * here directly, and is paid only while no receiver is owed. A seizure takes yield first, pays what is liquid now, even
- * ahead of the queue, and queues the rest for `payReceivers`, which pays in seizure order and then, after release, the
- * bond holder
+ * here directly. It is paid only while no receiver is owed. A seizure takes yield first and pays what is liquid now,
+ * even ahead of earlier seizures still owed. The rest is queued: `payReceivers` pays the queue in seizure order, then,
+ * after release, the bond holder
  * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. The
  * books are kept here: a source account overrides only the steps that talk to its source, plus `sourceType` and
  * `isValidSource`
@@ -99,10 +99,12 @@ contract BondAccount is Initializable, IBondAccount {
             return 0;
         }
         _accrueYield();
-        uint256 bondAssets = _bondAssets();
+        uint256 balance = asset.balanceOf(address(this));
+        uint256 inSource = _assetsInSource();
+        uint256 bondAssets = _bondAssets(balance, inSource);
         if (bondAssets > principal) {
             // The pending deposit is principal, so the yield comes from the rest of the balance, then the source
-            amount = _payNow(bondHolder, bondAssets - principal, asset.balanceOf(address(this)) - pendingDeposit);
+            amount = _payNow(bondHolder, bondAssets - principal, balance - pendingDeposit, inSource);
         }
     }
 
@@ -111,7 +113,9 @@ contract BondAccount is Initializable, IBondAccount {
         _accrueYield();
 
         // 1. Take the amount off the books: yield first, then principal
-        uint256 bondAssets = _bondAssets();
+        uint256 balance = asset.balanceOf(address(this));
+        uint256 inSource = _assetsInSource();
+        uint256 bondAssets = _bondAssets(balance, inSource);
         if (amount > bondAssets) {
             revert InsufficientFunds(amount, bondAssets);
         }
@@ -120,13 +124,12 @@ contract BondAccount is Initializable, IBondAccount {
             principal -= amount - yield;
         }
 
-        // 2. Pay what can be paid now: the account's balance, the pending deposit last, then the source
-        uint256 balance = asset.balanceOf(address(this));
+        // 2. Pay what can be paid now: the balance, spending the pending deposit last, then the source
         // The pending deposit is always in the balance and spent last, so whatever the payment leaves is still pending
         if (amount > balance - pendingDeposit) {
             pendingDeposit = amount < balance ? balance - amount : 0;
         }
-        paidNow = _payNow(receiver, amount, balance);
+        paidNow = _payNow(receiver, amount, balance, inSource);
 
         // 3. Owe the rest: request it from the source, and pay it by `payReceivers`
         uint256 owed = amount - paidNow;
@@ -139,68 +142,24 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function release() external onlyBondManager returns (uint256 paidToBondHolder) {
-        _accrueYield();
+    function release() external onlyBondManager {
         released = true;
         principal = 0;
         pendingDeposit = 0;
-        _requestFromSource(type(uint256).max);
-        paidToBondHolder = _payReceivers();
-    }
-
-    /// @inheritdoc IBondAccount
-    function retryDeposit() external onlyBondManager returns (uint256 amount) {
-        amount = pendingDeposit;
-        if (amount == 0) {
-            revert NothingToRetry();
-        }
-        pendingDeposit = 0;
-        if (!_depositToSource(amount)) {
-            revert SourceDepositFailed();
-        }
     }
 
     /// @inheritdoc IBondAccount
     function payReceivers() external onlyBondManager {
         _accrueYield();
-        _payReceivers();
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @inheritdoc IBondAccount
-    function isValidSource(address, address source_) external view virtual returns (bool) {
-        return source_ == address(0);
-    }
-
-    /// @inheritdoc IBondAccount
-    function value() external view returns (uint256) {
-        uint256 bondAssets = _bondAssets();
-        return bondAssets < principal ? bondAssets : principal;
-    }
-
-    /// @inheritdoc IBondAccount
-    function seizableAmount() external view returns (uint256) {
-        return _bondAssets();
-    }
-
-    /// @inheritdoc IBondAccount
-    function sourceType() public pure virtual returns (ISpokeBondManager.SourceType) {
-        return ISpokeBondManager.SourceType.Idle;
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Internal functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @dev Collects what the source pays now and pays the owed receivers in order, then after release the bond holder
-    function _payReceivers() internal returns (uint256 paidToBondHolder) {
-        uint256 needed = released ? type(uint256).max : owedToReceivers;
+        uint256 needed = owedToReceivers;
+        if (released) {
+            needed = type(uint256).max;
+            // Starts withdrawing what is left from a source that pays after a delay
+            _requestFromSource(needed);
+        }
         uint256 funds = _claimFromSource();
         if (funds < needed) {
-            funds += _withdrawFromSource(needed - funds);
+            funds += _withdrawFromSource(needed - funds, _assetsInSource());
         }
         if (released) {
             funds = asset.balanceOf(address(this));
@@ -225,18 +184,67 @@ contract BondAccount is Initializable, IBondAccount {
         owedToReceivers -= paidToReceivers;
 
         if (released && i == paymentCount) {
-            paidToBondHolder = asset.balanceOf(address(this));
-            if (paidToBondHolder != 0) {
-                _transferOut(bondHolder, paidToBondHolder);
+            uint256 remaining = asset.balanceOf(address(this));
+            if (remaining != 0) {
+                _transferOut(bondHolder, remaining);
             }
         }
     }
 
-    /// @dev Pays `receiver` up to `amount` now: up to `available` of the balance, then what the source pays at once
-    function _payNow(address receiver, uint256 amount, uint256 available) internal returns (uint256 paid) {
+    /// @inheritdoc IBondAccount
+    function retryDeposit() external onlyBondManager returns (uint256 amount) {
+        amount = pendingDeposit;
+        if (amount == 0) {
+            revert NothingToRetry();
+        }
+        pendingDeposit = 0;
+        if (!_depositToSource(amount)) {
+            revert SourceDepositFailed();
+        }
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @inheritdoc IBondAccount
+    function isValidSource(address, address source_) external view virtual returns (bool) {
+        return source_ == address(0);
+    }
+
+    /// @inheritdoc IBondAccount
+    function value() external view returns (uint256) {
+        uint256 bondAssets = _bondAssets(asset.balanceOf(address(this)), _assetsInSource());
+        return bondAssets < principal ? bondAssets : principal;
+    }
+
+    /// @inheritdoc IBondAccount
+    function seizableAmount() external view returns (uint256) {
+        return _bondAssets(asset.balanceOf(address(this)), _assetsInSource());
+    }
+
+    /// @inheritdoc IBondAccount
+    function sourceType() public pure virtual returns (ISpokeBondManager.SourceType) {
+        return ISpokeBondManager.SourceType.Idle;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Internal functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * @dev Pays `receiver` up to `amount` now: up to `available` of the balance, then what the source pays at once.
+     *   `inSource` is the position `_assetsInSource` returns
+     */
+    function _payNow(
+        address receiver,
+        uint256 amount,
+        uint256 available,
+        uint256 inSource
+    ) internal returns (uint256 paid) {
         paid = amount < available ? amount : available;
         if (paid < amount) {
-            paid += _withdrawFromSource(amount - paid);
+            paid += _withdrawFromSource(amount - paid, inSource);
         }
         if (paid != 0) {
             _transferOut(receiver, paid);
@@ -254,12 +262,15 @@ contract BondAccount is Initializable, IBondAccount {
         return true;
     }
 
-    /// @dev Brings the yield up to date, such as by claiming rewards, before the bond is valued or paid out
+    /// @dev Brings the yield up to date, such as by claiming rewards, before the account pays out
     // solhint-disable-next-line no-empty-blocks
     function _accrueYield() internal virtual {}
 
-    /// @dev Withdraws up to an amount from the source into the account, as much as the source pays at once
-    function _withdrawFromSource(uint256) internal virtual returns (uint256) {
+    /**
+     * @dev Withdraws up to an amount from the source into the account, as much as the source pays at once. The second
+     *   argument is the position `_assetsInSource` returns, so a source need not read it again
+     */
+    function _withdrawFromSource(uint256, uint256) internal virtual returns (uint256) {
         return 0;
     }
 
@@ -273,8 +284,8 @@ contract BondAccount is Initializable, IBondAccount {
     }
 
     /// @dev Returns what the bond holds beyond what it owes receivers, or zero after a loss in the source leaves less
-    function _bondAssets() internal view returns (uint256) {
-        uint256 holdings = asset.balanceOf(address(this)) + _assetsInSource();
+    function _bondAssets(uint256 balance, uint256 inSource) internal view returns (uint256) {
+        uint256 holdings = balance + inSource;
         return holdings > owedToReceivers ? holdings - owedToReceivers : 0;
     }
 

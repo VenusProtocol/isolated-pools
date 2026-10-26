@@ -6,9 +6,7 @@ import { ReentrancyGuardUpgradeable } from "@openzeppelin/contracts-upgradeable/
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
-import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
-import { EXP_SCALE } from "../../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../../lib/validators.sol";
 import { IBondAccount } from "../../interfaces/IBondAccount.sol";
 import { ISpokeBondManager } from "../../interfaces/ISpokeBondManager.sol";
@@ -16,11 +14,11 @@ import { ISpokeBondManager } from "../../interfaces/ISpokeBondManager.sol";
 /**
  * @title SpokeBondManager
  * @author Venus
- * @notice Holds the bond of every live open spoke pool, keyed by its comptroller: the first money that repays the
- * pool's bad debt. Each bond sits in its own account, a clone of its asset's source type implementation, which stakes
- * XVS in the XVSVault, deposits a stablecoin in its Liquidity Hub or simply holds the asset. A released bond's account
- * is detached from its pool and keeps paying what it owes through `payReceivers`
- * @dev Only `SPOKE_POOL_MANAGER` moves bonds
+ * @notice Holds the bond of every open spoke pool until it is released, keyed by the pool's comptroller. The bond is
+ * the first money that repays the pool's bad debt. Each bond sits in its own account, a clone of the implementation for
+ * its asset's source type: it stakes XVS in the XVSVault, deposits a stablecoin in its Liquidity Hub, or just holds
+ * the asset. A released bond's account is detached from its pool and keeps paying what it owes through `payReceivers`
+ * @dev Only `SPOKE_POOL_MANAGER` creates, tops up, claims yield from, seizes and releases bonds
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISpokeBondManager {
@@ -28,9 +26,6 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
 
     /// @inheritdoc ISpokeBondManager
     address public immutable SPOKE_POOL_MANAGER;
-
-    /// @inheritdoc ISpokeBondManager
-    ResilientOracleInterface public immutable RESILIENT_ORACLE;
 
     /// @inheritdoc ISpokeBondManager
     mapping(SourceType => address) public accountImplementations;
@@ -61,15 +56,12 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
 
     /**
      * @param spokePoolManager The manager that moves bonds
-     * @param resilientOracle The oracle bonds are valued with
-     * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
+     * @custom:error ZeroAddressNotAllowed is thrown when the manager is zero
      */
-    constructor(address spokePoolManager, ResilientOracleInterface resilientOracle) {
+    constructor(address spokePoolManager) {
         ensureNonzeroAddress(spokePoolManager);
-        ensureNonzeroAddress(address(resilientOracle));
 
         SPOKE_POOL_MANAGER = spokePoolManager;
-        RESILIENT_ORACLE = resilientOracle;
 
         _disableInitializers();
     }
@@ -99,12 +91,9 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
             revert BondAlreadyExists(comptroller);
         }
 
+        // The manager only bonds allowed assets, whose config `setAssetConfig` checked has an implementation
         AssetConfig memory assetConfig = assetConfigs[asset];
-        address implementation = accountImplementations[assetConfig.sourceType];
-        if (implementation == address(0)) {
-            revert AccountImplementationNotSet(assetConfig.sourceType);
-        }
-        account = Clones.clone(implementation);
+        account = Clones.clone(accountImplementations[assetConfig.sourceType]);
         IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetConfig.source);
         bondAccounts[comptroller] = account;
         isBondAccount[account] = true;
@@ -116,7 +105,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
 
     /// @inheritdoc ISpokeBondManager
     function topUp(address comptroller, uint256 amount) external onlySpokePoolManager nonReentrant {
-        IBondAccount account = _ensureBond(comptroller);
+        IBondAccount account = _ensureBondExists(comptroller);
 
         _fundBond(account, account.asset(), amount);
 
@@ -125,7 +114,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
 
     /// @inheritdoc ISpokeBondManager
     function claimYield(address comptroller) external onlySpokePoolManager nonReentrant returns (uint256 amount) {
-        amount = _ensureBond(comptroller).claimYield();
+        amount = _ensureBondExists(comptroller).claimYield();
 
         if (amount != 0) {
             emit YieldClaimed(comptroller, amount);
@@ -138,21 +127,22 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         uint256 amount,
         address receiver
     ) external onlySpokePoolManager nonReentrant returns (uint256 paidNow) {
-        paidNow = _ensureBond(comptroller).seize(amount, receiver);
+        paidNow = _ensureBondExists(comptroller).seize(amount, receiver);
 
         emit BondSeized(comptroller, receiver, amount, paidNow);
     }
 
     /// @inheritdoc ISpokeBondManager
-    function release(
-        address comptroller
-    ) external onlySpokePoolManager nonReentrant returns (uint256 paidToBondHolder) {
-        IBondAccount account = _ensureBond(comptroller);
+    function release(address comptroller) external onlySpokePoolManager nonReentrant {
+        IBondAccount account = _ensureBondExists(comptroller);
         delete bondAccounts[comptroller];
 
-        paidToBondHolder = account.release();
+        account.release();
+        // Pays out what it can now; a payment the token or source refuses is left for `payReceivers`, not the release
+        // solhint-disable-next-line no-empty-blocks
+        try account.payReceivers() {} catch {}
 
-        emit BondReleased(comptroller, address(account), paidToBondHolder);
+        emit BondReleased(comptroller, address(account));
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -185,6 +175,21 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     }
 
     /// @inheritdoc ISpokeBondManager
+    function setAccountImplementation(SourceType sourceType, address implementation) external {
+        _checkAccessAllowed("setAccountImplementation(uint8,address)");
+        ensureNonzeroAddress(implementation);
+        if (
+            IBondAccount(implementation).sourceType() != sourceType ||
+            IBondAccount(implementation).BOND_MANAGER() != address(this)
+        ) {
+            revert InvalidAccountImplementation(sourceType, implementation);
+        }
+
+        emit AccountImplementationUpdated(sourceType, accountImplementations[sourceType], implementation);
+        accountImplementations[sourceType] = implementation;
+    }
+
+    /// @inheritdoc ISpokeBondManager
     function setAssetConfig(address asset, AssetConfig calldata config) external {
         _checkAccessAllowed("setAssetConfig(address,AssetConfig)");
         ensureNonzeroAddress(asset);
@@ -201,34 +206,13 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         assetConfigs[asset] = config;
     }
 
-    /// @inheritdoc ISpokeBondManager
-    function setAccountImplementation(SourceType sourceType, address implementation) external {
-        _checkAccessAllowed("setAccountImplementation(uint8,address)");
-        ensureNonzeroAddress(implementation);
-        if (
-            IBondAccount(implementation).sourceType() != sourceType ||
-            IBondAccount(implementation).BOND_MANAGER() != address(this)
-        ) {
-            revert InvalidAccountImplementation(sourceType, implementation);
-        }
-
-        emit AccountImplementationUpdated(sourceType, accountImplementations[sourceType], implementation);
-        accountImplementations[sourceType] = implementation;
-    }
-
     // ──────────────────────────────────────────────────────────────────────
     // View functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokeBondManager
     function getSeizableAmount(address comptroller) external view returns (uint256) {
-        return _ensureBond(comptroller).seizableAmount();
-    }
-
-    /// @inheritdoc ISpokeBondManager
-    function getBondValueUsd(address comptroller) external view returns (uint256) {
-        IBondAccount account = _ensureBond(comptroller);
-        return (account.value() * RESILIENT_ORACLE.getPrice(address(account.asset()))) / EXP_SCALE;
+        return _ensureBondExists(comptroller).seizableAmount();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -243,7 +227,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     }
 
     /// @dev Returns a pool's live bond account
-    function _ensureBond(address comptroller) internal view returns (IBondAccount) {
+    function _ensureBondExists(address comptroller) internal view returns (IBondAccount) {
         address account = bondAccounts[comptroller];
         if (account == address(0)) {
             revert BondNotFound(comptroller);
