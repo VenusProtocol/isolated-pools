@@ -7,8 +7,8 @@ uint8 constant PROPOSAL_TYPE_NORMAL = 0;
 /**
  * @title IGovernorBravo
  * @author Venus
- * @notice The GovernorBravo functions the pool builder encodes `propose` calls for and reads the Normal route's
- * timelock and action limit from
+ * @notice The GovernorBravo functions the proposal builder uses: it encodes `propose` calls and reads the Normal
+ * route's timelock and the proposal action limit
  */
 interface IGovernorBravo {
     /**

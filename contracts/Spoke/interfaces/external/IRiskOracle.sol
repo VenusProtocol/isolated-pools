@@ -4,8 +4,8 @@ pragma solidity ^0.8.25;
 /**
  * @title IRiskOracle
  * @author Venus
- * @notice The RiskOracle functions `SpokePoolManager` uses: it publishes deployer updates and reads each market's
- * latest one
+ * @notice The RiskOracle functions `SpokePoolManager` uses: it publishes deployer updates and reads a market's latest
+ * update of a type
  */
 interface IRiskOracle {
     /// @notice A published risk parameter update

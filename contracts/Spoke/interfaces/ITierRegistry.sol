@@ -7,10 +7,6 @@ pragma solidity ^0.8.25;
  * @notice Functions, events and errors of `TierRegistry`
  */
 interface ITierRegistry {
-    // ──────────────────────────────────────────────────────────────────────
-    // Structs
-    // ──────────────────────────────────────────────────────────────────────
-
     /// @notice A tier's limits on its pools; mantissas are scaled by 1e18
     struct PoolLimits {
         // The least share of the required bond the bond must be worth; below it the deployer's risk setters revert
@@ -25,7 +21,7 @@ interface ITierRegistry {
     /// @notice A loan asset a tier offers
     struct LoanAsset {
         address asset;
-        // In the asset's units; a loan market's borrow cap and Hub resource cap equal it
+        // In the asset's units; a loan market's borrow cap and Hub resource cap are set to it too
         uint256 supplyCap;
         // The models a new loan market of the asset may pick from; a live market keeps its own
         address[] interestRateModels;
@@ -33,7 +29,7 @@ interface ITierRegistry {
 
     /// @notice A tier's bond requirement, pool limits and loan assets
     struct Tier {
-        // False stops new requests only; live pools keep working
+        // False stops new pool requests on the tier and upgrades to it; its live pools keep working
         bool enabled;
         // The bond required before the bond asset's factor, in USD scaled by 1e18
         uint256 minBondUsd;
@@ -42,10 +38,6 @@ interface ITierRegistry {
         LoanAsset[] loanAssets;
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Events
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Emitted when a tier is set
      * @param tierId The tier
@@ -53,10 +45,6 @@ interface ITierRegistry {
      * @param newTier The new tier
      */
     event TierUpdated(uint256 indexed tierId, Tier oldTier, Tier newTier);
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Errors
-    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Thrown when a tier's values are zero or inconsistent
@@ -78,10 +66,6 @@ interface ITierRegistry {
      */
     error DuplicateLoanAsset(uint256 tierId, address asset);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Sets a tier. Its pools' later deployer changes are checked against it; their live values stay as they are
      * @param tierId The tier
@@ -96,10 +80,6 @@ interface ITierRegistry {
      */
     function setTier(uint256 tierId, Tier calldata tier) external;
 
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Returns a tier
      * @param tierId The tier
@@ -110,7 +90,7 @@ interface ITierRegistry {
     /**
      * @notice Returns a tier's terms without its loan assets
      * @param tierId The tier
-     * @return enabled Whether the tier takes new requests
+     * @return enabled Whether the tier takes new pool requests and upgrades
      * @return minBondUsd The bond required before the bond asset's factor, in USD scaled by 1e18
      * @return limits The tier's pool limits
      */
