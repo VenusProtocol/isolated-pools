@@ -325,7 +325,6 @@ describe("SpokeBondManager", () => {
       expect((await xvsVault.getUserInfo(xvs.address, XVS_POOL_ID, account.address)).amount).to.equal(BOND);
       expect(await account.bondHolder()).to.equal(bondHolder.address);
       expect(await account.principal()).to.equal(BOND);
-      expect(await account.pendingDeposit()).to.equal(0);
       expect(await account.value()).to.equal(BOND);
     });
 
@@ -339,46 +338,40 @@ describe("SpokeBondManager", () => {
       const account = await createBond(idleToken);
       expect(await account.sourceType()).to.equal(SourceType.Idle);
       expect(await idleToken.balanceOf(account.address)).to.equal(BOND);
-      expect(await account.pendingDeposit()).to.equal(0);
       expect(await account.value()).to.equal(BOND);
     });
 
-    it("keeps the bond as a pending deposit while the XVSVault refuses it, and stakes it on retryDeposit", async () => {
+    it("keeps the bond in the account while the XVSVault refuses it, and stakes it on deposit", async () => {
       await xvsVault.pause();
       const tx = await bondManager
         .connect(spokePoolManager)
         .createBond(comptroller.address, bondHolder.address, xvs.address, BOND);
       const account = BondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
       await expect(tx).to.emit(account, "SourceDepositRefused").withArgs(BOND);
-      expect(await account.pendingDeposit()).to.equal(BOND);
+      expect(await xvs.balanceOf(account.address)).to.equal(BOND);
       expect(await xvs.allowance(account.address, xvsVault.address)).to.equal(0);
       expect(await account.value()).to.equal(BOND);
 
-      await expect(bondManager.retryDeposit(account.address)).to.be.revertedWithCustomError(
-        account,
-        "SourceDepositFailed",
-      );
+      await expect(bondManager.deposit(account.address)).to.emit(account, "SourceDepositRefused").withArgs(BOND);
 
       await xvsVault.resume();
-      await expect(bondManager.retryDeposit(account.address))
-        .to.emit(bondManager, "DepositRetried")
-        .withArgs(account.address, BOND);
-      expect(await account.pendingDeposit()).to.equal(0);
+      await expect(bondManager.deposit(account.address)).to.not.emit(account, "SourceDepositRefused");
+      expect(await xvs.balanceOf(account.address)).to.equal(0);
+      expect(await account.principal()).to.equal(BOND);
       expect((await xvsVault.getUserInfo(xvs.address, XVS_POOL_ID, account.address)).amount).to.equal(BOND);
-      await expect(bondManager.retryDeposit(account.address)).to.be.revertedWithCustomError(account, "NothingToRetry");
     });
 
-    it("keeps the bond as a pending deposit while its Hub is at its deposit cap", async () => {
+    it("keeps the bond in the account while its Hub is at its deposit cap", async () => {
       await hub.setDepositCap(0);
       const account = await createBond(usdt);
-      expect(await account.pendingDeposit()).to.equal(BOND);
+      expect(await usdt.balanceOf(account.address)).to.equal(BOND);
       expect(await hub.balanceOf(account.address)).to.equal(0);
     });
 
-    it("keeps the bond as a pending deposit when the source refuses it without revert data", async () => {
+    it("keeps the bond in the account when the source refuses it without revert data", async () => {
       await hub.setRevertWithoutData(true);
       const account = await createBond(usdt);
-      expect(await account.pendingDeposit()).to.equal(BOND);
+      expect(await usdt.balanceOf(account.address)).to.equal(BOND);
       expect(await usdt.allowance(account.address, hub.address)).to.equal(0);
     });
 
@@ -454,7 +447,7 @@ describe("SpokeBondManager", () => {
       expect(await account.value()).to.equal(BOND);
     });
 
-    it("pays the yield around a pending deposit, which stays principal", async () => {
+    it("pays the yield around a refused deposit, which stays principal", async () => {
       await hub.setDepositCap(0);
       const account = await createBond(usdt);
       await sendTo(usdt, account.address, "5");
@@ -462,8 +455,8 @@ describe("SpokeBondManager", () => {
       await expect(bondManager.connect(spokePoolManager).claimYield(comptroller.address))
         .to.emit(bondManager, "YieldClaimed")
         .withArgs(comptroller.address, e18("5"));
-      expect(await account.pendingDeposit()).to.equal(BOND);
       expect(await usdt.balanceOf(account.address)).to.equal(BOND);
+      expect(await account.principal()).to.equal(BOND);
     });
 
     it("pays what is sent to an account with no source as yield", async () => {
@@ -490,7 +483,7 @@ describe("SpokeBondManager", () => {
       expect(await xvs.balanceOf(bondHolder.address)).to.equal(0);
 
       await time.increase(LOCK_PERIOD);
-      await bondManager.payReceivers(account.address);
+      await bondManager.connect(recoverer).payReceiver(account.address, recoverer.address);
       await bondManager.connect(spokePoolManager).claimYield(comptroller.address);
       expect(await xvs.balanceOf(bondHolder.address)).to.equal(e18("5"));
     });
@@ -517,7 +510,7 @@ describe("SpokeBondManager", () => {
     });
 
     it("takes the XVS yield first and owes the principal until the XVSVault's lock period passes", async () => {
-      const account = await createBond(xvs);
+      const account = XVSVaultBondAccount__factory.connect((await createBond(xvs)).address, owner);
       await accrueRewards(10);
 
       await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, e18("110"), recoverer.address))
@@ -527,24 +520,24 @@ describe("SpokeBondManager", () => {
         .withArgs(recoverer.address, e18("100"));
       expect(await xvs.balanceOf(recoverer.address)).to.equal(e18("10"));
       expect(await account.principal()).to.equal(e18("900"));
-      expect(await account.owedToReceivers()).to.equal(e18("100"));
+      expect(await account.pendingSeizedAmounts(recoverer.address)).to.equal(e18("100"));
+      expect(await account.totalPendingSeizedAmount()).to.equal(e18("100"));
       expect(await account.value()).to.equal(e18("900"));
 
-      await bondManager.payReceivers(account.address);
+      await bondManager.connect(recoverer).payReceiver(account.address, recoverer.address);
       expect(await xvs.balanceOf(recoverer.address)).to.equal(e18("10"));
 
       await time.increase(LOCK_PERIOD);
-      await expect(bondManager.payReceivers(account.address))
+      await expect(bondManager.connect(recoverer).payReceiver(account.address, recoverer.address))
         .to.emit(account, "Paid")
         .withArgs(recoverer.address, e18("100"));
       expect(await xvs.balanceOf(recoverer.address)).to.equal(e18("110"));
-      expect(await account.owedToReceivers()).to.equal(0);
-      expect(await account.nextPaymentIndex()).to.equal(1);
-      expect((await account.receiverPayments(0)).amount).to.equal(0);
+      expect(await account.pendingSeizedAmounts(recoverer.address)).to.equal(0);
+      expect(await account.totalPendingSeizedAmount()).to.equal(0);
       expect(await account.value()).to.equal(e18("900"));
     });
 
-    it("spends the yield in the account before the pending deposit", async () => {
+    it("spends the yield in the account before the refused deposit", async () => {
       await xvsVault.pause();
       const account = await createBond(xvs);
       await xvsVault.resume();
@@ -554,51 +547,44 @@ describe("SpokeBondManager", () => {
         .to.emit(bondManager, "BondSeized")
         .withArgs(comptroller.address, recoverer.address, e18("100"), e18("100"));
       expect(await account.principal()).to.equal(e18("930"));
-      expect(await account.pendingDeposit()).to.equal(e18("930"));
+      expect(await xvs.balanceOf(account.address)).to.equal(e18("930"));
 
-      await bondManager.retryDeposit(account.address);
+      await bondManager.deposit(account.address);
       expect((await xvsVault.getUserInfo(xvs.address, XVS_POOL_ID, account.address)).amount).to.equal(e18("930"));
     });
 
-    it("pays a Hub seizure as far as the Hub can and owes the rest", async () => {
+    it("reverts a Hub seizure the Hub cannot pay at once, and pays it once the Hub can", async () => {
       const account = await createBond(usdt);
       await hub.setLiquidity(e18("30"));
 
       await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address))
-        .to.emit(bondManager, "BondSeized")
-        .withArgs(comptroller.address, recoverer.address, e18("100"), e18("30"))
-        .and.to.emit(account, "PaymentQueued")
-        .withArgs(recoverer.address, e18("70"));
-      expect(await usdt.balanceOf(recoverer.address)).to.equal(e18("30"));
+        .to.be.revertedWithCustomError(account, "InsufficientLiquidity")
+        .withArgs(e18("70"));
 
       await hub.setLiquidity(constants.MaxUint256);
-      await bondManager.payReceivers(account.address);
+      await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address))
+        .to.emit(bondManager, "BondSeized")
+        .withArgs(comptroller.address, recoverer.address, e18("100"), e18("100"));
       expect(await usdt.balanceOf(recoverer.address)).to.equal(e18("100"));
       expect(await account.principal()).to.equal(e18("900"));
       expect(await account.value()).to.equal(e18("900"));
     });
 
-    it("owes the whole Hub seizure while the Hub is paused", async () => {
+    it("reverts a Hub seizure while the Hub is paused", async () => {
       const account = await createBond(usdt);
       await hub.setPaused(true);
 
       await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address))
-        .to.emit(bondManager, "BondSeized")
-        .withArgs(comptroller.address, recoverer.address, e18("100"), 0);
-      expect(await account.owedToReceivers()).to.equal(e18("100"));
-
-      await hub.setPaused(false);
-      await bondManager.payReceivers(account.address);
-      expect(await usdt.balanceOf(recoverer.address)).to.equal(e18("100"));
+        .to.be.revertedWithCustomError(account, "InsufficientLiquidity")
+        .withArgs(e18("100"));
     });
 
-    it("pays a partial Hub seizure exactly, with nothing owed, after the Hub accrues its fees", async () => {
-      const account = await createBond(usdt);
+    it("pays a partial Hub seizure exactly after the Hub accrues its fees", async () => {
+      await createBond(usdt);
       await hub.setFeeSharesPerBlock(e18("10"));
 
       await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("500"), recoverer.address);
       expect(await usdt.balanceOf(recoverer.address)).to.equal(e18("500"));
-      expect(await account.owedToReceivers()).to.equal(0);
     });
 
     it("seizes the whole seizable amount of a Hub bond once the Hub has charged its fees", async () => {
@@ -613,11 +599,10 @@ describe("SpokeBondManager", () => {
         .to.emit(bondManager, "BondSeized")
         .withArgs(comptroller.address, recoverer.address, seizable, seizable);
       expect(await usdt.balanceOf(recoverer.address)).to.equal(seizable);
-      expect(await account.owedToReceivers()).to.equal(0);
       expect(await account.value()).to.be.lte(1);
     });
 
-    it("seizes a whole Hub bond net of the exit fee and owes nothing, although maxWithdraw rounds the fee up", async () => {
+    it("seizes a whole Hub bond net of the exit fee, although maxWithdraw rounds the fee up", async () => {
       await hub.setRedeemFeeBps(30);
       const account = await createBond(usdt, BOND.add(1));
       const seizable = await bondManager.getSeizableAmount(comptroller.address);
@@ -627,7 +612,6 @@ describe("SpokeBondManager", () => {
         .to.emit(bondManager, "BondSeized")
         .withArgs(comptroller.address, recoverer.address, seizable, seizable);
       expect(await usdt.balanceOf(recoverer.address)).to.equal(seizable);
-      expect(await account.owedToReceivers()).to.equal(0);
       expect(await hub.balanceOf(account.address)).to.equal(0);
     });
 
@@ -683,11 +667,11 @@ describe("SpokeBondManager", () => {
       ).to.be.revertedWithCustomError(bondManager, "BondNotFound");
 
       await time.increase(LOCK_PERIOD);
-      await bondManager.payReceivers(account.address);
+      await bondManager.connect(bondHolder).payReceiver(account.address, bondHolder.address);
       expect(await xvs.balanceOf(bondHolder.address)).to.equal(BOND.add(e18("10")));
     });
 
-    it("pays the receivers still owed before the bond holder", async () => {
+    it("keeps what the receivers are still owed from the bond holder", async () => {
       const account = await createBond(xvs);
       await accrueRewards(10);
       await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("110"), recoverer.address);
@@ -697,16 +681,17 @@ describe("SpokeBondManager", () => {
         .withArgs(comptroller.address, account.address);
 
       await time.increase(LOCK_PERIOD);
-      await expect(bondManager.payReceivers(account.address))
+      await expect(bondManager.connect(bondHolder).payReceiver(account.address, bondHolder.address))
         .to.emit(account, "Paid")
-        .withArgs(recoverer.address, e18("100"))
-        .and.to.emit(account, "Paid")
         .withArgs(bondHolder.address, e18("900"));
+      await expect(bondManager.connect(recoverer).payReceiver(account.address, recoverer.address))
+        .to.emit(account, "Paid")
+        .withArgs(recoverer.address, e18("100"));
       expect(await xvs.balanceOf(recoverer.address)).to.equal(e18("110"));
       expect(await xvs.balanceOf(account.address)).to.equal(0);
     });
 
-    it("pays a Hub bond's holder everything the Hub can pay now", async () => {
+    it("pays a Hub bond's holder everything at once", async () => {
       const account = await createBond(usdt);
       await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
         .to.emit(bondManager, "BondReleased")
@@ -715,20 +700,22 @@ describe("SpokeBondManager", () => {
       expect(await hub.balanceOf(account.address)).to.equal(0);
     });
 
-    it("releases even when the payout fails, leaving it to payReceivers", async () => {
+    it("reverts while the XVSVault is paused, and releases once it resumes", async () => {
       const account = await createBond(xvs);
       await accrueRewards(1);
       await xvsVault.pause();
 
+      await expect(bondManager.connect(spokePoolManager).release(comptroller.address)).to.be.revertedWith(
+        "Vault is paused",
+      );
+      expect(await account.released()).to.equal(false);
+
+      await xvsVault.resume();
       await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
         .to.emit(bondManager, "BondReleased")
         .withArgs(comptroller.address, account.address);
-      expect(await account.released()).to.equal(true);
-
-      await xvsVault.resume();
-      await bondManager.payReceivers(account.address);
       await time.increase(LOCK_PERIOD);
-      await bondManager.payReceivers(account.address);
+      await bondManager.connect(bondHolder).payReceiver(account.address, bondHolder.address);
       expect(await xvs.balanceOf(bondHolder.address)).to.equal(BOND.add(e18("1")));
     });
 
@@ -742,38 +729,38 @@ describe("SpokeBondManager", () => {
       expect(await bondManager.isBondAccount(oldAccount.address)).to.equal(true);
 
       await time.increase(LOCK_PERIOD);
-      await bondManager.payReceivers(oldAccount.address);
+      await bondManager.connect(bondHolder).payReceiver(oldAccount.address, bondHolder.address);
       expect(await xvs.balanceOf(bondHolder.address)).to.equal(BOND.add(e18("10")));
       expect(await newAccount.value()).to.equal(BOND);
     });
   });
 
-  describe("retryDeposit and payReceivers", () => {
-    it("retryDeposit reverts unless the caller is allowed", async () => {
+  describe("deposit and payReceiver", () => {
+    it("deposit reverts unless the caller is allowed", async () => {
       const account = await createBond(xvs);
-      await expectUnauthorized(other, "retryDeposit(address)", () =>
-        bondManager.connect(other).retryDeposit(account.address),
-      );
+      await expectUnauthorized(other, "deposit(address)", () => bondManager.connect(other).deposit(account.address));
     });
 
-    it("payReceivers pays the queue for any caller", async () => {
-      const account = await createBond(xvs);
+    it("payReceiver pays a receiver only what it is owed, whoever calls, with no role", async () => {
+      const account = XVSVaultBondAccount__factory.connect((await createBond(xvs)).address, owner);
       await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address);
-      const owed = await account.owedToReceivers();
+      const owed = await account.pendingSeizedAmounts(recoverer.address);
       await time.increase(LOCK_PERIOD);
       acm.isAllowedToCall.returns(false);
 
-      await expect(bondManager.connect(other).payReceivers(account.address))
+      await expect(bondManager.connect(other).payReceiver(account.address, other.address)).to.not.emit(account, "Paid");
+      await expect(bondManager.connect(other).payReceiver(account.address, recoverer.address))
         .to.emit(account, "Paid")
         .withArgs(recoverer.address, owed);
-      expect(await account.owedToReceivers()).to.equal(0);
+      expect(await account.totalPendingSeizedAmount()).to.equal(0);
     });
 
     it("revert on an account not created here", async () => {
-      for (const call of [bondManager.retryDeposit, bondManager.payReceivers]) {
-        await expect(call(other.address))
-          .to.be.revertedWithCustomError(bondManager, "NotBondAccount")
-          .withArgs(other.address);
+      for (const call of [
+        () => bondManager.deposit(other.address),
+        () => bondManager.payReceiver(other.address, other.address),
+      ]) {
+        await expect(call()).to.be.revertedWithCustomError(bondManager, "NotBondAccount").withArgs(other.address);
       }
     });
   });
