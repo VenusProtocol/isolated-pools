@@ -1,3 +1,9 @@
+## 4.4.0-dev.12 (2026-10-26)
+
+* Merge pull request #572 from kalen1446-byte/fix/seize-precision-isolated-pools ([c3bbf96](https://github.com/VenusProtocol/isolated-pools/commit/c3bbf96)), closes [#572](https://github.com/VenusProtocol/isolated-pools/issues/572)
+* test(comptroller): cover seize precision for 24-decimal debt tokens ([db53d40](https://github.com/VenusProtocol/isolated-pools/commit/db53d40)), closes [hi#priced](https://github.com/hi/issues/priced)
+* fix(comptroller): compute seize tokens with a single division ([28ae4c6](https://github.com/VenusProtocol/isolated-pools/commit/28ae4c6)), closes [VenusProtocol/venus-protocol#714](https://github.com/VenusProtocol/venus-protocol/issues/714) [VenusProtocol/venus-protocol#713](https://github.com/VenusProtocol/venus-protocol/issues/713)
+
 ## 4.4.0-dev.11 (2026-10-26)
 
 * Merge branch 'develop' into feat/hub-spoke-pools ([52ac015](https://github.com/VenusProtocol/isolated-pools/commit/52ac015))
