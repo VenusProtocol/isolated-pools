@@ -1,17 +1,37 @@
+# Foundry runs only the fuzz and invariant tests under tests/foundry. Hardhat still builds, tests and deploys the rest.
 [profile.default]
-test = 'tests/foundry'
+# Pointing `src` at the tests compiles only the contracts they import.
+src = "tests/foundry"
+test = "tests/foundry"
 # Not the default here: with Hardhat's artifacts/ present, Foundry would write into it.
-out = 'out'
-cache_path = 'cache-foundry'
-
-# Matches the 0.8.25 compiler in hardhat.config.ts, so the tests run the bytecode that ships.
-evm_version = 'paris'
+out = "out"
+# `cache/` belongs to Hardhat.
+cache_path = "cache-foundry"
+libs = ["node_modules", "lib"]
+# forge-std comes from the lib/forge-std submodule, mapped in remappings.txt.
+remappings = [
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "@venusprotocol/=node_modules/@venusprotocol/",
+]
+solc_version = "0.8.25"
 optimizer = true
+optimizer_runs = 200
+# Hardhat compiles for `paris`, but Foundry runs tests on the EVM version it compiles for, and the published
+# DeviationBoundedOracle uses TSTORE/TLOAD, which `paris` does not have.
+evm_version = "cancun"
+# Same size override as hardhat.config.ts: SpokeComptroller exceeds EIP-170 at 200 runs.
+additional_compiler_profiles = [{ name = "size", optimizer_runs = 30 }]
+compilation_restrictions = [{ paths = "contracts/Spoke/SpokeComptroller.sol", optimizer_runs = 30 }]
+# Runs every top-level call as its own transaction. Otherwise a whole test is one transaction, and the bounded
+# oracle's transient price cache hides every price change after the first read.
+isolate = true
+# The bounded oracle is deployed from its published artifact.
+fs_permissions = [{ access = "read", path = "./node_modules/@venusprotocol/oracle/artifacts" }]
 
-# The edit-loop budget for future invariant suites; CI overrides it below.
+# The edit-loop budget for invariant suites; CI overrides it below. Set FOUNDRY_INVARIANT_DEPTH for a deeper pass.
 [profile.default.invariant]
 runs = 64
-depth = 32
+depth = 100
 
 # Everything not set here is inherited from the default profile.
 [profile.ci]
