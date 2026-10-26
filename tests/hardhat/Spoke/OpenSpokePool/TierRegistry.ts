@@ -184,6 +184,18 @@ describe("TierRegistry", () => {
       await registry.setTier(1, { ...tier, loanAssets: [usdtAsset, usdcAsset] });
     });
 
+    it("returns a tier's terms without its loan assets, and zeros for an unset tier", async () => {
+      const [enabled, minBondUsd, limits] = await registry.getTierTerms(1);
+      expect(enabled).to.equal(true);
+      expect(minBondUsd).to.equal(tier.minBondUsd);
+      expect(limits).to.deep.equal(Object.values(LIMITS));
+
+      const [unsetEnabled, unsetMinBondUsd, unsetLimits] = await registry.getTierTerms(2);
+      expect(unsetEnabled).to.equal(false);
+      expect(unsetMinBondUsd).to.equal(0);
+      expect(unsetLimits).to.deep.equal([0, 0, 0, 0, 0]);
+    });
+
     it("returns a loan asset's supply cap, and zero for an asset the tier does not offer", async () => {
       expect(await registry.getLoanSupplyCap(1, usdt.address)).to.equal(usdtAsset.supplyCap);
       expect(await registry.getLoanSupplyCap(1, usdc.address)).to.equal(usdcAsset.supplyCap);
