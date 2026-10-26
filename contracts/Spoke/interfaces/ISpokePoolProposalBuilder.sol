@@ -115,13 +115,6 @@ interface ISpokePoolProposalBuilder {
     function DEVIATION_BOUNDED_ORACLE() external view returns (IDeviationBoundedOracle);
 
     /**
-     * @notice Returns the oracle a new collateral asset's Chainlink feed is set on, the asset's main oracle
-     * @return The ChainlinkOracle
-     */
-    // solhint-disable-next-line func-name-mixedcase
-    function CHAINLINK_ORACLE() external view returns (address);
-
-    /**
      * @notice Returns the Hub adapter loan markets are registered with
      * @return The adapter
      */

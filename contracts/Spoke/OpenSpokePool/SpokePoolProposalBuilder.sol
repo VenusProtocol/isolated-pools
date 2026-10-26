@@ -11,7 +11,7 @@ import { InterestRateModel } from "../../InterestRateModel.sol";
 import { PoolRegistry } from "../../Pool/PoolRegistry.sol";
 import { VToken } from "../../VToken.sol";
 import { VTokenInterface } from "../../VTokenInterfaces.sol";
-import { EXP_SCALE } from "../../lib/constants.sol";
+import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
@@ -34,8 +34,9 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups' `addResource`, `raiseResourceCap` and
  * `lowerResourceCap` (it already holds the other comptroller setters and `setReduceReservesBlockDelta`); to the Risk
  * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the supply pause steward on `setCollateralFactor`
- * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `setTokenConfig` on the
- * ChainlinkOracle, the ResilientOracle and the DeviationBoundedOracle, to price a new collateral asset
+ * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `setTokenConfig` on every supported
+ * oracle, the ResilientOracle and the DeviationBoundedOracle, and `setValidateConfig` on the BoundValidator, to price
+ * a new collateral asset
  */
 contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev VIP actions being assembled, with room for a fixed number of them
@@ -56,11 +57,12 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     uint256 internal constant POOL_CREATION_ACTIONS = 3;
 
     /**
-     * @dev Most actions a VIP adds per new market: approve, `addMarket`, burn, `setReduceReservesBlockDelta`, and a
-     *   loan market's `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `addResource` and `lowerResourceCap`. A
-     *   collateral market adds at most three oracle configs instead
+     * @dev Most actions a VIP adds per new market: approve, `addMarket`, burn and `setReduceReservesBlockDelta`, plus a
+     *   collateral market's oracle configs, at most six: three feeds, the BoundValidator, the ResilientOracle and the
+     *   DeviationBoundedOracle. A loan market adds four instead: `setSupplyAllowlistEnabled`, `setAllowedSupplier`,
+     *   `addResource` and `lowerResourceCap`
      */
-    uint256 internal constant MAX_ACTIONS_PER_MARKET = 8;
+    uint256 internal constant MAX_ACTIONS_PER_MARKET = 10;
 
     /// @dev Actions of an exit VIP besides one per collateral market
     uint256 internal constant EXIT_ACTIONS = 4;
@@ -82,9 +84,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
     /// @inheritdoc ISpokePoolProposalBuilder
     IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
-
-    /// @inheritdoc ISpokePoolProposalBuilder
-    address public immutable CHAINLINK_ORACLE;
 
     /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable SPOKE_ADAPTER;
@@ -109,7 +108,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
      * @param governorBravo The governor the VIPs are proposed to
      * @param poolRegistry The registry new pools are listed in
      * @param deviationBoundedOracle The oracle that bounds collateral prices
-     * @param chainlinkOracle The oracle a new collateral asset's Chainlink feed is set on, the asset's main oracle
      * @param spokeAdapter The Hub adapter loan markets are registered with
      * @param comptrollerBeacon The beacon the comptroller proxies point at
      * @param vTokenBeacon The beacon the vToken proxies point at
@@ -125,7 +123,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         IGovernorBravo governorBravo,
         address poolRegistry,
         IDeviationBoundedOracle deviationBoundedOracle,
-        address chainlinkOracle,
         address spokeAdapter,
         address comptrollerBeacon,
         address vTokenBeacon,
@@ -137,7 +134,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         ensureNonzeroAddress(address(governorBravo));
         ensureNonzeroAddress(poolRegistry);
         ensureNonzeroAddress(address(deviationBoundedOracle));
-        ensureNonzeroAddress(chainlinkOracle);
         ensureNonzeroAddress(spokeAdapter);
         ensureNonzeroAddress(comptrollerBeacon);
         ensureNonzeroAddress(vTokenBeacon);
@@ -153,7 +149,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         GOVERNOR_BRAVO = governorBravo;
         POOL_REGISTRY = poolRegistry;
         DEVIATION_BOUNDED_ORACLE = deviationBoundedOracle;
-        CHAINLINK_ORACLE = chainlinkOracle;
         SPOKE_ADAPTER = spokeAdapter;
         COMPTROLLER_BEACON = comptrollerBeacon;
         VTOKEN_BEACON = vTokenBeacon;
@@ -303,7 +298,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 collateralCount = request.collateralMarkets.length;
         uint256 marketCount = collateralCount + request.loanMarkets.length;
         vTokens = new address[](marketCount);
-        (address collateralInterestRateModel, , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (address collateralInterestRateModel, , , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
         for (uint256 i; i < collateralCount; ++i) {
             vTokens[i] = _deployMarket(
                 comptroller,
@@ -314,7 +309,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             );
         }
         for (uint256 i; i < request.loanMarkets.length; ++i) {
-            ISpokePoolManager.LoanMarketParams memory market = request.loanMarkets[i];
+            ISpokePoolManager.LoanMarketRequestParams memory market = request.loanMarkets[i];
             vTokens[collateralCount + i] = _deployMarket(
                 comptroller,
                 poolName,
@@ -336,7 +331,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address interestRateModel,
         address executor
     ) internal returns (address vToken) {
-        (, uint256 reserveFactor, , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (, uint256 reserveFactor, , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
         string memory assetSymbol = IERC20MetadataUpgradeable(asset).symbol();
         vToken = address(new BeaconProxy(VTOKEN_BEACON, ""));
         VToken(vToken).initialize(
@@ -388,7 +383,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         );
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
-            ISpokePoolManager.CollateralMarketParams memory market = request.collateralMarkets[i];
+            ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
             _addOracleConfigs(proposal, market);
             _addMarketListing(
                 proposal,
@@ -427,12 +422,14 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /**
-     * @dev Adds a collateral asset's oracle configs with Venus's parameters, skipping each oracle that has the asset
-     *   already: its Chainlink feed as the ResilientOracle's only oracle, then its DeviationBoundedOracle config
+     * @dev Adds a collateral asset's oracle configs with Venus's parameters. Unless the ResilientOracle prices the asset
+     *   already: each set feed on its own oracle, the BoundValidator's bounds when a pivot or fallback feed is set, and the
+     *   ResilientOracle config with each set feed's oracle enabled. Then its DeviationBoundedOracle config, unless that
+     *   oracle has the asset already
      */
     function _addOracleConfigs(
         Proposal memory proposal,
-        ISpokePoolManager.CollateralMarketParams memory market
+        ISpokePoolManager.CollateralMarketRequestParams memory market
     ) internal view {
         address asset = market.asset;
         (
@@ -442,25 +439,46 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             uint256 maxStalePeriod,
             uint64 cooldownPeriod,
             uint256 triggerThreshold,
-            uint256 resetThreshold
+            uint256 resetThreshold,
+            uint256 boundDeviation
         ) = SPOKE_POOL_MANAGER.marketParams();
-        address resilientOracle = address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE());
-        if (IResilientOracle(resilientOracle).getTokenConfig(asset).asset == address(0)) {
+        IResilientOracle resilientOracle = IResilientOracle(address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE()));
+        if (resilientOracle.getTokenConfig(asset).asset == address(0)) {
+            // The manager checked each set feed's oracle is one it supports and differs from the others
+            address[3] memory oracles;
+            bool[3] memory enabled;
+            for (uint256 i; i < 3; ++i) {
+                ISpokePoolManager.OracleFeed memory feed = market.feeds[i];
+                if (feed.feed == address(0)) {
+                    continue;
+                }
+                oracles[i] = feed.oracle;
+                enabled[i] = true;
+                _addAction(
+                    proposal,
+                    feed.oracle,
+                    "setTokenConfig((address,address,uint256))",
+                    abi.encode(asset, feed.feed, maxStalePeriod)
+                );
+            }
+            // The ResilientOracle checks the main and fallback prices against the pivot, and each other
+            if (enabled[1] || enabled[2]) {
+                _addAction(
+                    proposal,
+                    resilientOracle.boundValidator(),
+                    "setValidateConfig((address,uint256,uint256))",
+                    abi.encode(asset, MANTISSA_ONE + boundDeviation, MANTISSA_ONE - boundDeviation)
+                );
+            }
             _addAction(
                 proposal,
-                CHAINLINK_ORACLE,
-                "setTokenConfig((address,address,uint256))",
-                abi.encode(asset, market.feed, maxStalePeriod)
-            );
-            _addAction(
-                proposal,
-                resilientOracle,
+                address(resilientOracle),
                 "setTokenConfig((address,address[3],bool[3],bool))",
                 abi.encode(
                     IResilientOracle.TokenConfig({
                         asset: asset,
-                        oracles: [CHAINLINK_ORACLE, address(0), address(0)],
-                        enableFlagsForOracles: [true, false, false],
+                        oracles: oracles,
+                        enableFlagsForOracles: enabled,
                         cachingEnabled: false
                     })
                 )
@@ -503,7 +521,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address vToken = address(input.vToken);
         uint256 seedVTokens = (input.initialSupply * EXP_SCALE) / VToken(vToken).exchangeRateStored();
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(address(0), seedVTokens));
-        (, , uint256 reduceReservesBlockDelta, , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (, , uint256 reduceReservesBlockDelta, , , , , ) = SPOKE_POOL_MANAGER.marketParams();
         _addAction(proposal, vToken, "setReduceReservesBlockDelta(uint256)", abi.encode(reduceReservesBlockDelta));
     }
 

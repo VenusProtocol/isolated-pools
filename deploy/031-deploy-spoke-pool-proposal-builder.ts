@@ -8,9 +8,9 @@ import { readBackAddress, readBackUntil, sameAddress, toAddress, verifyDeploymen
 
 const DEPLOYMENT_NAME = "SpokePoolProposalBuilder";
 
-// The constructor rejects a value whose pool-creation VIP would not fit GovernorBravo's action limit: 12 at most with
-// 100 actions
-const MAX_POOL_MARKETS = 10;
+// The constructor rejects a value whose pool-creation VIP would not fit GovernorBravo's action limit: 9 at most with
+// 100 actions, as a collateral market takes up to 10
+const MAX_POOL_MARKETS = 9;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -28,7 +28,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const governorBravo = await toAddress(preconfiguredAddresses.GovernorBravo);
   const poolRegistry = await toAddress("SpokePoolRegistry");
   const deviationBoundedOracle = await toAddress("DeviationBoundedOracle");
-  const chainlinkOracle = await toAddress("ChainlinkOracle");
   const spokeAdapter = await toAddress(preconfiguredAddresses.SpokeAdapter);
   const comptrollerBeacon = await toAddress("SpokeComptrollerBeacon");
   const vTokenBeacon = await toAddress("SpokeVTokenBeacon");
@@ -40,7 +39,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     governorBravo,
     poolRegistry,
     deviationBoundedOracle,
-    chainlinkOracle,
     spokeAdapter,
     comptrollerBeacon,
     vTokenBeacon,
@@ -67,7 +65,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       await readBackAddress(() => builder.DEVIATION_BOUNDED_ORACLE(), deviationBoundedOracle),
       deviationBoundedOracle,
     ],
-    ["CHAINLINK_ORACLE", await readBackAddress(() => builder.CHAINLINK_ORACLE(), chainlinkOracle), chainlinkOracle],
     ["SPOKE_ADAPTER", await readBackAddress(() => builder.SPOKE_ADAPTER(), spokeAdapter), spokeAdapter],
     [
       "COMPTROLLER_BEACON",

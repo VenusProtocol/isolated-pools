@@ -63,10 +63,13 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     /// @inheritdoc ISpokePoolManager
     mapping(address => bytes) public exitProposals;
 
+    /// @inheritdoc ISpokePoolManager
+    address[3] public supportedOracles;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[25] private __gap;
+    uint256[22] private __gap;
 }

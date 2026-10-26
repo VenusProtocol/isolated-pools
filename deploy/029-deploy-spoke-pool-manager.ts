@@ -31,18 +31,23 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
-  const library = await deploy("SpokePoolManagerLib", {
-    from: deployer,
-    log: true,
-    autoMine: true,
-    skipIfAlreadyDeployed: true,
-  });
-  await verifyDeployment(hre, "SpokePoolManagerLib", library, []);
+  // The manager's linked libraries: request checks and escrow, risk updates, and VIP builds
+  const libraries: Record<string, string> = {};
+  for (const name of ["SpokePoolRequestLib", "SpokePoolRiskLib", "SpokePoolProposalLib"]) {
+    const library = await deploy(name, {
+      from: deployer,
+      log: true,
+      autoMine: true,
+      skipIfAlreadyDeployed: true,
+    });
+    await verifyDeployment(hre, name, library, []);
+    libraries[name] = library.address;
+  }
 
   const deployment: DeployResult = await deploy(DEPLOYMENT_NAME, {
     from: deployer,
     args,
-    libraries: { SpokePoolManagerLib: library.address },
+    libraries,
     proxy: {
       owner,
       proxyContract: "OptimizedTransparentUpgradeableProxy",
