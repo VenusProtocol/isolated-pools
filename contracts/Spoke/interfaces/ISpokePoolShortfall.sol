@@ -17,7 +17,7 @@ interface ISpokePoolShortfall {
      * @param recoverer The account that repaid the bad debt
      * @param amount The bad debt repaid, in the market's asset
      * @param seizedAmount The amount taken from the bond for the recoverer, in the bond's asset
-     * @param paidNow The part of it paid now; the rest is paid by the bond manager's `payReceivers`
+     * @param paidNow The part of it paid now; the bond manager's `payReceiver` pays the rest of an XVSVault bond
      */
     event BadDebtRecovered(
         address indexed comptroller,

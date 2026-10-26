@@ -11,14 +11,8 @@ import { ISpokeBondManager } from "./ISpokeBondManager.sol";
  * @notice Functions, events and errors of `BondAccount`, the account that holds one open spoke pool bond
  */
 interface IBondAccount {
-    /// @notice A payment owed to a seizure's receiver
-    struct Payment {
-        address receiver;
-        uint256 amount;
-    }
-
     /**
-     * @notice Emitted when the source refuses a deposit and the amount is kept as a pending deposit
+     * @notice Emitted when the source refuses a deposit; the amount stays in the account until a later deposit
      * @param amount The amount kept
      */
     event SourceDepositRefused(uint256 amount);
@@ -31,7 +25,7 @@ interface IBondAccount {
     event Paid(address indexed receiver, uint256 amount);
 
     /**
-     * @notice Emitted when part of a seizure cannot be paid at once
+     * @notice Emitted when an account whose source pays later owes part of a seizure to its receiver
      * @param receiver The seizure's receiver
      * @param amount The amount owed
      */
@@ -50,11 +44,11 @@ interface IBondAccount {
      */
     error InsufficientFunds(uint256 amount, uint256 available);
 
-    /// @notice Thrown when there is no pending deposit to retry
-    error NothingToRetry();
-
-    /// @notice Thrown when the source refuses the pending deposit
-    error SourceDepositFailed();
+    /**
+     * @notice Thrown when the source cannot pay a seizure or the release at once
+     * @param amount The part it cannot pay
+     */
+    error InsufficientLiquidity(uint256 amount);
 
     /**
      * @notice Initializes the account
@@ -66,8 +60,9 @@ interface IBondAccount {
     function initialize(address bondHolder_, IERC20Upgradeable asset_, address source_) external;
 
     /**
-     * @notice Pulls `amount` into the principal and deposits it in the source, or keeps it pending if refused
-     * @param amount The amount, which `BOND_MANAGER` must have approved
+     * @notice Adds `amount`, which `BOND_MANAGER` sent here, to the principal, then deposits the account's balance
+     *   beyond what it owes receivers in the source, keeping it here if refused; nothing is deposited after release
+     * @param amount The amount; zero only retries depositing the balance
      * @custom:event Emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:access Only `BOND_MANAGER`
@@ -75,8 +70,8 @@ interface IBondAccount {
     function deposit(uint256 amount) external;
 
     /**
-     * @notice Pays the yield, everything beyond the principal, to the bond holder: from the balance beyond the pending
-     *   deposit first, then the source; nothing is paid while a receiver is still owed
+     * @notice Pays the yield, everything beyond the principal, to the bond holder: from the balance first, then the
+     *   source; nothing is paid while a receiver is still owed
      * @return amount The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
@@ -86,46 +81,42 @@ interface IBondAccount {
     function claimYield() external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from the bond, yield first, and pays `receiver` what is liquid now, even ahead of earlier
-     *   seizures still owed; the rest, such as XVS principal in its lock period, is owed and paid by `payReceivers`
+     * @notice Takes `amount` from the bond, yield first, and pays `receiver` what is liquid now. An XVSVault account owes
+     *   the rest, such as XVS in its lock period, and pays it by `payReceiver`; any other account reverts
      * @param amount The amount to take
      * @param receiver The receiver
      * @return paidNow The amount paid now
      * @custom:event Emits Paid for what is paid now and PaymentQueued for what is owed
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error InsufficientFunds is thrown when the bond holds less than `amount` beyond what it owes receivers
+     * @custom:error InsufficientLiquidity is thrown when an account other than an XVSVault one cannot pay it all now
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
     function seize(uint256 amount, address receiver) external returns (uint256 paidNow);
 
     /**
-     * @notice Releases the bond without paying anything, so a refused payment cannot block it; `payReceivers` then pays
-     *   the owed receivers first, then the bond holder
+     * @notice Releases the bond and pays the bond holder everything at once; an XVSVault account instead requests its
+     *   whole stake, which `payReceiver` pays the bond holder after the lock period
+     * @custom:event Emits Paid when the bond holder is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
+     * @custom:error InsufficientLiquidity is thrown when an account other than an XVSVault one cannot pay it all now
+     * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
     function release() external;
 
     /**
-     * @notice Pays the owed receivers in order, then after release the bond holder, from what the source pays now.
-     *   After release it also starts withdrawing what is left from a source that pays after a delay
+     * @notice Pays `receiver` what the account owes it, as far as matured XVSVault withdrawals and the balance allow;
+     *   after release the bond holder receives the balance beyond what unpaid seizures still hold. A no-op for accounts
+     *   that never owe
+     * @param receiver The receiver
      * @custom:event Emits Paid for every payment
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
-    function payReceivers() external;
-
-    /**
-     * @notice Retries depositing the pending deposit in the source
-     * @return amount The amount deposited
-     * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
-     * @custom:error NothingToRetry is thrown when there is no pending deposit
-     * @custom:error SourceDepositFailed is thrown when the source refuses the deposit
-     * @custom:access Only `BOND_MANAGER`
-     */
-    function retryDeposit() external returns (uint256 amount);
+    function payReceiver(address receiver) external;
 
     /**
      * @notice Returns whether `source_` can hold `asset_` for this kind of account; with no source, it must be zero
@@ -188,32 +179,6 @@ interface IBondAccount {
      * @return The principal, in the asset
      */
     function principal() external view returns (uint256);
-
-    /**
-     * @notice Returns the principal the source refused, held here until `retryDeposit`, a seizure or release spends it
-     * @return The amount, in the asset
-     */
-    function pendingDeposit() external view returns (uint256);
-
-    /**
-     * @notice Returns the total still owed to seizure receivers
-     * @return The amount, in the asset
-     */
-    function owedToReceivers() external view returns (uint256);
-
-    /**
-     * @notice Returns the index in `receiverPayments` of the next payment to make; every earlier one is made
-     * @return The index
-     */
-    function nextPaymentIndex() external view returns (uint256);
-
-    /**
-     * @notice Returns a payment owed to a seizure receiver, in seizure order; a made payment has a zero amount
-     * @param index The payment's index
-     * @return receiver The receiver
-     * @return amount The amount still owed
-     */
-    function receiverPayments(uint256 index) external view returns (address receiver, uint256 amount);
 
     /**
      * @notice Returns the kind of source this account puts the bond to work in

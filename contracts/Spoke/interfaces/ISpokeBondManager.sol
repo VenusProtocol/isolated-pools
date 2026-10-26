@@ -61,7 +61,7 @@ interface ISpokeBondManager {
      * @param comptroller The pool's comptroller
      * @param receiver The receiver
      * @param amount The amount taken from the bond
-     * @param paidNow The part of it paid now; the rest is paid by `payReceivers`
+     * @param paidNow The part of it paid now; an XVSVault account pays the rest by `payReceiver`
      */
     event BondSeized(address indexed comptroller, address indexed receiver, uint256 amount, uint256 paidNow);
 
@@ -71,13 +71,6 @@ interface ISpokeBondManager {
      * @param account The bond's account
      */
     event BondReleased(address indexed comptroller, address indexed account);
-
-    /**
-     * @notice Emitted when a bond's pending deposit is retried and deposited in its source
-     * @param account The bond's account
-     * @param amount The amount deposited
-     */
-    event DepositRetried(address indexed account, uint256 amount);
 
     /**
      * @notice Emitted when the account implementation of a source type changes
@@ -138,7 +131,7 @@ interface ISpokeBondManager {
     error InvalidAssetConfig(address asset);
 
     /**
-     * @notice Creates a pool's bond account and deposits the bond in its source, or keeps it pending if refused
+     * @notice Creates a pool's bond account and deposits the bond in its source, or keeps it in the account if refused
      * @param comptroller The pool's comptroller
      * @param bondHolder The bond holder, in whose name the bond is created
      * @param asset The bond's asset, which the caller checks is allowed; it must move exact amounts, with no fee on
@@ -158,7 +151,7 @@ interface ISpokeBondManager {
     ) external returns (address account);
 
     /**
-     * @notice Adds to a pool's bond and deposits it in the bond's source, or keeps it pending if refused
+     * @notice Adds to a pool's bond and deposits it in the bond's source, or keeps it in the account if refused
      * @param comptroller The pool's comptroller
      * @param amount The amount, in the bond's asset, which the caller must have approved
      * @custom:event Emits BondToppedUp; the account emits SourceDepositRefused when the source refuses the deposit
@@ -181,8 +174,8 @@ interface ISpokeBondManager {
     function claimYield(address comptroller) external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from a pool's bond, yield first, and pays `receiver` what is liquid now, even ahead of
-     *   earlier seizures still owed; the rest is owed and paid by `payReceivers`
+     * @notice Takes `amount` from a pool's bond, yield first, and pays `receiver` what is liquid now. An XVSVault
+     *   account owes the rest and pays it by `payReceiver`; any other account reverts
      * @param comptroller The pool's comptroller
      * @param amount The amount to take, in the bond's asset; at most `getSeizableAmount`
      * @param receiver The receiver
@@ -192,43 +185,48 @@ interface ISpokeBondManager {
      * @custom:error BondNotFound is thrown when the pool has no live bond
      * @custom:error InsufficientFunds is thrown by the account when the bond holds less than `amount` beyond what it
      *   owes receivers
+     * @custom:error InsufficientLiquidity is thrown by an account other than an XVSVault one that cannot pay it all now
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function seize(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow);
 
     /**
-     * @notice Releases a pool's bond and detaches its account, then pays the owed receivers first and the bond holder
-     *   what it can now. A payment the token or source refuses does not block the release; `payReceivers` retries it
+     * @notice Releases a pool's bond and detaches its account, which pays the bond holder everything at once. An
+     *   XVSVault account requests its whole stake instead, which `payReceiver` pays the bond holder after the lock
+     *   period
      * @param comptroller The pool's comptroller
-     * @custom:event Emits BondReleased; the account emits Paid for what it pays now
+     * @custom:event Emits BondReleased; the account emits Paid when it pays the bond holder
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondNotFound is thrown when the pool has no live bond
+     * @custom:error InsufficientLiquidity is thrown by an account other than an XVSVault one that cannot pay it all now
+     * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function release(address comptroller) external;
 
     /**
-     * @notice Pays a bond's owed receivers in order, then after release its bond holder, from what the source pays now.
-     *   After release it also starts withdrawing what is left from a source that pays after a delay
+     * @notice Pays a receiver what a bond's XVSVault account owes it, as far as matured withdrawals and its balance
+     *   allow; after release the bond holder receives the balance beyond what unpaid seizures still hold. A no-op for
+     *   other accounts
      * @param account The bond's account, live or released
+     * @param receiver The receiver
      * @custom:event The account emits Paid for every payment
      * @custom:error NotBondAccount is thrown when the account was not created here
      * @custom:error The source's errors, such as the XVSVault's while it is paused
-     * @custom:access Anyone; it only pays the queue in order, then the bond holder after release
+     * @custom:access Anyone; it pays only what is owed, to whom it is owed
      */
-    function payReceivers(address account) external;
+    function payReceiver(address account, address receiver) external;
 
     /**
-     * @notice Deposits a bond's pending deposit in its source, once the source accepts deposits again
+     * @notice Deposits a bond account's balance beyond what it owes receivers in its source, such as a refused deposit
+     *   once the source accepts deposits again; a no-op when there is none or the bond is released
      * @param account The bond's account
-     * @custom:event Emits DepositRetried
+     * @custom:event The account emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotBondAccount is thrown when the account was not created here
-     * @custom:error NothingToRetry is thrown when there is no pending deposit
-     * @custom:error SourceDepositFailed is thrown when the source refuses the deposit
      * @custom:access Controlled by AccessControlManager
      */
-    function retryDeposit(address account) external;
+    function deposit(address account) external;
 
     /**
      * @notice Sets the account implementation new bonds of a source type are cloned from; existing accounts keep theirs

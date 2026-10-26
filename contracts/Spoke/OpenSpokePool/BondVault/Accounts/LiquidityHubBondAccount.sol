@@ -12,9 +12,9 @@ import { BondAccount } from "./BondAccount.sol";
 /**
  * @title LiquidityHubBondAccount
  * @author Venus
- * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. The Hub pays as far as it is
- * liquid, and `payReceivers` pays the rest later. The position is valued net of the Hub's exit fee. A Hub loss lowers
- * the bond's value, and no yield is paid until the position grows back above the principal
+ * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. A seizure or the release
+ * reverts when the Hub cannot pay it at once. The position is valued net of the Hub's exit fee. A Hub loss lowers the
+ * bond's value, and no yield is paid until the position grows back above the principal
  * @dev Clones share this implementation's `BOND_MANAGER`
  */
 contract LiquidityHubBondAccount is BondAccount {
@@ -26,6 +26,19 @@ contract LiquidityHubBondAccount is BondAccount {
      */
     // solhint-disable-next-line no-empty-blocks
     constructor(address bondManager) BondAccount(bondManager) {}
+
+    // ──────────────────────────────────────────────────────────────────────
+    // SpokeBondManager functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @inheritdoc IBondAccount
+    function seize(uint256 amount, address receiver) external override onlyBondManager returns (uint256 paidNow) {
+        (uint256 balance, uint256 inSource) = _recordSeizure(amount);
+        paidNow = _payNow(receiver, amount, balance, inSource);
+        if (paidNow < amount) {
+            revert InsufficientLiquidity(amount - paidNow);
+        }
+    }
 
     // ──────────────────────────────────────────────────────────────────────
     // View functions

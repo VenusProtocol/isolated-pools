@@ -17,7 +17,8 @@ import { ISpokeBondManager } from "../../interfaces/ISpokeBondManager.sol";
  * @notice Holds the bond of every open spoke pool until it is released, keyed by the pool's comptroller. The bond is
  * the first money that repays the pool's bad debt. Each bond sits in its own account, a clone of the implementation for
  * its asset's source type: it stakes XVS in the XVSVault, deposits a stablecoin in its Liquidity Hub, or just holds
- * the asset. A released bond's account is detached from its pool and keeps paying what it owes through `payReceivers`
+ * the asset. A released bond's account is detached from its pool; an XVSVault one keeps paying what it owes through
+ * `payReceiver`
  * @dev Only `SPOKE_POOL_MANAGER` creates, tops up, claims yield from, seizes and releases bonds
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
@@ -138,9 +139,6 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         delete bondAccounts[comptroller];
 
         account.release();
-        // Pays out what it can now; a payment the token or source refuses is left for `payReceivers`, not the release
-        // solhint-disable-next-line no-empty-blocks
-        try account.payReceivers() {} catch {}
 
         emit BondReleased(comptroller, address(account));
     }
@@ -150,12 +148,12 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokeBondManager
-    function payReceivers(address account) external nonReentrant {
+    function payReceiver(address account, address receiver) external nonReentrant {
         if (!isBondAccount[account]) {
             revert NotBondAccount(account);
         }
 
-        IBondAccount(account).payReceivers();
+        IBondAccount(account).payReceiver(receiver);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -163,15 +161,13 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokeBondManager
-    function retryDeposit(address account) external nonReentrant {
-        _checkAccessAllowed("retryDeposit(address)");
+    function deposit(address account) external nonReentrant {
+        _checkAccessAllowed("deposit(address)");
         if (!isBondAccount[account]) {
             revert NotBondAccount(account);
         }
 
-        uint256 amount = IBondAccount(account).retryDeposit();
-
-        emit DepositRetried(account, amount);
+        IBondAccount(account).deposit(0);
     }
 
     /// @inheritdoc ISpokeBondManager
@@ -219,10 +215,9 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @dev Pulls `amount` from the caller and lets the bond's account pull it into the bond
+    /// @dev Sends `amount` from the caller to the bond's account, which adds it to the principal and deposits it
     function _fundBond(IBondAccount account, IERC20Upgradeable asset, uint256 amount) internal {
-        asset.safeTransferFrom(msg.sender, address(this), amount);
-        asset.forceApprove(address(account), amount);
+        asset.safeTransferFrom(msg.sender, address(account), amount);
         account.deposit(amount);
     }
 
