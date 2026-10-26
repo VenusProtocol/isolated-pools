@@ -32,7 +32,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    function deposit(uint256 amount) external override onlyBondManager {
+    function deposit(uint256 amount) external onlyBondManager {
         principal += amount;
         uint256 balance = asset.balanceOf(address(this));
         if (released || balance == 0) {
@@ -48,7 +48,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function claimYield() external override onlyBondManager returns (uint256 amount) {
+    function claimYield() external onlyBondManager returns (uint256 amount) {
         _accrueFees();
         (uint256 balance, uint256 inHub) = _holdings();
         uint256 bondAssets = balance + inHub;
@@ -58,7 +58,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function seize(uint256 amount, address receiver) external override onlyBondManager returns (uint256 paidNow) {
+    function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
         _accrueFees();
         (uint256 balance, uint256 inHub) = _holdings();
         _recordSeizure(amount, balance + inHub);
@@ -69,7 +69,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function release() external override onlyBondManager {
+    function release() external onlyBondManager {
         released = true;
         principal = 0;
         _accrueFees();
@@ -86,12 +86,12 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    function isValidSource(address asset_, address source_) external view override returns (bool) {
+    function isValidSource(address asset_, address source_) external view returns (bool) {
         return source_ != address(0) && ILiquidityHub(source_).asset() == asset_;
     }
 
     /// @inheritdoc IBondAccount
-    function sourceType() public pure override returns (ISpokeBondManager.SourceType) {
+    function sourceType() external pure returns (ISpokeBondManager.SourceType) {
         return ISpokeBondManager.SourceType.LiquidityHub;
     }
 

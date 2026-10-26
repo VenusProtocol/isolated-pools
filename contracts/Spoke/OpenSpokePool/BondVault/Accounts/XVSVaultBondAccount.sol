@@ -45,7 +45,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    function deposit(uint256 amount) external override onlyBondManager {
+    function deposit(uint256 amount) external onlyBondManager {
         principal += amount;
         uint256 free = _freeAssets(asset.balanceOf(address(this)));
         if (released || free == 0) {
@@ -61,7 +61,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function claimYield() external override onlyBondManager returns (uint256 amount) {
+    function claimYield() external onlyBondManager returns (uint256 amount) {
         _claimRewards();
         uint256 balance = asset.balanceOf(address(this));
         uint256 bondAssets = _bondAssets();
@@ -74,7 +74,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function seize(uint256 amount, address receiver) external override onlyBondManager returns (uint256 paidNow) {
+    function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
         _claimRewards();
         uint256 balance = asset.balanceOf(address(this));
         _recordSeizure(amount, _bondAssets());
@@ -91,7 +91,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function release() external override onlyBondManager {
+    function release() external onlyBondManager {
         released = true;
         principal = 0;
         _requestWithdrawal(type(uint256).max);
@@ -124,7 +124,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    function isValidSource(address asset_, address source_) external view override returns (bool) {
+    function isValidSource(address asset_, address source_) external view returns (bool) {
         if (source_ == address(0) || IXVSVault(source_).xvsAddress() != asset_) {
             return false;
         }
@@ -133,7 +133,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function sourceType() public pure override returns (ISpokeBondManager.SourceType) {
+    function sourceType() external pure returns (ISpokeBondManager.SourceType) {
         return ISpokeBondManager.SourceType.XVSVault;
     }
 
