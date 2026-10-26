@@ -6,7 +6,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getConfig } from "../helpers/deploymentConfig";
 import { readBackAddress, readBackUntil, sameAddress, toAddress, verifyDeployment } from "../helpers/deploymentUtils";
 
-const DEPLOYMENT_NAME = "SpokePoolBuilder";
+const DEPLOYMENT_NAME = "SpokePoolProposalBuilder";
 
 // The constructor rejects a value whose pool-creation VIP would not fit GovernorBravo's action limit: 12 at most with
 // 100 actions

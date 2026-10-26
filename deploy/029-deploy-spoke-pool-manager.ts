@@ -4,7 +4,13 @@ import { DeployFunction } from "hardhat-deploy/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig } from "../helpers/deploymentConfig";
-import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "../helpers/deploymentUtils";
+import {
+  readBackAddress,
+  sameAddress,
+  toAddress,
+  verifyDeployment,
+  verifyProxyDeployment,
+} from "../helpers/deploymentUtils";
 
 const DEPLOYMENT_NAME = "SpokePoolManager";
 
@@ -25,9 +31,18 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
+  const library = await deploy("SpokePoolManagerLib", {
+    from: deployer,
+    log: true,
+    autoMine: true,
+    skipIfAlreadyDeployed: true,
+  });
+  await verifyDeployment(hre, "SpokePoolManagerLib", library, []);
+
   const deployment: DeployResult = await deploy(DEPLOYMENT_NAME, {
     from: deployer,
     args,
+    libraries: { SpokePoolManagerLib: library.address },
     proxy: {
       owner,
       proxyContract: "OptimizedTransparentUpgradeableProxy",

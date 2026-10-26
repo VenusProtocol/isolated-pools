@@ -4,7 +4,7 @@ pragma solidity ^0.8.25;
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { ISpokeBondManager } from "./ISpokeBondManager.sol";
-import { ISpokePoolBuilder } from "./ISpokePoolBuilder.sol";
+import { ISpokePoolProposalBuilder } from "./ISpokePoolProposalBuilder.sol";
 import { ITierRegistry } from "./ITierRegistry.sol";
 import { IRiskOracle } from "./external/IRiskOracle.sol";
 import { IRiskStewardReceiver } from "./external/IRiskStewardReceiver.sol";
@@ -15,10 +15,6 @@ import { IRiskStewardReceiver } from "./external/IRiskStewardReceiver.sol";
  * @notice Functions, events and errors of `SpokePoolManager`
  */
 interface ISpokePoolManager {
-    // ──────────────────────────────────────────────────────────────────────
-    // Types
-    // ──────────────────────────────────────────────────────────────────────
-
     /// @notice What a request asks for
     enum RequestType {
         Pool,
@@ -99,8 +95,6 @@ interface ISpokePoolManager {
         uint256 bondAmount;
         // Pool and markets requests
         DeployerMarketParams[] markets;
-        // The latest build's markets, in `markets` order
-        address[] vTokens;
     }
 
     /// @notice A pool created through the manager
@@ -114,10 +108,6 @@ interface ISpokePoolManager {
         // The latest exit build; zero when there is none or after rejectExit
         uint256 exitBuildId;
     }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Events
-    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Emitted when a deployer submits a request
@@ -146,12 +136,6 @@ interface ISpokePoolManager {
     event RequestCanceled(uint256 indexed requestId);
 
     /**
-     * @notice Emitted when a deployer asks to exit its pool
-     * @param comptroller The pool's comptroller
-     */
-    event ExitRequested(address indexed comptroller);
-
-    /**
      * @notice Emitted when the Venus team edits a request
      * @param requestId The request
      */
@@ -164,13 +148,6 @@ interface ISpokePoolManager {
      * @param vTokens The markets deployed for it, in the request's market order
      */
     event RequestBuilt(uint256 indexed requestId, uint256 buildId, address[] vTokens);
-
-    /**
-     * @notice Emitted when a request is settled by its VIP
-     * @param requestId The request
-     * @param comptroller The pool's comptroller
-     */
-    event RequestSettled(uint256 indexed requestId, address indexed comptroller);
 
     /**
      * @notice Emitted when a new pool goes live and its deployer's rights start
@@ -189,17 +166,23 @@ interface ISpokePoolManager {
     event PoolTierUpgraded(address indexed comptroller, uint256 oldTierId, uint256 newTierId);
 
     /**
+     * @notice Emitted when a request is settled by its VIP
+     * @param requestId The request
+     * @param comptroller The pool's comptroller
+     */
+    event RequestSettled(uint256 indexed requestId, address indexed comptroller);
+
+    /**
      * @notice Emitted when the Venus team rejects a request
      * @param requestId The request
      */
     event RequestRejected(uint256 indexed requestId);
 
     /**
-     * @notice Emitted when a pool's deployer is paused or unpaused
+     * @notice Emitted when a deployer asks to exit its pool
      * @param comptroller The pool's comptroller
-     * @param paused Whether the deployer is paused
      */
-    event DeployerPausedUpdated(address indexed comptroller, bool paused);
+    event ExitRequested(address indexed comptroller);
 
     /**
      * @notice Emitted when a pool's exit VIP payload is built and stored
@@ -239,11 +222,21 @@ interface ISpokePoolManager {
     event PoolHandedOver(address indexed comptroller);
 
     /**
-     * @notice Emitted when the pool builder is changed
-     * @param oldPoolBuilder The previous builder
-     * @param newPoolBuilder The new builder
+     * @notice Emitted when a pool's deployer is paused or unpaused
+     * @param comptroller The pool's comptroller
+     * @param paused Whether the deployer is paused
      */
-    event PoolBuilderUpdated(ISpokePoolBuilder indexed oldPoolBuilder, ISpokePoolBuilder indexed newPoolBuilder);
+    event DeployerPausedUpdated(address indexed comptroller, bool paused);
+
+    /**
+     * @notice Emitted when the proposal builder is changed
+     * @param oldProposalBuilder The previous builder
+     * @param newProposalBuilder The new builder
+     */
+    event ProposalBuilderUpdated(
+        ISpokePoolProposalBuilder indexed oldProposalBuilder,
+        ISpokePoolProposalBuilder indexed newProposalBuilder
+    );
 
     /**
      * @notice Emitted when the bond manager is set
@@ -295,10 +288,6 @@ interface ISpokePoolManager {
      */
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Errors
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Thrown when a RiskStewardReceiver reads another RiskOracle
      * @param receiver The receiver
@@ -310,12 +299,6 @@ interface ISpokePoolManager {
      * @param deployer The deployer
      */
     error ActivePoolExists(address deployer);
-
-    /**
-     * @notice Thrown when the caller already has an open request
-     * @param requestId The open request
-     */
-    error OpenRequestExists(uint256 requestId);
 
     /**
      * @notice Thrown when a tier is disabled
@@ -335,6 +318,53 @@ interface ISpokePoolManager {
      * @param requiredBondUsd The required bond, in USD
      */
     error InsufficientBondValue(uint256 bondUsd, uint256 requiredBondUsd);
+
+    /// @notice Thrown when a request has no market
+    error InvalidArrayLength();
+
+    /**
+     * @notice Thrown when a pool would have more markets than the builder's `MAX_POOL_MARKETS`, or more collateral
+     *   markets than its tier allows
+     * @param marketCount The markets
+     * @param maxMarketCount The maximum
+     */
+    error TooManyMarkets(uint256 marketCount, uint256 maxMarketCount);
+
+    /**
+     * @notice Thrown when a market's asset is already in the request or the pool
+     * @param asset The asset
+     */
+    error DuplicateAsset(address asset);
+
+    /**
+     * @notice Thrown when a market's parameters are missing or do not fit its type or seed
+     * @param asset The market's asset
+     */
+    error InvalidMarketParams(address asset);
+
+    /**
+     * @notice Thrown when a loan market's asset is not one the tier offers
+     * @param asset The market's asset
+     */
+    error LoanAssetNotAllowed(address asset);
+
+    /**
+     * @notice Thrown when a loan market's interest rate model is not one its tier allows for its asset
+     * @param interestRateModel The interest rate model
+     */
+    error InterestRateModelNotAllowed(address interestRateModel);
+
+    /**
+     * @notice Thrown when a value is above the limits of the pool's tier
+     * @param vToken The market, or a new market's asset
+     */
+    error ExceedsTierLimit(address vToken);
+
+    /**
+     * @notice Thrown when the caller already has an open request
+     * @param requestId The open request
+     */
+    error OpenRequestExists(uint256 requestId);
 
     /**
      * @notice Thrown when a transfer delivers a different amount than requested
@@ -374,6 +404,39 @@ interface ISpokePoolManager {
     error InvalidRequestStatus(uint256 requestId);
 
     /**
+     * @notice Thrown when a request is not of a type the function accepts
+     * @param requestId The request
+     */
+    error InvalidRequestType(uint256 requestId);
+
+    /// @notice Thrown when pool parameters are outside the bounds the comptroller accepts
+    error InvalidPoolParams();
+
+    /**
+     * @notice Thrown when a request is built before its deployer approved it
+     * @param requestId The request
+     */
+    error RequestNotApproved(uint256 requestId);
+
+    /**
+     * @notice Thrown when a seed is worth less than the $10 minimum
+     * @param asset The market's asset
+     */
+    error InsufficientSeed(address asset);
+
+    /**
+     * @notice Thrown when a collateral asset has no bounded pricing
+     * @param asset The asset
+     */
+    error DeviationBoundedOracleNotSet(address asset);
+
+    /**
+     * @notice Thrown when a VIP carries a build that is not the latest
+     * @param buildId The build
+     */
+    error InvalidBuild(uint256 buildId);
+
+    /**
      * @notice Thrown when a market is not listed in the pool
      * @param vToken The market
      */
@@ -386,7 +449,7 @@ interface ISpokePoolManager {
     error InvalidMarketType(address vToken);
 
     /**
-     * @notice Thrown when an earlier update of the same kind for a market is still being applied
+     * @notice Thrown when an earlier update of the same kind for a market can still be applied
      * @param vToken The market
      */
     error PreviousUpdatePending(address vToken);
@@ -404,41 +467,20 @@ interface ISpokePoolManager {
     error RedundantUpdate(address vToken);
 
     /**
-     * @notice Thrown when a value is above the limits of the pool's tier
-     * @param vToken The market
-     */
-    error ExceedsTierLimit(address vToken);
-
-    /**
      * @notice Thrown when a pool's bond covers less than its tier's minimum coverage ratio
      * @param coverage The bond's value to required bond ratio, scaled by 1e18
      * @param minCoverageRatio The tier's minimum, scaled by 1e18
      */
     error CoverageTooLow(uint256 coverage, uint256 minCoverageRatio);
 
-    /**
-     * @notice Thrown when a request is not of a type the function accepts
-     * @param requestId The request
-     */
-    error InvalidRequestType(uint256 requestId);
-
-    /// @notice Thrown when pool parameters are outside the bounds the comptroller accepts
-    error InvalidPoolParams();
-
-    /**
-     * @notice Thrown when a request is built before its deployer approved it
-     * @param requestId The request
-     */
-    error RequestNotApproved(uint256 requestId);
-
-    /**
-     * @notice Thrown when a VIP carries a build that is not the latest
-     * @param buildId The build
-     */
-    error InvalidBuild(uint256 buildId);
-
     /// @notice Thrown when a force close is built before the wind-down period has elapsed
     error WindDownPeriodNotElapsed();
+
+    /**
+     * @notice Thrown when a pool's borrows and bad debt exceed `maxResidualPoolDebtUsd`
+     * @param debtUsd The borrows and bad debt, in USD
+     */
+    error ResidualDebtExceeded(uint256 debtUsd);
 
     /**
      * @notice Thrown when a market has bad debt
@@ -465,10 +507,6 @@ interface ISpokePoolManager {
      */
     error InsufficientAmount(address token, uint256 amount);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Deployer functions
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Requests a new pool of a tier, pulling the bond and the seeds; both are refunded on reject or cancel
      * @param tierId The tier
@@ -484,7 +522,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidBondAsset is thrown when the bond manager does not allow the bond asset
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
      * @custom:error TransferAmountMismatch is thrown when a transfer delivers a different amount
-     * @custom:error The builder's `validateMarkets` errors
+     * @custom:error The `SpokePoolManagerLib._validateMarkets` errors
      * @custom:access Not restricted
      */
     function requestPool(
@@ -506,7 +544,7 @@ interface ISpokePoolManager {
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
-     * @custom:error The builder's `validateMarkets` errors
+     * @custom:error The `SpokePoolManagerLib._validateMarkets` errors
      * @custom:access Only the pool's deployer
      */
     function requestNewMarkets(
@@ -551,6 +589,64 @@ interface ISpokePoolManager {
      * @custom:access Only the request's deployer
      */
     function cancelRequest(uint256 requestId) external;
+
+    /**
+     * @notice Replaces a pool or markets request's markets, and a pool request's parameters, and clears its approval,
+     *   refunding its seeds until the deployer approves it again
+     * @param requestId The request
+     * @param params A pool request's pool parameters; ignored for a markets request
+     * @param markets The request's new markets
+     * @custom:event Emits RequestEdited
+     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
+     * @custom:error InvalidRequestType is thrown for a tier request
+     * @custom:error InvalidPoolParams is thrown when a pool request's parameters are out of bounds
+     * @custom:error The `SpokePoolManagerLib._validateMarkets` errors
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function editRequest(
+        uint256 requestId,
+        PoolParams calldata params,
+        DeployerMarketParams[] calldata markets
+    ) external;
+
+    /**
+     * @notice Builds an approved request's VIP under a new build id, after checking a pool or markets request's
+     *   markets again, with prices. The bond was priced at request and is not priced again
+     * @param requestId The request
+     * @param description The VIP's description
+     * @custom:event Emits RequestBuilt
+     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
+     * @custom:error RequestNotApproved is thrown when the deployer has not approved it since the last edit
+     * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error The `SpokePoolManagerLib._validateMarkets` errors
+     * @custom:error InsufficientSeed is thrown when a seed is worth less than the $10 minimum
+     * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
+     * @custom:error DeviationBoundedOracleNotSet is thrown when a collateral asset has no bounded pricing
+     * @custom:error The builder's `buildRequestProposal` errors
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function buildRequestProposal(uint256 requestId, string calldata description) external;
+
+    /**
+     * @notice Settles a request from its VIP, sending the seeds to the caller to list the markets with
+     * @param requestId The request
+     * @param buildId The build the VIP carries; only the latest settles
+     * @custom:event Emits PoolActivated for a pool request, PoolTierUpgraded for a tier request, and RequestSettled
+     * @custom:error InvalidBuild is thrown when the request is not built, or not with this build
+     * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error The bond manager's `createBond` errors
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function settleRequest(uint256 requestId, uint256 buildId) external;
+
+    /**
+     * @notice Rejects a request and refunds its bond and seeds; a VIP already built for it then reverts
+     * @param requestId The request
+     * @custom:event Emits RequestRejected
+     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function rejectRequest(uint256 requestId) external;
 
     /**
      * @notice Publishes a collateral market's new collateral factor and liquidation threshold to the RiskOracle
@@ -638,6 +734,19 @@ interface ISpokePoolManager {
     function topUpBond(address comptroller, uint256 amount) external;
 
     /**
+     * @notice Takes part of a pool's bond for a receiver; what cannot be paid now is owed and paid later
+     * @param comptroller The pool's comptroller
+     * @param amount The amount, in the bond's asset
+     * @param receiver The receiver
+     * @return paidNow The amount paid now
+     * @custom:event The bond manager emits BondSeized
+     * @custom:error ZeroAddressNotAllowed is thrown when the receiver is zero
+     * @custom:error The bond manager's `seize` errors
+     * @custom:access Controlled by AccessControlManager, granted to `SpokePoolShortfall`
+     */
+    function seizeBond(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow);
+
+    /**
      * @notice Asks Venus to wind the caller's pool down or hand it over to governance. The deployer's risk controls end
      *   here; `rejectExit` gives them back
      * @param comptroller The pool's comptroller
@@ -649,82 +758,6 @@ interface ISpokePoolManager {
      * @custom:access Only the pool's deployer
      */
     function requestExit(address comptroller) external;
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Replaces a pool or markets request's markets, and a pool request's parameters, and clears its approval,
-     *   refunding its seeds until the deployer approves it again
-     * @param requestId The request
-     * @param params A pool request's pool parameters; ignored for a markets request
-     * @param markets The request's new markets
-     * @custom:event Emits RequestEdited
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
-     * @custom:error InvalidRequestType is thrown for a tier request
-     * @custom:error InvalidPoolParams is thrown when a pool request's parameters are out of bounds
-     * @custom:error The builder's `validateMarkets` errors
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function editRequest(
-        uint256 requestId,
-        PoolParams calldata params,
-        DeployerMarketParams[] calldata markets
-    ) external;
-
-    /**
-     * @notice Builds an approved request's VIP under a new build id. The bond was priced at request and is not priced
-     *   again
-     * @param requestId The request
-     * @param description The VIP's description
-     * @custom:event Emits RequestBuilt
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
-     * @custom:error RequestNotApproved is thrown when the deployer has not approved it since the last edit
-     * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
-     * @custom:error The builder's `buildRequestProposal` errors
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function buildRequestProposal(uint256 requestId, string calldata description) external;
-
-    /**
-     * @notice Settles a request from its VIP, sending the seeds to the caller to list the markets with
-     * @param requestId The request
-     * @param buildId The build the VIP carries; only the latest settles
-     * @custom:event Emits PoolActivated for a pool request, PoolTierUpgraded for a tier request, and RequestSettled
-     * @custom:error InvalidBuild is thrown when the request is not built, or not with this build
-     * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
-     * @custom:error The bond manager's `createBond` errors
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function settleRequest(uint256 requestId, uint256 buildId) external;
-
-    /**
-     * @notice Rejects a request and refunds its bond and seeds; a VIP already built for it then reverts
-     * @param requestId The request
-     * @custom:event Emits RequestRejected
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function rejectRequest(uint256 requestId) external;
-
-    /**
-     * @notice Pauses a pool deployer's controls until `unpauseDeployer`; it still claims yield and tops up the bond
-     * @param comptroller The pool's comptroller
-     * @custom:event Emits DeployerPausedUpdated
-     * @custom:error InvalidPoolStatus is thrown when the pool does not exist
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team and the Guardian
-     */
-    function pauseDeployer(address comptroller) external;
-
-    /**
-     * @notice Gives a paused deployer its controls back
-     * @param comptroller The pool's comptroller
-     * @custom:event Emits DeployerPausedUpdated
-     * @custom:error InvalidPoolStatus is thrown when the pool does not exist
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function unpauseDeployer(address comptroller) external;
 
     /**
      * @notice Builds a pool's exit VIP under a new build id; this ends the deployer's controls and voids earlier exit
@@ -770,7 +803,7 @@ interface ISpokePoolManager {
      * @param comptroller The pool's comptroller
      * @custom:event Emits PoolClosed; the bond manager emits BondReleased
      * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
-     * @custom:error The builder's `accrueAndCheckResidualDebt` errors
+     * @custom:error ResidualDebtExceeded is thrown when the pool's borrows and bad debt exceed `maxResidualPoolDebtUsd`
      * @custom:error The bond manager's `release` errors
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
@@ -786,11 +819,11 @@ interface ISpokePoolManager {
     function rejectExit(address comptroller) external;
 
     /**
-     * @notice Hands a pool whose deployer requested an exit over to governance and releases its bond; the pool keeps
-     *   running
+     * @notice Hands a pool whose exit is requested or built over to governance and releases its bond. The pool keeps
+     *   running, and a built exit VIP then fails
      * @param comptroller The pool's comptroller
      * @custom:event Emits PoolHandedOver; the bond manager emits BondReleased
-     * @custom:error InvalidPoolStatus is thrown when the deployer has not requested an exit
+     * @custom:error InvalidPoolStatus is thrown unless the pool's exit is requested or built
      * @custom:error BadDebtOutstanding is thrown when a market has bad debt
      * @custom:error The bond manager's `release` errors
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
@@ -798,26 +831,32 @@ interface ISpokePoolManager {
     function handoverPoolToGovernance(address comptroller) external;
 
     /**
-     * @notice Takes part of a pool's bond for a receiver; what cannot be paid now is owed and paid later
+     * @notice Pauses a pool deployer's requests, risk controls and exit request until `unpauseDeployer`; it can still
+     *   approve or cancel open requests, claim yield and top up the bond
      * @param comptroller The pool's comptroller
-     * @param amount The amount, in the bond's asset
-     * @param receiver The receiver
-     * @return paidNow The amount paid now
-     * @custom:event The bond manager emits BondSeized
-     * @custom:error ZeroAddressNotAllowed is thrown when the receiver is zero
-     * @custom:error The bond manager's `seize` errors
-     * @custom:access Controlled by AccessControlManager, granted to `SpokePoolShortfall`
+     * @custom:event Emits DeployerPausedUpdated
+     * @custom:error InvalidPoolStatus is thrown when the pool does not exist
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team and the Guardian
      */
-    function seizeBond(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow);
+    function pauseDeployer(address comptroller) external;
 
     /**
-     * @notice Sets the builder that checks requests' markets and builds the VIPs
-     * @param newPoolBuilder The new builder
-     * @custom:event Emits PoolBuilderUpdated
+     * @notice Gives a paused deployer its controls back
+     * @param comptroller The pool's comptroller
+     * @custom:event Emits DeployerPausedUpdated
+     * @custom:error InvalidPoolStatus is thrown when the pool does not exist
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function unpauseDeployer(address comptroller) external;
+
+    /**
+     * @notice Sets the builder that builds the VIPs
+     * @param newProposalBuilder The new builder
+     * @custom:event Emits ProposalBuilderUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the builder is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function setPoolBuilder(ISpokePoolBuilder newPoolBuilder) external;
+    function setProposalBuilder(ISpokePoolProposalBuilder newProposalBuilder) external;
 
     /**
      * @notice Sets the bond manager, once
@@ -887,10 +926,6 @@ interface ISpokePoolManager {
      */
     function sweepToken(address token, address to, uint256 amount) external;
 
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Returns a request
      * @param requestId The request
@@ -906,21 +941,7 @@ interface ISpokePoolManager {
     function getPool(address comptroller) external view returns (Pool memory);
 
     /**
-     * @notice Returns a request's latest VIP payload, an ABI-encoded GovernorBravo `propose` call
-     * @param requestId The request
-     * @return The payload; empty before the first build
-     */
-    function getRequestProposal(uint256 requestId) external view returns (bytes memory);
-
-    /**
-     * @notice Returns a pool's latest exit or force-close VIP payload, an ABI-encoded GovernorBravo `propose` call
-     * @param comptroller The pool's comptroller
-     * @return The payload; empty before the first build
-     */
-    function getExitProposal(address comptroller) external view returns (bytes memory);
-
-    /**
-     * @notice Returns the oracle bonds and caps are priced with
+     * @notice Returns the oracle bonds, seeds, caps and debts are priced with
      * @return The ResilientOracle
      */
     // solhint-disable-next-line func-name-mixedcase
@@ -948,10 +969,10 @@ interface ISpokePoolManager {
     function TIER_REGISTRY() external view returns (ITierRegistry);
 
     /**
-     * @notice Returns the builder that checks requests' markets and builds the VIPs
+     * @notice Returns the builder that builds the VIPs
      * @return The builder
      */
-    function poolBuilder() external view returns (ISpokePoolBuilder);
+    function proposalBuilder() external view returns (ISpokePoolProposalBuilder);
 
     /**
      * @notice Returns the bond manager
@@ -1039,4 +1060,18 @@ interface ISpokePoolManager {
      * @return The amount
      */
     function escrowedAmounts(address token) external view returns (uint256);
+
+    /**
+     * @notice Returns a request's latest VIP payload, an ABI-encoded GovernorBravo `propose` call
+     * @param requestId The request
+     * @return The payload; empty before the first build
+     */
+    function requestProposals(uint256 requestId) external view returns (bytes memory);
+
+    /**
+     * @notice Returns a pool's latest exit or force-close VIP payload, an ABI-encoded GovernorBravo `propose` call
+     * @param comptroller The pool's comptroller
+     * @return The payload; empty before the first build
+     */
+    function exitProposals(address comptroller) external view returns (bytes memory);
 }

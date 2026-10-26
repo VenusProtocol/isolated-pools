@@ -8,42 +8,33 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
-import { Action } from "../../ComptrollerInterface.sol";
 import { VToken } from "../../VToken.sol";
 import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { IBondAccount } from "../interfaces/IBondAccount.sol";
 import { ISpokeBondManager } from "../interfaces/ISpokeBondManager.sol";
-import { ISpokePoolBuilder } from "../interfaces/ISpokePoolBuilder.sol";
+import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ITierRegistry } from "../interfaces/ITierRegistry.sol";
 import { IRiskOracle } from "../interfaces/external/IRiskOracle.sol";
 import { IRiskStewardReceiver } from "../interfaces/external/IRiskStewardReceiver.sol";
+import { SpokePoolManagerLib } from "./SpokePoolManagerLib.sol";
 import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 
 /**
  * @title SpokePoolManager
  * @author Venus
  * @notice Entry point of open spoke pools. A deployer requests a pool of a tier, escrowing a bond and its markets'
- * seeds; the Venus team builds the request's VIP through the pool builder, and the VIP's `settleRequest` starts the
+ * seeds; the Venus team builds the request's VIP through the proposal builder, and the VIP's `settleRequest` starts the
  * pool and moves the bond to the bond manager. The deployer tunes the pool's collateral markets through the
  * RiskOracle, within its tier's current terms
- * @dev Needs to be a RiskOracle authorized sender
+ * @dev Needs to be a RiskOracle authorized sender. The request and risk-control functions run in `SpokePoolManagerLib`;
+ * this contract keeps their access checks, reentrancy guard and id counters
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, SpokePoolManagerStorage {
     using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    /// @dev Bounds of a new pool's close factor and liquidation incentive, as the comptroller accepts them
-    uint256 internal constant MIN_CLOSE_FACTOR_MANTISSA = 0.05e18;
-    uint256 internal constant MAX_CLOSE_FACTOR_MANTISSA = 0.9e18;
-    uint256 internal constant MIN_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18;
-
-    /// @dev The RiskOracle update types the deployer publishes; each one selects the Risk Steward that applies it
-    string internal constant COLLATERAL_FACTORS_UPDATE = "collateralFactors";
-    string internal constant SUPPLY_CAP_UPDATE = "supplyCap";
-    string internal constant PAUSE_ACTIONS_UPDATE = "pauseActions";
 
     /// @inheritdoc ISpokePoolManager
     ResilientOracleInterface public immutable RESILIENT_ORACLE;
@@ -58,7 +49,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     ITierRegistry public immutable TIER_REGISTRY;
 
     /**
-     * @param resilientOracle The oracle bonds and caps are priced with
+     * @param resilientOracle The oracle bonds, seeds, caps and debts are priced with
      * @param riskOracle The oracle deployer updates are published to
      * @param riskStewardReceiver The receiver that applies the published updates
      * @param tierRegistry The registry of pool tiers
@@ -98,7 +89,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Deployer functions
+    // Request functions, run in SpokePoolManagerLib
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolManager
@@ -109,23 +100,25 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         uint256 bondAmount,
         DeployerMarketParams[] calldata markets
     ) external nonReentrant returns (uint256 requestId) {
-        if (activePools[msg.sender] != address(0)) {
-            revert ActivePoolExists(msg.sender);
-        }
-        _checkBond(tierId, bondAsset, bondAmount);
-        poolBuilder.validateMarkets(address(0), tierId, markets);
-
-        Request storage request;
-        (requestId, request) = _newRequest(RequestType.Pool, address(0), tierId);
-        request.poolName = poolName;
-        request.params = poolDefaults;
-        request.bondAsset = bondAsset;
-        request.bondAmount = bondAmount;
-        _storeMarkets(request, markets);
-        _pullSeeds(request);
-        _escrow(bondAsset, bondAmount);
-
-        emit RequestSubmitted(requestId, RequestType.Pool, msg.sender, address(0));
+        SpokePoolManagerLib.DeployerPoolParams memory pool = SpokePoolManagerLib.DeployerPoolParams(
+            tierId,
+            poolName,
+            bondAsset,
+            bondAmount
+        );
+        requestId = ++requestCount;
+        SpokePoolManagerLib.requestPool(
+            _contracts(),
+            poolDefaults,
+            requests,
+            latestRequestIds,
+            activePools,
+            escrowedAmounts,
+            isLoanMarket,
+            requestId,
+            pool,
+            markets
+        );
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -133,141 +126,43 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         address comptroller,
         DeployerMarketParams[] calldata markets
     ) external nonReentrant returns (uint256 requestId) {
-        Pool storage pool = _ensureActiveDeployer(comptroller);
-        poolBuilder.validateMarkets(comptroller, pool.tierId, markets);
-
-        Request storage request;
-        (requestId, request) = _newRequest(RequestType.Markets, comptroller, pool.tierId);
-        _storeMarkets(request, markets);
-        _pullSeeds(request);
-
-        emit RequestSubmitted(requestId, RequestType.Markets, msg.sender, comptroller);
+        requestId = ++requestCount;
+        SpokePoolManagerLib.requestNewMarkets(
+            _contracts(),
+            pools,
+            isLoanMarket,
+            requests,
+            latestRequestIds,
+            escrowedAmounts,
+            requestId,
+            comptroller,
+            markets
+        );
     }
 
     /// @inheritdoc ISpokePoolManager
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId) {
-        _ensureActiveDeployer(comptroller);
-        _ensureUpgrade(comptroller, tierId);
-
-        (requestId, ) = _newRequest(RequestType.Tier, comptroller, tierId);
-
-        emit RequestSubmitted(requestId, RequestType.Tier, msg.sender, comptroller);
+        requestId = ++requestCount;
+        SpokePoolManagerLib.requestTierUpgrade(
+            _contracts(),
+            pools,
+            requests,
+            latestRequestIds,
+            requestId,
+            comptroller,
+            tierId
+        );
     }
 
     /// @inheritdoc ISpokePoolManager
     function approveRequest(uint256 requestId) external nonReentrant {
-        Request storage request = _ensureEditableRequest(requestId);
-        _ensureDeployer(request.deployer);
-
-        if (!request.approved) {
-            _pullSeeds(request);
-        }
-        request.approved = true;
-
-        emit RequestApproved(requestId);
+        SpokePoolManagerLib.approveRequest(requests, escrowedAmounts, requestId);
     }
 
     /// @inheritdoc ISpokePoolManager
     function cancelRequest(uint256 requestId) external nonReentrant {
-        Request storage request = requests[requestId];
-        _ensureDeployer(request.deployer);
-        if (request.status != RequestStatus.Pending) {
-            revert InvalidRequestStatus(requestId);
-        }
-
-        _closeRequest(request, RequestStatus.Canceled);
-
-        emit RequestCanceled(requestId);
+        SpokePoolManagerLib.cancelRequest(requests, escrowedAmounts, requestId);
     }
-
-    /// @inheritdoc ISpokePoolManager
-    function setCollateralFactor(
-        address comptroller,
-        address vToken,
-        uint256 collateralFactor,
-        uint256 liquidationThreshold
-    ) external {
-        Pool storage pool = _ensureActiveDeployer(comptroller);
-        _ensureCollateralMarket(comptroller, vToken);
-        _ensureNoPendingUpdate(COLLATERAL_FACTORS_UPDATE, vToken);
-        (, uint256 marketCollateralFactor, uint256 marketLiquidationThreshold) = SpokeComptroller(comptroller).markets(
-            vToken
-        );
-        if (collateralFactor > liquidationThreshold || liquidationThreshold < marketLiquidationThreshold) {
-            revert InvalidCollateralFactors(vToken);
-        }
-        if (collateralFactor == marketCollateralFactor && liquidationThreshold == marketLiquidationThreshold) {
-            revert RedundantUpdate(vToken);
-        }
-        (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = TIER_REGISTRY.getTierTerms(pool.tierId);
-        if (collateralFactor > limits.maxCollateralFactor || liquidationThreshold > limits.maxLiquidationThreshold) {
-            revert ExceedsTierLimit(vToken);
-        }
-        _checkCoverage(comptroller, minBondUsd, limits.minCoverageRatio);
-
-        _publishUpdate(COLLATERAL_FACTORS_UPDATE, vToken, abi.encode(collateralFactor, liquidationThreshold));
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setCollateralSupplyCap(address comptroller, address vToken, uint256 supplyCap) external {
-        Pool storage pool = _ensureActiveDeployer(comptroller);
-        _ensureCollateralMarket(comptroller, vToken);
-        _ensureNoPendingUpdate(SUPPLY_CAP_UPDATE, vToken);
-        if (supplyCap == SpokeComptroller(comptroller).supplyCaps(vToken)) {
-            revert RedundantUpdate(vToken);
-        }
-        (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = TIER_REGISTRY.getTierTerms(pool.tierId);
-        uint256 supplyCapUsd = (supplyCap * RESILIENT_ORACLE.getUnderlyingPrice(vToken)) / EXP_SCALE;
-        if (supplyCapUsd > limits.maxCollateralSupplyCapUsd) {
-            revert ExceedsTierLimit(vToken);
-        }
-        _checkCoverage(comptroller, minBondUsd, limits.minCoverageRatio);
-
-        _publishUpdate(SUPPLY_CAP_UPDATE, vToken, abi.encode(supplyCap));
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function pauseCollateralMint(address comptroller, address vToken) external {
-        _ensureActiveDeployer(comptroller);
-        _ensureCollateralMarket(comptroller, vToken);
-        uint8[] memory actions = new uint8[](1);
-        actions[0] = uint8(Action.MINT);
-
-        _publishUpdate(PAUSE_ACTIONS_UPDATE, vToken, abi.encode(actions));
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function claimBondYield(address comptroller) external nonReentrant {
-        _ensureDeployer(pools[comptroller].deployer);
-
-        bondManager.claimYield(comptroller);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function topUpBond(address comptroller, uint256 amount) external nonReentrant {
-        _ensureDeployer(pools[comptroller].deployer);
-        address bondAsset = address(IBondAccount(bondManager.bondAccounts(comptroller)).asset());
-
-        // Not escrowed, as it leaves in this call
-        _transferIn(bondAsset, amount);
-        IERC20Upgradeable(bondAsset).forceApprove(address(bondManager), amount);
-        bondManager.topUp(comptroller, amount);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function requestExit(address comptroller) external {
-        Pool storage pool = _ensureActiveDeployer(comptroller);
-        // A markets or tier VIP settles only on a live pool
-        _ensureNoOpenRequest();
-
-        pool.status = PoolStatus.ExitRequested;
-
-        emit ExitRequested(comptroller);
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
-    // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolManager
     function editRequest(
@@ -276,112 +171,130 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         DeployerMarketParams[] calldata markets
     ) external nonReentrant {
         _checkAccessAllowed("editRequest(uint256,PoolParams,DeployerMarketParams[])");
-        Request storage request = _ensureEditableRequest(requestId);
-        if (request.requestType == RequestType.Tier) {
-            revert InvalidRequestType(requestId);
-        }
-        poolBuilder.validateMarkets(request.comptroller, request.tierId, markets);
-        if (request.requestType == RequestType.Pool) {
-            _checkPoolParams(params);
-            request.params = params;
-        }
 
-        // Refunded here and pulled again when the deployer approves the edited request
-        if (request.approved) {
-            _releaseSeeds(request, request.deployer);
-        }
-        delete request.markets;
-        _storeMarkets(request, markets);
-        request.approved = false;
-        request.buildId = 0;
-        request.status = RequestStatus.Pending;
-
-        emit RequestEdited(requestId);
+        SpokePoolManagerLib.editRequest(
+            _contracts(),
+            isLoanMarket,
+            requests,
+            escrowedAmounts,
+            requestId,
+            params,
+            markets
+        );
     }
 
     /// @inheritdoc ISpokePoolManager
     function buildRequestProposal(uint256 requestId, string calldata description) external nonReentrant {
         _checkAccessAllowed("buildRequestProposal(uint256,string)");
-        Request storage request = _ensureEditableRequest(requestId);
-        if (!request.approved) {
-            revert RequestNotApproved(requestId);
-        }
-        if (request.requestType != RequestType.Pool) {
-            _ensurePoolStatus(request.comptroller, PoolStatus.Live);
-        }
 
-        uint256 buildId = ++buildCount;
-        (address comptroller, address[] memory vTokens, bytes memory proposal) = poolBuilder.buildRequestProposal(
+        SpokePoolManagerLib.buildRequestProposal(
+            _contracts(),
+            pools,
+            isLoanMarket,
+            requests,
+            requestProposals,
             requestId,
-            buildId,
+            ++buildCount,
             description
         );
-
-        request.comptroller = comptroller;
-        request.status = RequestStatus.Built;
-        request.buildId = buildId;
-        request.vTokens = vTokens;
-        requestProposals[requestId] = proposal;
-        uint256 marketCount = vTokens.length;
-        // Recorded at build; a superseded build's markets are never listed, so their records are never read
-        for (uint256 i; i < marketCount; ++i) {
-            if (request.markets[i].isLoanMarket) {
-                isLoanMarket[vTokens[i]] = true;
-            }
-        }
-
-        emit RequestBuilt(requestId, buildId, vTokens);
     }
 
     /// @inheritdoc ISpokePoolManager
     function settleRequest(uint256 requestId, uint256 buildId) external nonReentrant {
         _checkAccessAllowed("settleRequest(uint256,uint256)");
-        Request storage request = requests[requestId];
-        if (request.status != RequestStatus.Built || buildId != request.buildId) {
-            revert InvalidBuild(buildId);
-        }
-        address comptroller = request.comptroller;
-        if (request.requestType != RequestType.Pool) {
-            _ensurePoolStatus(comptroller, PoolStatus.Live);
-        }
 
-        request.status = RequestStatus.Settled;
-        if (request.requestType == RequestType.Pool) {
-            _activatePool(requestId, request);
-        } else if (request.requestType == RequestType.Tier) {
-            Pool storage pool = pools[comptroller];
-            emit PoolTierUpgraded(comptroller, pool.tierId, request.tierId);
-            pool.tierId = request.tierId;
-        }
-        // Transfers the seeds to the Normal Timelock, which lists the markets with them in the rest of the VIP. A no-op
-        // for a tier request, whose `markets` is empty
-        _releaseSeeds(request, msg.sender);
-
-        emit RequestSettled(requestId, comptroller);
+        SpokePoolManagerLib.settleRequest(
+            _contracts(),
+            pools,
+            requests,
+            activePools,
+            escrowedAmounts,
+            requestId,
+            buildId
+        );
     }
 
     /// @inheritdoc ISpokePoolManager
     function rejectRequest(uint256 requestId) external nonReentrant {
         _checkAccessAllowed("rejectRequest(uint256)");
-        Request storage request = _ensureEditableRequest(requestId);
 
-        _closeRequest(request, RequestStatus.Rejected);
+        SpokePoolManagerLib.rejectRequest(requests, escrowedAmounts, requestId);
+    }
 
-        emit RequestRejected(requestId);
+    // ──────────────────────────────────────────────────────────────────────
+    // Risk control functions, run in SpokePoolManagerLib
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @inheritdoc ISpokePoolManager
+    function setCollateralFactor(
+        address comptroller,
+        address vToken,
+        uint256 collateralFactor,
+        uint256 liquidationThreshold
+    ) external {
+        SpokePoolManagerLib.setCollateralFactor(
+            _contracts(),
+            pools,
+            isLoanMarket,
+            comptroller,
+            vToken,
+            collateralFactor,
+            liquidationThreshold
+        );
     }
 
     /// @inheritdoc ISpokePoolManager
-    function pauseDeployer(address comptroller) external {
-        _checkAccessAllowed("pauseDeployer(address)");
-
-        _setDeployerPaused(comptroller, true);
+    function setCollateralSupplyCap(address comptroller, address vToken, uint256 supplyCap) external {
+        SpokePoolManagerLib.setCollateralSupplyCap(_contracts(), pools, isLoanMarket, comptroller, vToken, supplyCap);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function unpauseDeployer(address comptroller) external {
-        _checkAccessAllowed("unpauseDeployer(address)");
+    function pauseCollateralMint(address comptroller, address vToken) external {
+        SpokePoolManagerLib.pauseCollateralMint(_contracts(), pools, isLoanMarket, comptroller, vToken);
+    }
 
-        _setDeployerPaused(comptroller, false);
+    // ──────────────────────────────────────────────────────────────────────
+    // Bond functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @inheritdoc ISpokePoolManager
+    function claimBondYield(address comptroller) external nonReentrant {
+        SpokePoolManagerLib.ensureDeployer(pools[comptroller].deployer);
+
+        bondManager.claimYield(comptroller);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function topUpBond(address comptroller, uint256 amount) external nonReentrant {
+        SpokePoolManagerLib.ensureDeployer(pools[comptroller].deployer);
+        address bondAsset = address(IBondAccount(bondManager.bondAccounts(comptroller)).asset());
+
+        SpokePoolManagerLib.transferIn(bondAsset, amount);
+        IERC20Upgradeable(bondAsset).forceApprove(address(bondManager), amount);
+        bondManager.topUp(comptroller, amount);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function seizeBond(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow) {
+        _checkAccessAllowed("seizeBond(address,uint256,address)");
+        ensureNonzeroAddress(receiver);
+
+        paidNow = bondManager.seize(comptroller, amount, receiver);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Exit functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @inheritdoc ISpokePoolManager
+    function requestExit(address comptroller) external {
+        Pool storage pool = SpokePoolManagerLib.ensureActiveDeployer(pools, comptroller);
+        // A markets or tier VIP settles only on a live pool
+        SpokePoolManagerLib.ensureNoOpenRequest(requests, latestRequestIds);
+
+        pool.status = PoolStatus.ExitRequested;
+
+        emit ExitRequested(comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -400,7 +313,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         uint256 buildId = ++buildCount;
         pool.status = PoolStatus.ExitProposed;
         pool.exitBuildId = buildId;
-        exitProposals[comptroller] = poolBuilder.buildExitProposal(
+        exitProposals[comptroller] = proposalBuilder.buildExitProposal(
             comptroller,
             buildId,
             liquidationThresholds,
@@ -427,12 +340,12 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function buildForceCloseProposal(address comptroller, string calldata description) external {
         _checkAccessAllowed("buildForceCloseProposal(address,string)");
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
+        Pool storage pool = SpokePoolManagerLib.ensurePoolStatus(pools, comptroller, PoolStatus.WindingDown);
         if (block.timestamp < pool.windDownStartedAt + windDownPeriod) {
             revert WindDownPeriodNotElapsed();
         }
 
-        exitProposals[comptroller] = poolBuilder.buildForceCloseProposal(comptroller, description);
+        exitProposals[comptroller] = proposalBuilder.buildForceCloseProposal(comptroller, description);
 
         emit ForceCloseBuilt(comptroller);
     }
@@ -440,8 +353,20 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function closePool(address comptroller) external {
         _checkAccessAllowed("closePool(address)");
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.WindingDown);
-        poolBuilder.accrueAndCheckResidualDebt(comptroller);
+        Pool storage pool = SpokePoolManagerLib.ensurePoolStatus(pools, comptroller, PoolStatus.WindingDown);
+        VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = vTokens.length;
+        uint256 debtUsd;
+        for (uint256 i; i < marketCount; ++i) {
+            VToken vToken = vTokens[i];
+            uint256 debt = vToken.totalBorrowsCurrent() + vToken.badDebt();
+            if (debt != 0) {
+                debtUsd += (debt * RESILIENT_ORACLE.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
+            }
+        }
+        if (debtUsd > maxResidualPoolDebtUsd) {
+            revert ResidualDebtExceeded(debtUsd);
+        }
 
         pool.status = PoolStatus.Closed;
         delete activePools[pool.deployer];
@@ -468,7 +393,11 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function handoverPoolToGovernance(address comptroller) external {
         _checkAccessAllowed("handoverPoolToGovernance(address)");
-        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitRequested);
+        Pool storage pool = pools[comptroller];
+        PoolStatus status = pool.status;
+        if (status != PoolStatus.ExitRequested && status != PoolStatus.ExitProposed) {
+            revert InvalidPoolStatus(comptroller);
+        }
         // The bond is the first loss, so it stays until every market's bad debt is repaid
         VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = vTokens.length;
@@ -485,21 +414,31 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         emit PoolHandedOver(comptroller);
     }
 
-    /// @inheritdoc ISpokePoolManager
-    function seizeBond(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow) {
-        _checkAccessAllowed("seizeBond(address,uint256,address)");
-        ensureNonzeroAddress(receiver);
+    // ──────────────────────────────────────────────────────────────────────
+    // Admin functions
+    // ──────────────────────────────────────────────────────────────────────
 
-        paidNow = bondManager.seize(comptroller, amount, receiver);
+    /// @inheritdoc ISpokePoolManager
+    function pauseDeployer(address comptroller) external {
+        _checkAccessAllowed("pauseDeployer(address)");
+
+        _setDeployerPaused(comptroller, true);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setPoolBuilder(ISpokePoolBuilder newPoolBuilder) external {
-        _checkAccessAllowed("setPoolBuilder(address)");
-        ensureNonzeroAddress(address(newPoolBuilder));
+    function unpauseDeployer(address comptroller) external {
+        _checkAccessAllowed("unpauseDeployer(address)");
 
-        emit PoolBuilderUpdated(poolBuilder, newPoolBuilder);
-        poolBuilder = newPoolBuilder;
+        _setDeployerPaused(comptroller, false);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setProposalBuilder(ISpokePoolProposalBuilder newProposalBuilder) external {
+        _checkAccessAllowed("setProposalBuilder(address)");
+        ensureNonzeroAddress(address(newProposalBuilder));
+
+        emit ProposalBuilderUpdated(proposalBuilder, newProposalBuilder);
+        proposalBuilder = newProposalBuilder;
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -529,7 +468,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function setPoolDefaults(PoolParams calldata params) external {
         _checkAccessAllowed("setPoolDefaults(PoolParams)");
-        _checkPoolParams(params);
+        SpokePoolManagerLib.checkPoolParams(params);
 
         emit PoolDefaultsUpdated(poolDefaults, params);
         poolDefaults = params;
@@ -594,118 +533,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         return pools[comptroller];
     }
 
-    /// @inheritdoc ISpokePoolManager
-    function getRequestProposal(uint256 requestId) external view returns (bytes memory) {
-        return requestProposals[requestId];
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function getExitProposal(address comptroller) external view returns (bytes memory) {
-        return exitProposals[comptroller];
-    }
-
     // ──────────────────────────────────────────────────────────────────────
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
-
-    /// @dev Opens a pending request from the caller, approved by it, unless its latest request is still open
-    function _newRequest(
-        RequestType requestType,
-        address comptroller,
-        uint256 tierId
-    ) internal returns (uint256 requestId, Request storage request) {
-        _ensureNoOpenRequest();
-
-        requestId = ++requestCount;
-        latestRequestIds[msg.sender] = requestId;
-        request = requests[requestId];
-        request.requestType = requestType;
-        request.status = RequestStatus.Pending;
-        request.approved = true;
-        request.deployer = msg.sender;
-        request.comptroller = comptroller;
-        request.tierId = tierId;
-    }
-
-    /// @dev Adds markets to a request
-    function _storeMarkets(Request storage request, DeployerMarketParams[] calldata markets) internal {
-        uint256 marketCount = markets.length;
-        for (uint256 i; i < marketCount; ++i) {
-            request.markets.push(markets[i]);
-        }
-    }
-
-    /// @dev Pulls a request's seeds from the caller into escrow
-    function _pullSeeds(Request storage request) internal {
-        uint256 marketCount = request.markets.length;
-        for (uint256 i; i < marketCount; ++i) {
-            DeployerMarketParams storage market = request.markets[i];
-            _escrow(market.asset, market.seed);
-        }
-    }
-
-    /// @dev Starts a pool request's pool on its tier and moves the escrowed bond to the bond manager
-    function _activatePool(uint256 requestId, Request storage request) internal {
-        address comptroller = request.comptroller;
-        address deployer = request.deployer;
-        Pool storage pool = pools[comptroller];
-        pool.deployer = deployer;
-        pool.status = PoolStatus.Live;
-        pool.tierId = request.tierId;
-        activePools[deployer] = comptroller;
-
-        address bondAsset = request.bondAsset;
-        uint256 bondAmount = request.bondAmount;
-        escrowedAmounts[bondAsset] -= bondAmount;
-        IERC20Upgradeable(bondAsset).forceApprove(address(bondManager), bondAmount);
-        bondManager.createBond(comptroller, deployer, bondAsset, bondAmount);
-
-        emit PoolActivated(requestId, comptroller, deployer);
-    }
-
-    /// @dev Closes an open request and refunds its bond and seeds to its deployer
-    function _closeRequest(Request storage request, RequestStatus status) internal {
-        request.status = status;
-        address deployer = request.deployer;
-        if (request.requestType == RequestType.Pool) {
-            _releaseEscrow(request.bondAsset, deployer, request.bondAmount);
-        }
-        // An unapproved request's seeds were already refunded at its edit
-        if (request.approved) {
-            _releaseSeeds(request, deployer);
-        }
-    }
-
-    /// @dev Sends a request's escrowed seeds to `to`
-    function _releaseSeeds(Request storage request, address to) internal {
-        uint256 marketCount = request.markets.length;
-        for (uint256 i; i < marketCount; ++i) {
-            DeployerMarketParams storage market = request.markets[i];
-            _releaseEscrow(market.asset, to, market.seed);
-        }
-    }
-
-    /// @dev Pulls tokens from the caller into escrow
-    function _escrow(address token, uint256 amount) internal {
-        _transferIn(token, amount);
-        escrowedAmounts[token] += amount;
-    }
-
-    /// @dev Sends escrowed tokens
-    function _releaseEscrow(address token, address to, uint256 amount) internal {
-        escrowedAmounts[token] -= amount;
-        IERC20Upgradeable(token).safeTransfer(to, amount);
-    }
-
-    /// @dev Pulls tokens from the caller, reverting unless exactly `amount` arrives
-    function _transferIn(address token, uint256 amount) internal {
-        IERC20Upgradeable asset = IERC20Upgradeable(token);
-        uint256 balanceBefore = asset.balanceOf(address(this));
-        asset.safeTransferFrom(msg.sender, address(this), amount);
-        if (asset.balanceOf(address(this)) - balanceBefore != amount) {
-            revert TransferAmountMismatch(token);
-        }
-    }
 
     /// @dev Pauses or unpauses the controls of an existing pool's deployer
     function _setDeployerPaused(address comptroller, bool paused) internal {
@@ -719,145 +549,16 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         emit DeployerPausedUpdated(comptroller, paused);
     }
 
-    /// @dev Publishes a deployer's update of a collateral market to the RiskOracle
-    function _publishUpdate(string memory updateType, address vToken, bytes memory newValue) internal {
-        RISK_ORACLE.publishRiskParameterUpdate("", newValue, updateType, vToken, 0, 0, "");
-    }
-
-    /// @dev Checks a new pool's tier is enabled, its bond asset allowed and its bond worth what the tier requires
-    function _checkBond(uint256 tierId, address bondAsset, uint256 bondAmount) internal view {
-        (bool enabled, uint256 minBondUsd, ) = TIER_REGISTRY.getTierTerms(tierId);
-        if (!enabled) {
-            revert TierDisabled(tierId);
-        }
-        (, , bool allowed, ) = bondManager.assetConfigs(bondAsset);
-        if (!allowed) {
-            revert InvalidBondAsset(bondAsset);
-        }
-        _checkBondAmount(bondAsset, bondAmount, _requiredBondUsd(minBondUsd, bondAsset));
-    }
-
-    /**
-     * @dev Checks a bond amount is worth the required bond. The amount is checked, not the bond's value, which a
-     *   Hub's exit fee lowers
-     */
-    function _checkBondAmount(address bondAsset, uint256 bondAmount, uint256 requiredBondUsd) internal view {
-        uint256 bondUsd = (bondAmount * RESILIENT_ORACLE.getPrice(bondAsset)) / EXP_SCALE;
-        if (bondUsd < requiredBondUsd) {
-            revert InsufficientBondValue(bondUsd, requiredBondUsd);
-        }
-    }
-
-    /// @dev Checks a tier is an upgrade of a pool's tier and the bond's principal pays for it, priced at request only
-    function _ensureUpgrade(address comptroller, uint256 tierId) internal view {
-        uint256 fromTierId = pools[comptroller].tierId;
-        if (!TIER_REGISTRY.isUpgrade(fromTierId, tierId)) {
-            revert NotAnUpgrade(fromTierId, tierId);
-        }
-        (, uint256 minBondUsd, ) = TIER_REGISTRY.getTierTerms(tierId);
-        IBondAccount bondAccount = IBondAccount(bondManager.bondAccounts(comptroller));
-        address bondAsset = address(bondAccount.asset());
-        _checkBondAmount(bondAsset, bondAccount.principal(), _requiredBondUsd(minBondUsd, bondAsset));
-    }
-
-    /// @dev Checks a pool's bond is worth at least `minCoverageRatio` of the bond its tier requires
-    function _checkCoverage(address comptroller, uint256 minBondUsd, uint256 minCoverageRatio) internal view {
-        address bondAsset = address(IBondAccount(bondManager.bondAccounts(comptroller)).asset());
-        uint256 requiredBondUsd = _requiredBondUsd(minBondUsd, bondAsset);
-        uint256 bondUsd = bondManager.getBondValueUsd(comptroller);
-        if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
-            revert CoverageTooLow((bondUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);
-        }
-    }
-
-    /// @dev Returns a tier's minimum bond times a bond asset's factor, in USD
-    function _requiredBondUsd(uint256 minBondUsd, address bondAsset) internal view returns (uint256) {
-        (, , , uint256 factor) = bondManager.assetConfigs(bondAsset);
-        return (minBondUsd * factor) / EXP_SCALE;
-    }
-
-    /**
-     * @dev Reverts while the latest update of this kind for a market can still be applied: the receiver has not
-     *   processed it, or holds it pending, and it has not expired. A new update then lands after the current values,
-     *   so it is checked against them; an expired one does not block the deployer
-     */
-    function _ensureNoPendingUpdate(string memory updateType, address vToken) internal view {
-        uint256 updateId = RISK_ORACLE.getLatestUpdateIdByTypeAndMarket(updateType, vToken);
-        if (updateId == 0) {
-            return;
-        }
-        IRiskStewardReceiver.UpdateStatus status = RISK_STEWARD_RECEIVER.updates(updateId).status;
-        if (
-            (status == IRiskStewardReceiver.UpdateStatus.None || status == IRiskStewardReceiver.UpdateStatus.Pending) &&
-            RISK_ORACLE.getUpdateById(updateId).timestamp + RISK_STEWARD_RECEIVER.UPDATE_EXPIRATION_TIME() >=
-            block.timestamp
-        ) {
-            revert PreviousUpdatePending(vToken);
-        }
-    }
-
-    /// @dev Checks a market is listed in the pool and is not a loan market
-    function _ensureCollateralMarket(address comptroller, address vToken) internal view {
-        if (!SpokeComptroller(comptroller).isMarketListed(VToken(vToken))) {
-            revert MarketNotListed(vToken);
-        }
-        if (isLoanMarket[vToken]) {
-            revert InvalidMarketType(vToken);
-        }
-    }
-
-    /// @dev Returns a live pool after checking the caller is its deployer and is not paused
-    function _ensureActiveDeployer(address comptroller) internal view returns (Pool storage pool) {
-        pool = pools[comptroller];
-        _ensureDeployer(pool.deployer);
-        if (pool.status != PoolStatus.Live) {
-            revert InvalidPoolStatus(comptroller);
-        }
-        if (pool.deployerPaused) {
-            revert DeployerPaused(comptroller);
-        }
-    }
-
-    /// @dev Checks the caller is `deployer`
-    function _ensureDeployer(address deployer) internal view {
-        if (msg.sender != deployer) {
-            revert NotDeployer(msg.sender);
-        }
-    }
-
-    /// @dev Reverts while the caller's latest request is pending or built
-    function _ensureNoOpenRequest() internal view {
-        uint256 latestRequestId = latestRequestIds[msg.sender];
-        RequestStatus status = requests[latestRequestId].status;
-        if (status == RequestStatus.Pending || status == RequestStatus.Built) {
-            revert OpenRequestExists(latestRequestId);
-        }
-    }
-
-    /// @dev Returns a pool after checking its status
-    function _ensurePoolStatus(address comptroller, PoolStatus status) internal view returns (Pool storage pool) {
-        pool = pools[comptroller];
-        if (pool.status != status) {
-            revert InvalidPoolStatus(comptroller);
-        }
-    }
-
-    /// @dev Returns a request after checking it is pending or built, so it can still change
-    function _ensureEditableRequest(uint256 requestId) internal view returns (Request storage request) {
-        request = requests[requestId];
-        if (request.status != RequestStatus.Pending && request.status != RequestStatus.Built) {
-            revert InvalidRequestStatus(requestId);
-        }
-    }
-
-    /// @dev Checks a new pool's parameters are within the bounds the comptroller accepts
-    function _checkPoolParams(PoolParams calldata params) internal pure {
-        if (
-            params.closeFactor < MIN_CLOSE_FACTOR_MANTISSA ||
-            params.closeFactor > MAX_CLOSE_FACTOR_MANTISSA ||
-            params.liquidationIncentive < MIN_LIQUIDATION_INCENTIVE_MANTISSA
-        ) {
-            revert InvalidPoolParams();
-        }
+    /// @dev Returns the manager's contracts the library calls
+    function _contracts() internal view returns (SpokePoolManagerLib.Contracts memory) {
+        return
+            SpokePoolManagerLib.Contracts(
+                RESILIENT_ORACLE,
+                RISK_ORACLE,
+                RISK_STEWARD_RECEIVER,
+                TIER_REGISTRY,
+                bondManager,
+                proposalBuilder
+            );
     }
 }

@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import { ISpokeBondManager } from "../interfaces/ISpokeBondManager.sol";
-import { ISpokePoolBuilder } from "../interfaces/ISpokePoolBuilder.sol";
+import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 
 /**
@@ -13,7 +13,7 @@ import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 // solhint-disable-next-line max-states-count
 abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     /// @inheritdoc ISpokePoolManager
-    ISpokePoolBuilder public poolBuilder;
+    ISpokePoolProposalBuilder public proposalBuilder;
 
     /// @inheritdoc ISpokePoolManager
     ISpokeBondManager public bondManager;
@@ -57,11 +57,11 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     /// @inheritdoc ISpokePoolManager
     mapping(address => uint256) public escrowedAmounts;
 
-    /// @dev Each request's latest VIP payload; read it with `getRequestProposal`
-    mapping(uint256 => bytes) internal requestProposals;
+    /// @inheritdoc ISpokePoolManager
+    mapping(uint256 => bytes) public requestProposals;
 
-    /// @dev Each pool's latest exit or force-close VIP payload; read it with `getExitProposal`
-    mapping(address => bytes) internal exitProposals;
+    /// @inheritdoc ISpokePoolManager
+    mapping(address => bytes) public exitProposals;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

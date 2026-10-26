@@ -5,7 +5,6 @@ import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.so
 import { IERC20MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
-import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 
 import { Action, ComptrollerInterface } from "../../ComptrollerInterface.sol";
 import { InterestRateModel } from "../../InterestRateModel.sol";
@@ -15,19 +14,19 @@ import { VTokenInterface } from "../../VTokenInterfaces.sol";
 import { EXP_SCALE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
-import { ISpokePoolBuilder } from "../interfaces/ISpokePoolBuilder.sol";
+import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ITierRegistry } from "../interfaces/ITierRegistry.sol";
 import { IGovernorBravo, PROPOSAL_TYPE_NORMAL } from "../interfaces/external/IGovernorBravo.sol";
 import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
 
 /**
- * @title SpokePoolBuilder
+ * @title SpokePoolProposalBuilder
  * @author Venus
- * @notice Builds `SpokePoolManager`'s VIPs as ABI-encoded GovernorBravo `propose` calls on the Normal route: a pool or
- * markets request's VIP lists the contracts it deploys before the vote, a tier request's VIP settles it and sets the
- * pool's loan market caps to the new tier's, and an exit's VIPs wind the pool down. It also checks a request's
- * markets and a closing pool's residual debt
+ * @notice Builds `SpokePoolManager`'s VIPs as ABI-encoded GovernorBravo `propose` calls on the Normal route. A
+ * request's VIP settles it: for a pool or markets request the builder deploys the contracts before the vote and the
+ * VIP lists them; for a tier request the VIP sets the pool's loan market caps to the new tier's. An exit's VIPs wind
+ * the pool down. The manager checks a request's markets before it calls the builder
  * @dev The VIPs grant no roles. The onboarding VIP gives wildcard ACM grants once: to the pool registry on
  * `setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`, `setCollateralFactor`,
  * `setMarketSupplyCaps` and `setMarketBorrowCaps`; to the Normal Timelock on `setSupplyAllowlistEnabled`,
@@ -36,7 +35,7 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the action pause steward on
  * `setActionsPaused(address[],uint256[],bool)`
  */
-contract SpokePoolBuilder is ISpokePoolBuilder {
+contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev VIP actions being assembled, with room for a fixed number of them
     struct Proposal {
         address[] targets;
@@ -44,9 +43,6 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
         bytes[] calldatas;
         uint256 length;
     }
-
-    /// @dev Lowest USD value of a market's seed, scaled by 1e18
-    uint256 internal constant MIN_SEED_USD = 10e18;
 
     /// @dev ERC-20 decimals of a new market's vToken
     uint8 internal constant VTOKEN_DECIMALS = 8;
@@ -72,43 +68,35 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
     /// @dev Loop limit every comptroller the builder deploys is initialized with
     uint256 internal constant MAX_LOOPS_LIMIT = 100;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     ISpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     IGovernorBravo public immutable GOVERNOR_BRAVO;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable POOL_REGISTRY;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable SPOKE_ADAPTER;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable COMPTROLLER_BEACON;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable VTOKEN_BEACON;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     address payable public immutable PROTOCOL_SHARE_RESERVE;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable SHORTFALL;
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     uint256 public immutable MAX_POOL_MARKETS;
-
-    /// @dev Reverts unless the caller is `SPOKE_POOL_MANAGER`
-    modifier onlySpokePoolManager() {
-        if (msg.sender != address(SPOKE_POOL_MANAGER)) {
-            revert NotSpokePoolManager(msg.sender);
-        }
-        _;
-    }
 
     /**
      * @param spokePoolManager The manager the builder works for
@@ -168,12 +156,15 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
     // SpokePoolManager functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     function buildRequestProposal(
         uint256 requestId,
         uint256 buildId,
         string calldata description
-    ) external onlySpokePoolManager returns (address comptroller, address[] memory vTokens, bytes memory proposal) {
+    ) external returns (address comptroller, address[] memory vTokens, bytes memory proposal) {
+        if (msg.sender != address(SPOKE_POOL_MANAGER)) {
+            revert NotSpokePoolManager(msg.sender);
+        }
         ISpokePoolManager.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         comptroller = request.comptroller;
         if (request.requestType == ISpokePoolManager.RequestType.Tier) {
@@ -183,9 +174,6 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
                 _encodeProposal(_buildTierProposal(requestId, buildId, comptroller, request.tierId), description)
             );
         }
-        validateMarkets(comptroller, request.tierId, request.markets);
-        _checkMarketPrices(request.tierId, request.markets);
-
         address executor = GOVERNOR_BRAVO.proposalTimelocks(PROPOSAL_TYPE_NORMAL);
         // Only a pool request's first build has no comptroller yet
         if (comptroller == address(0)) {
@@ -199,32 +187,10 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Permissionless functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @inheritdoc ISpokePoolBuilder
-    function accrueAndCheckResidualDebt(address comptroller) external {
-        ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
-        VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
-        uint256 marketCount = vTokens.length;
-        uint256 debtUsd;
-        for (uint256 i; i < marketCount; ++i) {
-            VToken vToken = vTokens[i];
-            uint256 debt = vToken.totalBorrowsCurrent() + vToken.badDebt();
-            if (debt != 0) {
-                debtUsd += (debt * resilientOracle.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
-            }
-        }
-        if (debtUsd > SPOKE_POOL_MANAGER.maxResidualPoolDebtUsd()) {
-            revert ResidualDebtExceeded(debtUsd);
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
     // View functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     function buildExitProposal(
         address comptroller,
         uint256 buildId,
@@ -238,7 +204,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
         }
         Proposal memory proposal = _newProposal(marketCount + EXIT_ACTIONS);
 
-        // The comptroller rejects empty market arrays
+        // The comptroller's cap setters reject empty market arrays
         if (marketCount != 0) {
             uint256[] memory zeroCaps = new uint256[](marketCount);
             Action[] memory pausedActions = new Action[](3);
@@ -274,7 +240,7 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
         return _encodeProposal(proposal, description);
     }
 
-    /// @inheritdoc ISpokePoolBuilder
+    /// @inheritdoc ISpokePoolProposalBuilder
     function buildForceCloseProposal(
         address comptroller,
         string calldata description
@@ -296,35 +262,6 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
             }
         }
         return _encodeProposal(proposal, description);
-    }
-
-    /// @inheritdoc ISpokePoolBuilder
-    function validateMarkets(
-        address comptroller,
-        uint256 tierId,
-        ISpokePoolManager.DeployerMarketParams[] memory markets
-    ) public view {
-        uint256 marketCount = markets.length;
-        if (marketCount == 0) {
-            revert InvalidArrayLength();
-        }
-        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
-        (, , ITierRegistry.PoolLimits memory limits) = tierRegistry.getTierTerms(tierId);
-        (uint256 poolMarketCount, uint256 collateralMarketCount) = _countPoolMarkets(comptroller);
-        poolMarketCount += marketCount;
-        if (poolMarketCount > MAX_POOL_MARKETS) {
-            revert TooManyMarkets(poolMarketCount, MAX_POOL_MARKETS);
-        }
-        for (uint256 i; i < marketCount; ++i) {
-            _checkUniqueAsset(comptroller, markets, i);
-            _validateMarket(tierRegistry, tierId, limits, markets[i]);
-            if (!markets[i].isLoanMarket) {
-                ++collateralMarketCount;
-            }
-        }
-        if (collateralMarketCount > limits.maxCollateralMarkets) {
-            revert TooManyMarkets(collateralMarketCount, limits.maxCollateralMarkets);
-        }
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -426,51 +363,6 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
         }
     }
 
-    /// @dev Returns a tier request's VIP actions: `settleRequest`, then each loan market's caps set to the new tier's
-    function _buildTierProposal(
-        uint256 requestId,
-        uint256 buildId,
-        address comptroller,
-        uint256 tierId
-    ) internal view returns (Proposal memory proposal) {
-        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
-        VToken[] memory listed = _listedMarkets(comptroller);
-        uint256 marketCount = listed.length;
-        proposal = _newProposal(1 + TIER_ACTIONS_PER_MARKET * marketCount);
-        _addAction(
-            proposal,
-            address(SPOKE_POOL_MANAGER),
-            "settleRequest(uint256,uint256)",
-            abi.encode(requestId, buildId)
-        );
-        for (uint256 i; i < marketCount; ++i) {
-            address vToken = address(listed[i]);
-            if (!SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
-                continue;
-            }
-            address asset = VToken(vToken).underlying();
-            uint256 supplyCap = tierRegistry.getLoanSupplyCap(tierId, asset);
-            if (supplyCap == 0) {
-                revert LoanAssetNotAllowed(asset);
-            }
-            address[] memory markets = new address[](1);
-            markets[0] = vToken;
-            uint256[] memory caps = new uint256[](1);
-            caps[0] = supplyCap;
-            _addAction(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(markets, caps));
-            _addAction(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(markets, caps));
-
-            address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
-            // On a YieldGroup zero means uncapped; an unchanged cap is skipped
-            uint256 resourceCap = IYieldGroup(yieldGroup).resourceCap(vToken);
-            if (resourceCap == 0 || supplyCap < resourceCap) {
-                _addAction(proposal, yieldGroup, "lowerResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
-            } else if (supplyCap > resourceCap) {
-                _addAction(proposal, yieldGroup, "raiseResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
-            }
-        }
-    }
-
     /// @dev Adds a market's listing: approve and add it with its seed, burn the seed's vTokens, set its reserve delta
     function _addMarketListing(
         Proposal memory proposal,
@@ -523,103 +415,47 @@ contract SpokePoolBuilder is ISpokePoolBuilder {
         _addAction(proposal, yieldGroup, "lowerResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
     }
 
-    /// @dev Runs the checks that need prices, at build, as a new collateral asset's oracle is set after the request
-    function _checkMarketPrices(uint256 tierId, ISpokePoolManager.DeployerMarketParams[] memory markets) internal view {
-        (, , ITierRegistry.PoolLimits memory limits) = SPOKE_POOL_MANAGER.TIER_REGISTRY().getTierTerms(tierId);
-        ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
-        uint256 marketCount = markets.length;
+    /// @dev Returns a tier request's VIP actions: `settleRequest`, then each loan market's caps set to the new tier's
+    function _buildTierProposal(
+        uint256 requestId,
+        uint256 buildId,
+        address comptroller,
+        uint256 tierId
+    ) internal view returns (Proposal memory proposal) {
+        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
+        VToken[] memory listed = _listedMarkets(comptroller);
+        uint256 marketCount = listed.length;
+        proposal = _newProposal(1 + TIER_ACTIONS_PER_MARKET * marketCount);
+        _addAction(
+            proposal,
+            address(SPOKE_POOL_MANAGER),
+            "settleRequest(uint256,uint256)",
+            abi.encode(requestId, buildId)
+        );
         for (uint256 i; i < marketCount; ++i) {
-            ISpokePoolManager.DeployerMarketParams memory market = markets[i];
-            address asset = market.asset;
-            uint256 price = resilientOracle.getPrice(asset);
-            if ((market.seed * price) / EXP_SCALE < MIN_SEED_USD) {
-                revert InsufficientSeed(asset);
-            }
-            if (market.isLoanMarket) {
+            address vToken = address(listed[i]);
+            if (!SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
                 continue;
             }
-            if ((market.supplyCap * price) / EXP_SCALE > limits.maxCollateralSupplyCapUsd) {
-                revert ExceedsTierLimit(asset);
-            }
-            if (!DEVIATION_BOUNDED_ORACLE.isBoundedPricingEnabled(asset)) {
-                revert DeviationBoundedOracleNotSet(asset);
-            }
-        }
-    }
-
-    /// @dev Checks a market's asset is in no earlier market of the request and not in the pool
-    function _checkUniqueAsset(
-        address comptroller,
-        ISpokePoolManager.DeployerMarketParams[] memory markets,
-        uint256 index
-    ) internal view {
-        address asset = markets[index].asset;
-        // A nested loop bounded by `MAX_POOL_MARKETS`
-        for (uint256 j; j < index; ++j) {
-            if (markets[j].asset == asset) {
-                revert DuplicateAsset(asset);
-            }
-        }
-        if (PoolRegistry(POOL_REGISTRY).getVTokenForAsset(comptroller, asset) != address(0)) {
-            revert DuplicateAsset(asset);
-        }
-    }
-
-    /// @dev Checks a new market's parameters against its type and the tier's limits, without prices
-    function _validateMarket(
-        ITierRegistry tierRegistry,
-        uint256 tierId,
-        ITierRegistry.PoolLimits memory limits,
-        ISpokePoolManager.DeployerMarketParams memory market
-    ) internal view {
-        address asset = market.asset;
-        if (bytes(market.name).length == 0 || bytes(market.symbol).length == 0 || market.seed == 0) {
-            revert InvalidMarketParams(asset);
-        }
-        if (market.isLoanMarket) {
+            address asset = VToken(vToken).underlying();
             uint256 supplyCap = tierRegistry.getLoanSupplyCap(tierId, asset);
             if (supplyCap == 0) {
                 revert LoanAssetNotAllowed(asset);
             }
-            if (
-                market.collateralFactor != 0 ||
-                market.liquidationThreshold != 0 ||
-                market.supplyCap != 0 ||
-                market.seed > supplyCap
-            ) {
-                revert InvalidMarketParams(asset);
-            }
-            if (!tierRegistry.isAllowedInterestRateModel(tierId, asset, market.interestRateModel)) {
-                revert InterestRateModelNotAllowed(market.interestRateModel);
-            }
-            return;
-        }
-        if (
-            market.interestRateModel != address(0) ||
-            market.collateralFactor > market.liquidationThreshold ||
-            market.seed > market.supplyCap
-        ) {
-            revert InvalidMarketParams(asset);
-        }
-        if (
-            market.collateralFactor > limits.maxCollateralFactor ||
-            market.liquidationThreshold > limits.maxLiquidationThreshold
-        ) {
-            revert ExceedsTierLimit(asset);
-        }
-    }
+            address[] memory markets = new address[](1);
+            markets[0] = vToken;
+            uint256[] memory caps = new uint256[](1);
+            caps[0] = supplyCap;
+            _addAction(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(markets, caps));
+            _addAction(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(markets, caps));
 
-    /// @dev Returns how many markets a pool has and how many of them are collateral; zero for a new pool
-    function _countPoolMarkets(
-        address comptroller
-    ) internal view returns (uint256 marketCount, uint256 collateralMarketCount) {
-        if (comptroller != address(0)) {
-            VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
-            marketCount = vTokens.length;
-            for (uint256 i; i < marketCount; ++i) {
-                if (!SPOKE_POOL_MANAGER.isLoanMarket(address(vTokens[i]))) {
-                    ++collateralMarketCount;
-                }
+            address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
+            // On a YieldGroup zero means uncapped; an unchanged cap is skipped
+            uint256 resourceCap = IYieldGroup(yieldGroup).resourceCap(vToken);
+            if (resourceCap == 0 || supplyCap < resourceCap) {
+                _addAction(proposal, yieldGroup, "lowerResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
+            } else if (supplyCap > resourceCap) {
+                _addAction(proposal, yieldGroup, "raiseResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
             }
         }
     }
