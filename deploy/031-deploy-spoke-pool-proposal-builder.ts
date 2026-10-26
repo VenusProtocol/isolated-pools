@@ -28,6 +28,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const governorBravo = await toAddress(preconfiguredAddresses.GovernorBravo);
   const poolRegistry = await toAddress("SpokePoolRegistry");
   const deviationBoundedOracle = await toAddress("DeviationBoundedOracle");
+  const chainlinkOracle = await toAddress("ChainlinkOracle");
   const spokeAdapter = await toAddress(preconfiguredAddresses.SpokeAdapter);
   const comptrollerBeacon = await toAddress("SpokeComptrollerBeacon");
   const vTokenBeacon = await toAddress("SpokeVTokenBeacon");
@@ -39,6 +40,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     governorBravo,
     poolRegistry,
     deviationBoundedOracle,
+    chainlinkOracle,
     spokeAdapter,
     comptrollerBeacon,
     vTokenBeacon,
@@ -65,6 +67,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       await readBackAddress(() => builder.DEVIATION_BOUNDED_ORACLE(), deviationBoundedOracle),
       deviationBoundedOracle,
     ],
+    ["CHAINLINK_ORACLE", await readBackAddress(() => builder.CHAINLINK_ORACLE(), chainlinkOracle), chainlinkOracle],
     ["SPOKE_ADAPTER", await readBackAddress(() => builder.SPOKE_ADAPTER(), spokeAdapter), spokeAdapter],
     [
       "COMPTROLLER_BEACON",

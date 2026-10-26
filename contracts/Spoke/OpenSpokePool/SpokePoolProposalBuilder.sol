@@ -18,6 +18,7 @@ import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuild
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ITierRegistry } from "../interfaces/ITierRegistry.sol";
 import { IGovernorBravo, PROPOSAL_TYPE_NORMAL } from "../interfaces/external/IGovernorBravo.sol";
+import { IResilientOracle } from "../interfaces/external/IResilientOracle.sol";
 import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
 
 /**
@@ -32,8 +33,9 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * `setMarketSupplyCaps` and `setMarketBorrowCaps`; to the Normal Timelock on `setSupplyAllowlistEnabled`,
  * `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups' `addResource`, `raiseResourceCap` and
  * `lowerResourceCap` (it already holds the other comptroller setters and `setReduceReservesBlockDelta`); to the Risk
- * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the action pause steward on
- * `setActionsPaused(address[],uint256[],bool)`
+ * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the supply pause steward on `setCollateralFactor`
+ * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `setTokenConfig` on the
+ * ChainlinkOracle, the ResilientOracle and the DeviationBoundedOracle, to price a new collateral asset
  */
 contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev VIP actions being assembled, with room for a fixed number of them
@@ -55,7 +57,8 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
     /**
      * @dev Most actions a VIP adds per new market: approve, `addMarket`, burn, `setReduceReservesBlockDelta`, and a
-     *   loan market's `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `addResource` and `lowerResourceCap`
+     *   loan market's `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `addResource` and `lowerResourceCap`. A
+     *   collateral market adds at most three oracle configs instead
      */
     uint256 internal constant MAX_ACTIONS_PER_MARKET = 8;
 
@@ -81,6 +84,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     IDeviationBoundedOracle public immutable DEVIATION_BOUNDED_ORACLE;
 
     /// @inheritdoc ISpokePoolProposalBuilder
+    address public immutable CHAINLINK_ORACLE;
+
+    /// @inheritdoc ISpokePoolProposalBuilder
     address public immutable SPOKE_ADAPTER;
 
     /// @inheritdoc ISpokePoolProposalBuilder
@@ -103,6 +109,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
      * @param governorBravo The governor the VIPs are proposed to
      * @param poolRegistry The registry new pools are listed in
      * @param deviationBoundedOracle The oracle that bounds collateral prices
+     * @param chainlinkOracle The oracle a new collateral asset's Chainlink feed is set on, the asset's main oracle
      * @param spokeAdapter The Hub adapter loan markets are registered with
      * @param comptrollerBeacon The beacon the comptroller proxies point at
      * @param vTokenBeacon The beacon the vToken proxies point at
@@ -118,6 +125,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         IGovernorBravo governorBravo,
         address poolRegistry,
         IDeviationBoundedOracle deviationBoundedOracle,
+        address chainlinkOracle,
         address spokeAdapter,
         address comptrollerBeacon,
         address vTokenBeacon,
@@ -129,6 +137,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         ensureNonzeroAddress(address(governorBravo));
         ensureNonzeroAddress(poolRegistry);
         ensureNonzeroAddress(address(deviationBoundedOracle));
+        ensureNonzeroAddress(chainlinkOracle);
         ensureNonzeroAddress(spokeAdapter);
         ensureNonzeroAddress(comptrollerBeacon);
         ensureNonzeroAddress(vTokenBeacon);
@@ -144,6 +153,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         GOVERNOR_BRAVO = governorBravo;
         POOL_REGISTRY = poolRegistry;
         DEVIATION_BOUNDED_ORACLE = deviationBoundedOracle;
+        CHAINLINK_ORACLE = chainlinkOracle;
         SPOKE_ADAPTER = spokeAdapter;
         COMPTROLLER_BEACON = comptrollerBeacon;
         VTOKEN_BEACON = vTokenBeacon;
@@ -179,7 +189,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         if (comptroller == address(0)) {
             comptroller = _deployComptroller(executor);
         }
-        vTokens = _deployMarkets(comptroller, request.markets, executor);
+        string memory poolName = request.requestType == ISpokePoolManager.RequestType.Pool
+            ? request.poolName
+            : PoolRegistry(POOL_REGISTRY).getPoolByComptroller(comptroller).name;
+        vTokens = _deployMarkets(comptroller, poolName, request, executor);
         proposal = _encodeProposal(
             _buildMarketsProposal(requestId, buildId, request, comptroller, vTokens, executor),
             description
@@ -280,34 +293,59 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         SpokeComptroller(comptroller).transferOwnership(executor);
     }
 
-    /// @dev Deploys a request's markets, in the order of `markets`
+    /// @dev Deploys a request's markets: the collateral markets with Venus's model, then the loan markets with theirs
     function _deployMarkets(
         address comptroller,
-        ISpokePoolManager.DeployerMarketParams[] memory markets,
+        string memory poolName,
+        ISpokePoolManager.Request memory request,
         address executor
     ) internal returns (address[] memory vTokens) {
-        uint256 marketCount = markets.length;
+        uint256 collateralCount = request.collateralMarkets.length;
+        uint256 marketCount = collateralCount + request.loanMarkets.length;
         vTokens = new address[](marketCount);
-        for (uint256 i; i < marketCount; ++i) {
-            vTokens[i] = _deployMarket(comptroller, markets[i], executor);
+        (address collateralInterestRateModel, , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        for (uint256 i; i < collateralCount; ++i) {
+            vTokens[i] = _deployMarket(
+                comptroller,
+                poolName,
+                request.collateralMarkets[i].asset,
+                collateralInterestRateModel,
+                executor
+            );
+        }
+        for (uint256 i; i < request.loanMarkets.length; ++i) {
+            ISpokePoolManager.LoanMarketParams memory market = request.loanMarkets[i];
+            vTokens[collateralCount + i] = _deployMarket(
+                comptroller,
+                poolName,
+                market.asset,
+                market.interestRateModel,
+                executor
+            );
         }
     }
 
-    /// @dev Deploys a market owned by the Normal Timelock, with a loan market's requested model or collateral's default
+    /**
+     * @dev Deploys a market owned by the Normal Timelock, named like Venus's isolated pool markets:
+     *   `Venus <symbol> (<pool name>)` and `v<symbol>_<pool name>`
+     */
     function _deployMarket(
         address comptroller,
-        ISpokePoolManager.DeployerMarketParams memory market,
+        string memory poolName,
+        address asset,
+        address interestRateModel,
         address executor
     ) internal returns (address vToken) {
-        (address collateralInterestRateModel, uint256 reserveFactor, ) = SPOKE_POOL_MANAGER.marketDefaults();
+        (, uint256 reserveFactor, , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        string memory assetSymbol = IERC20MetadataUpgradeable(asset).symbol();
         vToken = address(new BeaconProxy(VTOKEN_BEACON, ""));
         VToken(vToken).initialize(
-            market.asset,
+            asset,
             ComptrollerInterface(comptroller),
-            InterestRateModel(market.isLoanMarket ? market.interestRateModel : collateralInterestRateModel),
-            uint256(10) ** (18 + IERC20MetadataUpgradeable(market.asset).decimals() - VTOKEN_DECIMALS),
-            market.name,
-            market.symbol,
+            InterestRateModel(interestRateModel),
+            uint256(10) ** (18 + IERC20MetadataUpgradeable(asset).decimals() - VTOKEN_DECIMALS),
+            string.concat("Venus ", assetSymbol, " (", poolName, ")"),
+            string.concat("v", assetSymbol, "_", poolName),
             VTOKEN_DECIMALS,
             executor,
             address(AccessControlledV8(address(SPOKE_POOL_MANAGER)).accessControlManager()),
@@ -316,7 +354,11 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         );
     }
 
-    /// @dev Returns a pool or markets request's VIP actions: a new pool's listing, `settleRequest`, then the markets'
+    /**
+     * @dev Returns a pool or markets request's VIP actions: a new pool's listing with Venus's current pool parameters,
+     *   `settleRequest`, then the collateral markets' oracle configs and listings and the loan markets' listings and
+     *   Hub registrations
+     */
     function _buildMarketsProposal(
         uint256 requestId,
         uint256 buildId,
@@ -325,23 +367,16 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address[] memory vTokens,
         address executor
     ) internal view returns (Proposal memory proposal) {
-        uint256 marketCount = vTokens.length;
-        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
-        proposal = _newProposal(POOL_CREATION_ACTIONS + MAX_ACTIONS_PER_MARKET * marketCount);
+        proposal = _newProposal(POOL_CREATION_ACTIONS + MAX_ACTIONS_PER_MARKET * vTokens.length);
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
-            ISpokePoolManager.PoolParams memory params = request.params;
+            (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral) = SPOKE_POOL_MANAGER
+                .poolParams();
             _addAction(proposal, comptroller, "acceptOwnership()", "");
             _addAction(
                 proposal,
                 POOL_REGISTRY,
                 "addPool(string,address,uint256,uint256,uint256)",
-                abi.encode(
-                    request.poolName,
-                    comptroller,
-                    params.closeFactor,
-                    params.liquidationIncentive,
-                    params.minLiquidatableCollateral
-                )
+                abi.encode(request.poolName, comptroller, closeFactor, liquidationIncentive, minLiquidatableCollateral)
             );
         }
         // Settled before the listings: it sends the seeds to the Normal Timelock, which lists the markets with them
@@ -351,46 +386,124 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             "settleRequest(uint256,uint256)",
             abi.encode(requestId, buildId)
         );
-        for (uint256 i; i < marketCount; ++i) {
-            ISpokePoolManager.DeployerMarketParams memory market = request.markets[i];
-            if (market.isLoanMarket) {
-                market.supplyCap = tierRegistry.getLoanSupplyCap(request.tierId, market.asset);
-            }
-            _addMarketListing(proposal, market, vTokens[i], executor);
-            if (market.isLoanMarket) {
-                _addHubRegistration(proposal, comptroller, market.asset, vTokens[i], market.supplyCap);
-            }
+        uint256 collateralCount = request.collateralMarkets.length;
+        for (uint256 i; i < collateralCount; ++i) {
+            ISpokePoolManager.CollateralMarketParams memory market = request.collateralMarkets[i];
+            _addOracleConfigs(proposal, market);
+            _addMarketListing(
+                proposal,
+                market.asset,
+                PoolRegistry.AddMarketInput({
+                    vToken: VToken(vTokens[i]),
+                    collateralFactor: market.collateralFactor,
+                    liquidationThreshold: market.liquidationThreshold,
+                    initialSupply: request.seeds[i],
+                    vTokenReceiver: executor,
+                    supplyCap: market.supplyCap,
+                    borrowCap: 0
+                })
+            );
+        }
+        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
+        for (uint256 i; i < request.loanMarkets.length; ++i) {
+            address asset = request.loanMarkets[i].asset;
+            address vToken = vTokens[collateralCount + i];
+            uint256 supplyCap = tierRegistry.getLoanSupplyCap(request.tierId, asset);
+            _addMarketListing(
+                proposal,
+                asset,
+                PoolRegistry.AddMarketInput({
+                    vToken: VToken(vToken),
+                    collateralFactor: 0,
+                    liquidationThreshold: 0,
+                    initialSupply: request.seeds[collateralCount + i],
+                    vTokenReceiver: executor,
+                    supplyCap: supplyCap,
+                    borrowCap: supplyCap
+                })
+            );
+            _addHubRegistration(proposal, comptroller, asset, vToken, supplyCap);
+        }
+    }
+
+    /**
+     * @dev Adds a collateral asset's oracle configs with Venus's parameters, skipping each oracle that has the asset
+     *   already: its Chainlink feed as the ResilientOracle's only oracle, then its DeviationBoundedOracle config
+     */
+    function _addOracleConfigs(
+        Proposal memory proposal,
+        ISpokePoolManager.CollateralMarketParams memory market
+    ) internal view {
+        address asset = market.asset;
+        (
+            ,
+            ,
+            ,
+            uint256 maxStalePeriod,
+            uint64 cooldownPeriod,
+            uint256 triggerThreshold,
+            uint256 resetThreshold
+        ) = SPOKE_POOL_MANAGER.marketParams();
+        address resilientOracle = address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE());
+        if (IResilientOracle(resilientOracle).getTokenConfig(asset).asset == address(0)) {
+            _addAction(
+                proposal,
+                CHAINLINK_ORACLE,
+                "setTokenConfig((address,address,uint256))",
+                abi.encode(asset, market.feed, maxStalePeriod)
+            );
+            _addAction(
+                proposal,
+                resilientOracle,
+                "setTokenConfig((address,address[3],bool[3],bool))",
+                abi.encode(
+                    IResilientOracle.TokenConfig({
+                        asset: asset,
+                        oracles: [CHAINLINK_ORACLE, address(0), address(0)],
+                        enableFlagsForOracles: [true, false, false],
+                        cachingEnabled: false
+                    })
+                )
+            );
+        }
+        (, , , , , , address initializedAsset, , , ) = DEVIATION_BOUNDED_ORACLE.assetProtectionConfig(asset);
+        if (initializedAsset == address(0)) {
+            _addAction(
+                proposal,
+                address(DEVIATION_BOUNDED_ORACLE),
+                "setTokenConfig((address,uint64,uint256,uint256,bool,bool))",
+                abi.encode(
+                    IDeviationBoundedOracle.TokenConfigInput({
+                        asset: asset,
+                        cooldownPeriod: cooldownPeriod,
+                        triggerThreshold: triggerThreshold,
+                        resetThreshold: resetThreshold,
+                        enableBoundedPricing: true,
+                        enableCaching: false
+                    })
+                )
+            );
         }
     }
 
     /// @dev Adds a market's listing: approve and add it with its seed, burn the seed's vTokens, set its reserve delta
     function _addMarketListing(
         Proposal memory proposal,
-        ISpokePoolManager.DeployerMarketParams memory market,
-        address vToken,
-        address executor
+        address asset,
+        PoolRegistry.AddMarketInput memory input
     ) internal view {
-        _addAction(proposal, market.asset, "approve(address,uint256)", abi.encode(POOL_REGISTRY, market.seed));
+        _addAction(proposal, asset, "approve(address,uint256)", abi.encode(POOL_REGISTRY, input.initialSupply));
         _addAction(
             proposal,
             POOL_REGISTRY,
             "addMarket((address,uint256,uint256,uint256,address,uint256,uint256))",
-            abi.encode(
-                PoolRegistry.AddMarketInput({
-                    vToken: VToken(vToken),
-                    collateralFactor: market.collateralFactor,
-                    liquidationThreshold: market.liquidationThreshold,
-                    initialSupply: market.seed,
-                    vTokenReceiver: executor,
-                    supplyCap: market.supplyCap,
-                    borrowCap: market.isLoanMarket ? market.supplyCap : 0
-                })
-            )
+            abi.encode(input)
         );
         // A new market mints at its initial exchange rate, so this is every vToken `addMarket` mints
-        uint256 seedVTokens = (market.seed * EXP_SCALE) / VToken(vToken).exchangeRateStored();
+        address vToken = address(input.vToken);
+        uint256 seedVTokens = (input.initialSupply * EXP_SCALE) / VToken(vToken).exchangeRateStored();
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(address(0), seedVTokens));
-        (, , uint256 reduceReservesBlockDelta) = SPOKE_POOL_MANAGER.marketDefaults();
+        (, , uint256 reduceReservesBlockDelta, , , , ) = SPOKE_POOL_MANAGER.marketParams();
         _addAction(proposal, vToken, "setReduceReservesBlockDelta(uint256)", abi.encode(reduceReservesBlockDelta));
     }
 

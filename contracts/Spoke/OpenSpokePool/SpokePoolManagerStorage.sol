@@ -25,10 +25,10 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     uint256 public maxResidualPoolDebtUsd;
 
     /// @inheritdoc ISpokePoolManager
-    PoolParams public poolDefaults;
+    PoolParams public poolParams;
 
     /// @inheritdoc ISpokePoolManager
-    ProtocolMarketParams public marketDefaults;
+    ProtocolMarketParams public marketParams;
 
     /// @inheritdoc ISpokePoolManager
     uint256 public requestCount;
@@ -68,5 +68,5 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[29] private __gap;
+    uint256[25] private __gap;
 }

@@ -41,7 +41,7 @@ interface ISpokePoolProposalBuilder {
      * @param buildId The build the VIP settles
      * @param description The VIP's description
      * @return comptroller The pool's comptroller, deployed on a pool request's first build
-     * @return vTokens The deployed markets, in the request's market order; empty for a tier request
+     * @return vTokens The deployed markets, the collateral markets' then the loan markets'; empty for a tier request
      * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error LoanAssetNotAllowed is thrown when a tier request's tier does not offer one of the pool's loan
@@ -113,6 +113,13 @@ interface ISpokePoolProposalBuilder {
      */
     // solhint-disable-next-line func-name-mixedcase
     function DEVIATION_BOUNDED_ORACLE() external view returns (IDeviationBoundedOracle);
+
+    /**
+     * @notice Returns the oracle a new collateral asset's Chainlink feed is set on, the asset's main oracle
+     * @return The ChainlinkOracle
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function CHAINLINK_ORACLE() external view returns (address);
 
     /**
      * @notice Returns the Hub adapter loan markets are registered with

@@ -94,22 +94,12 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function requestPool(
-        uint256 tierId,
-        string calldata poolName,
-        address bondAsset,
-        uint256 bondAmount,
-        DeployerMarketParams[] calldata markets
+        DeployerPoolParams calldata pool,
+        DeployerMarkets calldata markets
     ) external nonReentrant returns (uint256 requestId) {
-        SpokePoolManagerLib.DeployerPoolParams memory pool = SpokePoolManagerLib.DeployerPoolParams(
-            tierId,
-            poolName,
-            bondAsset,
-            bondAmount
-        );
         requestId = ++requestCount;
         SpokePoolManagerLib.requestPool(
             _contracts(),
-            poolDefaults,
             requests,
             latestRequestIds,
             activePools,
@@ -124,7 +114,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function requestNewMarkets(
         address comptroller,
-        DeployerMarketParams[] calldata markets
+        DeployerMarkets calldata markets
     ) external nonReentrant returns (uint256 requestId) {
         requestId = ++requestCount;
         SpokePoolManagerLib.requestNewMarkets(
@@ -155,32 +145,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function approveRequest(uint256 requestId) external nonReentrant {
-        SpokePoolManagerLib.approveRequest(requests, escrowedAmounts, requestId);
-    }
-
-    /// @inheritdoc ISpokePoolManager
     function cancelRequest(uint256 requestId) external nonReentrant {
         SpokePoolManagerLib.cancelRequest(requests, escrowedAmounts, requestId);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function editRequest(
-        uint256 requestId,
-        PoolParams calldata params,
-        DeployerMarketParams[] calldata markets
-    ) external nonReentrant {
-        _checkAccessAllowed("editRequest(uint256,PoolParams,DeployerMarketParams[])");
+    function setOracleFeed(uint256 requestId, address asset, address feed) external {
+        _checkAccessAllowed("setOracleFeed(uint256,address,address)");
 
-        SpokePoolManagerLib.editRequest(
-            _contracts(),
-            isLoanMarket,
-            requests,
-            escrowedAmounts,
-            requestId,
-            params,
-            markets
-        );
+        SpokePoolManagerLib.setOracleFeed(_contracts(), requests, requestId, asset, feed);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -192,6 +165,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             pools,
             isLoanMarket,
             requests,
+            escrowedAmounts,
             requestProposals,
             requestId,
             ++buildCount,
@@ -249,8 +223,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function pauseCollateralMint(address comptroller, address vToken) external {
-        SpokePoolManagerLib.pauseCollateralMint(_contracts(), pools, isLoanMarket, comptroller, vToken);
+    function pauseCollateralSupply(address comptroller, address vToken) external {
+        SpokePoolManagerLib.pauseCollateralSupply(_contracts(), pools, isLoanMarket, comptroller, vToken);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -269,7 +243,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         SpokePoolManagerLib.ensureDeployer(pools[comptroller].deployer);
         address bondAsset = address(IBondAccount(bondManager.bondAccounts(comptroller)).asset());
 
-        SpokePoolManagerLib.transferIn(bondAsset, amount);
+        SpokePoolManagerLib.transferIn(bondAsset, msg.sender, amount);
         IERC20Upgradeable(bondAsset).forceApprove(address(bondManager), amount);
         bondManager.topUp(comptroller, amount);
     }
@@ -466,27 +440,28 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setPoolDefaults(PoolParams calldata params) external {
-        _checkAccessAllowed("setPoolDefaults(PoolParams)");
+    function setPoolParams(PoolParams calldata params) external {
+        _checkAccessAllowed("setPoolParams(PoolParams)");
         SpokePoolManagerLib.checkPoolParams(params);
 
-        emit PoolDefaultsUpdated(poolDefaults, params);
-        poolDefaults = params;
+        emit PoolParamsUpdated(poolParams, params);
+        poolParams = params;
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setMarketDefaults(ProtocolMarketParams calldata params) external {
-        _checkAccessAllowed("setMarketDefaults(ProtocolMarketParams)");
+    function setMarketParams(ProtocolMarketParams calldata params) external {
+        _checkAccessAllowed("setMarketParams(ProtocolMarketParams)");
         if (
             params.collateralInterestRateModel == address(0) ||
             params.reserveFactor > MANTISSA_ONE ||
-            params.reduceReservesBlockDelta == 0
+            params.reduceReservesBlockDelta == 0 ||
+            params.maxStalePeriod == 0
         ) {
-            revert InvalidMarketDefaults();
+            revert InvalidProtocolMarketParams();
         }
 
-        emit MarketDefaultsUpdated(marketDefaults, params);
-        marketDefaults = params;
+        emit MarketParamsUpdated(marketParams, params);
+        marketParams = params;
     }
 
     /// @inheritdoc ISpokePoolManager
