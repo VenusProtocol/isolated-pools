@@ -10,10 +10,6 @@ import { ISpokePoolManager } from "./ISpokePoolManager.sol";
  * @notice Functions, events and errors of `SpokePoolShortfall`
  */
 interface ISpokePoolShortfall {
-    // ──────────────────────────────────────────────────────────────────────
-    // Events
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Emitted when a recoverer repays bad debt and is paid from the pool's bond
      * @param comptroller The pool's comptroller
@@ -41,29 +37,9 @@ interface ISpokePoolShortfall {
      */
     event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Errors
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Thrown when a market is not listed in its pool
-     * @param vToken The market
-     */
-    error MarketNotListed(address vToken);
-
-    /**
-     * @notice Thrown when a transfer delivers a different amount
-     * @param token The token
-     */
-    error TransferAmountMismatch(address token);
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Recoverer functions
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
      * @notice Repays a market's bad debt with the caller's funds, then pays the caller its worth in the pool's bond
-     *   asset at ResilientOracle prices; what is not liquid now is owed
+     *   asset at ResilientOracle prices; what the bond cannot pay out now is owed to the caller
      * @param vToken The market
      * @param amount The bad debt to repay, in the market's asset, which the caller must have approved; capped at the
      *   market's bad debt
@@ -77,12 +53,9 @@ interface ISpokePoolShortfall {
      */
     function recoverBadDebt(VToken vToken, uint256 amount) external returns (uint256 paidNow);
 
-    // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
-    // ──────────────────────────────────────────────────────────────────────
-
     /**
-     * @notice Repays a market's bad debt with Venus's own funds, once the pool's bond cannot; the bond is not touched
+     * @notice Repays a market's bad debt with the caller's funds without touching the pool's bond, so Venus can cover
+     *   what the bond cannot
      * @param vToken The market
      * @param amount The bad debt to repay, in the market's asset, which the caller must have approved; capped at the
      *   market's bad debt
@@ -92,10 +65,6 @@ interface ISpokePoolShortfall {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function repayBadDebt(VToken vToken, uint256 amount) external;
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @notice Returns the manager whose pools' bonds pay recoverers

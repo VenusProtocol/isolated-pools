@@ -102,23 +102,19 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
      * @return repaid The amount repaid, capped at the market's bad debt
      */
     function _repayBadDebt(VToken vToken, uint256 amount) internal returns (address comptroller, uint256 repaid) {
-        comptroller = _ensureListed(vToken);
+        comptroller = address(vToken.comptroller());
+        // Only a pool's own markets reach its bond
+        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
+            revert ISpokePoolManager.MarketNotListed(address(vToken));
+        }
         uint256 badDebt = vToken.badDebt();
         repaid = amount < badDebt ? amount : badDebt;
         IERC20Upgradeable underlying = IERC20Upgradeable(vToken.underlying());
         uint256 balanceBefore = underlying.balanceOf(address(vToken));
         underlying.safeTransferFrom(msg.sender, address(vToken), repaid);
         if (underlying.balanceOf(address(vToken)) - balanceBefore != repaid) {
-            revert TransferAmountMismatch(address(underlying));
+            revert ISpokePoolManager.TransferAmountMismatch(address(underlying));
         }
         vToken.badDebtRecovered(repaid);
-    }
-
-    /// @dev Returns a market's comptroller after checking it lists the market, so only a pool's markets reach its bond
-    function _ensureListed(VToken vToken) internal view returns (address comptroller) {
-        comptroller = address(vToken.comptroller());
-        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
-            revert MarketNotListed(address(vToken));
-        }
     }
 }
