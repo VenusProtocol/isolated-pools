@@ -16,7 +16,6 @@ import {
   MockLiquidityHub__factory,
   MockToken,
   MockToken__factory,
-  ResilientOracleInterface,
   SpokeBondManager,
   SpokeBondManager__factory,
   XVSStoreScenario__factory,
@@ -47,7 +46,6 @@ describe("SpokeBondManager", () => {
   let comptroller: SignerWithAddress;
   let other: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
-  let oracle: FakeContract<ResilientOracleInterface>;
   let xvs: MockToken;
   let usdt: MockToken;
   let idleToken: MockToken;
@@ -61,7 +59,7 @@ describe("SpokeBondManager", () => {
   /// Deploys a bond manager with no account implementations and approves it to pull the SpokePoolManager's tokens.
   const deployBondManager = async () => {
     const manager = (await upgrades.deployProxy(await ethers.getContractFactory("SpokeBondManager"), [acm.address], {
-      constructorArgs: [spokePoolManager.address, oracle.address],
+      constructorArgs: [spokePoolManager.address],
     })) as SpokeBondManager;
     for (const token of [xvs, usdt, idleToken]) {
       await token.connect(spokePoolManager).approve(manager.address, constants.MaxUint256);
@@ -73,7 +71,6 @@ describe("SpokeBondManager", () => {
     [owner, spokePoolManager, bondHolder, recoverer, comptroller, other] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     acm.isAllowedToCall.returns(true);
-    oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
 
     xvs = await new MockToken__factory(owner).deploy("Venus", "XVS", 18);
     usdt = await new MockToken__factory(owner).deploy("Tether", "USDT", 18);
@@ -133,19 +130,16 @@ describe("SpokeBondManager", () => {
   };
 
   describe("constructor and initialize", () => {
-    it("reverts when any address is zero", async () => {
+    it("reverts when the SpokePoolManager is zero", async () => {
       const factory = await ethers.getContractFactory<SpokeBondManager__factory>("SpokeBondManager");
-      const args: [string, string] = [spokePoolManager.address, oracle.address];
-      for (let i = 0; i < args.length; i++) {
-        const zeroed = [...args] as [string, string];
-        zeroed[i] = constants.AddressZero;
-        await expect(factory.deploy(...zeroed)).to.be.revertedWithCustomError(factory, "ZeroAddressNotAllowed");
-      }
+      await expect(factory.deploy(constants.AddressZero)).to.be.revertedWithCustomError(
+        factory,
+        "ZeroAddressNotAllowed",
+      );
     });
 
-    it("stores the SpokePoolManager, oracle, owner and access control manager", async () => {
+    it("stores the SpokePoolManager, owner and access control manager", async () => {
       expect(await bondManager.SPOKE_POOL_MANAGER()).to.equal(spokePoolManager.address);
-      expect(await bondManager.RESILIENT_ORACLE()).to.equal(oracle.address);
       expect(await bondManager.owner()).to.equal(owner.address);
       expect(await bondManager.accessControlManager()).to.equal(acm.address);
     });
@@ -314,15 +308,6 @@ describe("SpokeBondManager", () => {
       await expect(bondManager.connect(other).createBond(comptroller.address, bondHolder.address, xvs.address, BOND))
         .to.be.revertedWithCustomError(bondManager, "NotSpokePoolManager")
         .withArgs(other.address);
-    });
-
-    it("reverts when the asset's source type has no account implementation", async () => {
-      const manager = await deployBondManager();
-      await expect(
-        manager.connect(spokePoolManager).createBond(comptroller.address, bondHolder.address, idleToken.address, BOND),
-      )
-        .to.be.revertedWithCustomError(manager, "AccountImplementationNotSet")
-        .withArgs(SourceType.Idle);
     });
 
     it("stakes an XVS bond in the XVSVault from its own account", async () => {
@@ -689,7 +674,7 @@ describe("SpokeBondManager", () => {
 
       await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
         .to.emit(bondManager, "BondReleased")
-        .withArgs(comptroller.address, account.address, e18("10"));
+        .withArgs(comptroller.address, account.address);
       expect(await bondManager.bondAccounts(comptroller.address)).to.equal(constants.AddressZero);
       expect(await account.released()).to.equal(true);
       expect(await account.value()).to.equal(0);
@@ -709,7 +694,7 @@ describe("SpokeBondManager", () => {
 
       await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
         .to.emit(bondManager, "BondReleased")
-        .withArgs(comptroller.address, account.address, 0);
+        .withArgs(comptroller.address, account.address);
 
       await time.increase(LOCK_PERIOD);
       await expect(bondManager.payReceivers(account.address))
@@ -725,9 +710,26 @@ describe("SpokeBondManager", () => {
       const account = await createBond(usdt);
       await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
         .to.emit(bondManager, "BondReleased")
-        .withArgs(comptroller.address, account.address, BOND);
+        .withArgs(comptroller.address, account.address);
       expect(await usdt.balanceOf(bondHolder.address)).to.equal(BOND);
       expect(await hub.balanceOf(account.address)).to.equal(0);
+    });
+
+    it("releases even when the payout fails, leaving it to payReceivers", async () => {
+      const account = await createBond(xvs);
+      await accrueRewards(1);
+      await xvsVault.pause();
+
+      await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
+        .to.emit(bondManager, "BondReleased")
+        .withArgs(comptroller.address, account.address);
+      expect(await account.released()).to.equal(true);
+
+      await xvsVault.resume();
+      await bondManager.payReceivers(account.address);
+      await time.increase(LOCK_PERIOD);
+      await bondManager.payReceivers(account.address);
+      expect(await xvs.balanceOf(bondHolder.address)).to.equal(BOND.add(e18("1")));
     });
 
     it("lets a handed-over pool post a new bond while the old account finishes paying out", async () => {
@@ -773,20 +775,6 @@ describe("SpokeBondManager", () => {
           .to.be.revertedWithCustomError(bondManager, "NotBondAccount")
           .withArgs(other.address);
       }
-    });
-  });
-
-  describe("getBondValueUsd", () => {
-    it("values the principal the bond covers at the oracle price", async () => {
-      await createBond(xvs);
-      oracle.getPrice.whenCalledWith(xvs.address).returns(e18("4"));
-      expect(await bondManager.getBondValueUsd(comptroller.address)).to.equal(e18("4000"));
-    });
-
-    it("reverts when the pool has no bond", async () => {
-      await expect(bondManager.getBondValueUsd(comptroller.address))
-        .to.be.revertedWithCustomError(bondManager, "BondNotFound")
-        .withArgs(comptroller.address);
     });
   });
 });

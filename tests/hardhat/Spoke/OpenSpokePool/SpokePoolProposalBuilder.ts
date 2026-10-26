@@ -18,16 +18,16 @@ import {
   ResilientOracleInterface,
   SpokeComptroller,
   SpokeComptroller__factory,
-  SpokePoolBuilder,
-  SpokePoolBuilder__factory,
   SpokePoolManager,
+  SpokePoolProposalBuilder,
+  SpokePoolProposalBuilder__factory,
   TierRegistry,
   VToken,
   VToken__factory,
   WhitePaperInterestRateModel,
   WhitePaperInterestRateModel__factory,
 } from "../../../../typechain";
-import { NO_ESTIMATE, RequestStatus, RequestType, e18 } from "./utils";
+import { RequestStatus, RequestType, e18 } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -66,7 +66,7 @@ const EXIT_PAUSED_ACTIONS = [0, 2, 7];
 /// An action as [target, signature, argument types, arguments]
 type Action = [string, string, string[], unknown[]];
 
-describe("SpokePoolBuilder", () => {
+describe("SpokePoolProposalBuilder", () => {
   let deployer: SignerWithAddress;
   let timelock: SignerWithAddress;
   let spokeAdapter: SignerWithAddress;
@@ -84,13 +84,11 @@ describe("SpokePoolBuilder", () => {
   let usdt: MockToken;
   let colA: MockToken;
   let colB: MockToken;
-  let colC: MockToken;
   let loanIrm: WhitePaperInterestRateModel;
-  let otherIrm: WhitePaperInterestRateModel;
   let collateralIrm: WhitePaperInterestRateModel;
   let comptrollerBeacon: string;
   let vTokenBeacon: string;
-  let builder: SpokePoolBuilder;
+  let builder: SpokePoolProposalBuilder;
 
   const tier = (loanAssets: object[]) => ({ enabled: true, minBondUsd: e18("100000"), limits: LIMITS, loanAssets });
   const usdtLoanAsset = (supplyCap: BigNumberish = LOAN_CAP) => ({
@@ -162,11 +160,6 @@ describe("SpokePoolBuilder", () => {
     const result = await caller.callStatic.buildRequestProposal(REQUEST_ID, BUILD_ID, DESCRIPTION);
     await caller.buildRequestProposal(REQUEST_ID, BUILD_ID, DESCRIPTION);
     return result;
-  };
-
-  const buildReverts = (requestToBuild: object) => {
-    manager.getRequest.returns(requestToBuild);
-    return expect(builder.connect(manager.wallet).buildRequestProposal(REQUEST_ID, BUILD_ID, DESCRIPTION));
   };
 
   /// Checks a payload is a Normal-route `propose` of exactly these actions
@@ -258,19 +251,15 @@ describe("SpokePoolBuilder", () => {
     governor.proposalTimelocks.returns(timelock.address);
     poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
     boundedOracle = await smock.fake<IDeviationBoundedOracle>("IDeviationBoundedOracle");
-    boundedOracle.isBoundedPricingEnabled.returns(true);
     oracle = await smock.fake<ResilientOracleInterface>("ResilientOracleInterface");
-    oracle.getPrice.returns(e18("1"));
     yieldGroup = await smock.fake<IYieldGroup>("IYieldGroup");
 
     const tokenFactory = new MockToken__factory(deployer);
     usdt = await tokenFactory.deploy("Tether", "USDT", 18);
     colA = await tokenFactory.deploy("Collateral A", "COLA", 18);
     colB = await tokenFactory.deploy("Collateral B", "COLB", 18);
-    colC = await tokenFactory.deploy("Collateral C", "COLC", 18);
     const irmFactory = new WhitePaperInterestRateModel__factory(deployer);
     loanIrm = await irmFactory.deploy(0, e18("0.1"), false, BLOCKS_PER_YEAR);
-    otherIrm = await irmFactory.deploy(0, e18("0.2"), false, BLOCKS_PER_YEAR);
     collateralIrm = await irmFactory.deploy(0, 0, false, BLOCKS_PER_YEAR);
 
     registry = (await upgrades.deployProxy(await ethers.getContractFactory("TierRegistry"), [
@@ -292,12 +281,12 @@ describe("SpokePoolBuilder", () => {
     const vTokenImplementation = await new VToken__factory(deployer).deploy(false, BLOCKS_PER_YEAR, e18("0.000005"));
     vTokenBeacon = (await beaconFactory.deploy(vTokenImplementation.address)).address;
 
-    builder = await new SpokePoolBuilder__factory(deployer).deploy(...builderArgs());
+    builder = await new SpokePoolProposalBuilder__factory(deployer).deploy(...builderArgs());
   });
 
   describe("constructor", () => {
     it("reverts when any address is zero", async () => {
-      const factory = new SpokePoolBuilder__factory(deployer);
+      const factory = new SpokePoolProposalBuilder__factory(deployer);
       const args = builderArgs();
       for (let i = 0; i < args.length - 1; i++) {
         const zeroed = [...args] as typeof args;
@@ -307,7 +296,7 @@ describe("SpokePoolBuilder", () => {
     });
 
     it("rejects more markets per pool than a new pool's VIP can hold", async () => {
-      const factory = new SpokePoolBuilder__factory(deployer);
+      const factory = new SpokePoolProposalBuilder__factory(deployer);
       const args = builderArgs();
       // (100 - 3 pool creation actions) / 8 actions per market
       await expect(factory.deploy(...args.slice(0, -1), 13))
@@ -331,106 +320,6 @@ describe("SpokePoolBuilder", () => {
     });
   });
 
-  describe("validateMarkets", () => {
-    const validate = (markets: object[], comptroller = constants.AddressZero) =>
-      builder.validateMarkets(comptroller, TIER_ID, markets as Parameters<SpokePoolBuilder["validateMarkets"]>[2]);
-
-    it("accepts markets that fit the tier", async () => {
-      await validate([loanMarket(), collateralMarket(colA), collateralMarket(colB)]);
-    });
-
-    it("rejects an empty market list", async () => {
-      await expect(validate([])).to.be.revertedWithCustomError(builder, "InvalidArrayLength");
-    });
-
-    it("caps a pool's markets, counting its listed ones", async () => {
-      const markets = Array(MAX_POOL_MARKETS + 1).fill(loanMarket());
-      await expect(validate(markets))
-        .to.be.revertedWithCustomError(builder, "TooManyMarkets")
-        .withArgs(MAX_POOL_MARKETS + 1, MAX_POOL_MARKETS);
-
-      const comptroller = await fakeComptroller([other.address, timelock.address, shortfall.address, deployer.address]);
-      await expect(validate([loanMarket(), collateralMarket(colA)], comptroller.address))
-        .to.be.revertedWithCustomError(builder, "TooManyMarkets")
-        .withArgs(6, MAX_POOL_MARKETS);
-    });
-
-    it("caps a pool's collateral markets at its tier's, counting its listed ones but not its loan markets", async () => {
-      await expect(validate([collateralMarket(colA), collateralMarket(colB), collateralMarket(colC)]))
-        .to.be.revertedWithCustomError(builder, "TooManyMarkets")
-        .withArgs(3, LIMITS.maxCollateralMarkets);
-
-      const listedCollateral = await fakeComptroller([other.address]);
-      await expect(validate([collateralMarket(colA), collateralMarket(colB)], listedCollateral.address))
-        .to.be.revertedWithCustomError(builder, "TooManyMarkets")
-        .withArgs(3, LIMITS.maxCollateralMarkets);
-
-      const listedLoan = await fakeComptroller([other.address]);
-      manager.isLoanMarket.whenCalledWith(other.address).returns(true);
-      await validate([collateralMarket(colA), collateralMarket(colB)], listedLoan.address);
-    });
-
-    it("rejects an asset listed twice or already in the pool", async () => {
-      await expect(validate([collateralMarket(colA), collateralMarket(colA)]))
-        .to.be.revertedWithCustomError(builder, "DuplicateAsset")
-        .withArgs(colA.address);
-
-      const comptroller = await fakeComptroller([]);
-      poolRegistry.getVTokenForAsset.whenCalledWith(comptroller.address, colA.address).returns(other.address);
-      await expect(validate([collateralMarket(colA)], comptroller.address))
-        .to.be.revertedWithCustomError(builder, "DuplicateAsset")
-        .withArgs(colA.address);
-    });
-
-    it("rejects missing parameters and parameters that do not fit the market's type or seed", async () => {
-      const invalid = [
-        loanMarket({ name: "" }),
-        loanMarket({ symbol: "" }),
-        loanMarket({ seed: 0 }),
-        loanMarket({ collateralFactor: 1 }),
-        loanMarket({ liquidationThreshold: 1 }),
-        loanMarket({ supplyCap: 1 }),
-        loanMarket({ seed: LOAN_CAP.add(1) }),
-        collateralMarket(colA, { interestRateModel: loanIrm.address }),
-        collateralMarket(colA, { collateralFactor: e18("0.5"), liquidationThreshold: e18("0.4") }),
-        collateralMarket(colA, { seed: e18("1001") }),
-      ];
-      for (const market of invalid) {
-        await expect(validate([market]))
-          .to.be.revertedWithCustomError(builder, "InvalidMarketParams")
-          .withArgs(market.asset);
-      }
-    });
-
-    it("rejects a loan market of an asset the tier does not offer", async () => {
-      await expect(validate([loanMarket({ asset: colA.address })]))
-        .to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed")
-        .withArgs(colA.address);
-    });
-
-    it("rejects an interest rate model the tier does not allow for the loan market's asset", async () => {
-      await registry.setTier(
-        TIER_ID,
-        tier([usdtLoanAsset(), { asset: colA.address, supplyCap: LOAN_CAP, interestRateModels: [otherIrm.address] }]),
-      );
-      await expect(validate([loanMarket({ interestRateModel: otherIrm.address })]))
-        .to.be.revertedWithCustomError(builder, "InterestRateModelNotAllowed")
-        .withArgs(otherIrm.address);
-      await validate([loanMarket({ asset: colA.address, interestRateModel: otherIrm.address })]);
-    });
-
-    it("rejects a collateral factor or liquidation threshold above the tier's", async () => {
-      for (const overrides of [
-        { collateralFactor: e18("0.51"), liquidationThreshold: e18("0.6") },
-        { liquidationThreshold: e18("0.66") },
-      ]) {
-        await expect(validate([collateralMarket(colA, overrides)]))
-          .to.be.revertedWithCustomError(builder, "ExceedsTierLimit")
-          .withArgs(colA.address);
-      }
-    });
-  });
-
   describe("buildRequestProposal", () => {
     it("can only be called by the manager", async () => {
       await expect(builder.connect(other).buildRequestProposal(REQUEST_ID, BUILD_ID, DESCRIPTION))
@@ -440,8 +329,6 @@ describe("SpokePoolBuilder", () => {
 
     describe("pool and markets requests", () => {
       it("deploys a new pool's comptroller and markets and builds its listing VIP", async () => {
-        // A loan market needs no bounded pricing
-        boundedOracle.isBoundedPricingEnabled.whenCalledWith(usdt.address).returns(false);
         const loan = loanMarket();
         const collateral = collateralMarket(colA);
         const [comptroller, vTokens, proposal] = await build(request({ markets: [loan, collateral] }));
@@ -520,39 +407,6 @@ describe("SpokePoolBuilder", () => {
         );
         expect(marketsComptroller).to.equal(comptroller);
         expectActions(proposal, [settlement(), ...listing(collateral, vTokens[0], collateral.supplyCap)]);
-      });
-
-      it("rejects a seed worth less than $10", async () => {
-        oracle.getPrice.whenCalledWith(usdt.address).returns(e18("0.1"));
-        await build(request({ markets: [loanMarket()] }));
-
-        oracle.getPrice.whenCalledWith(usdt.address).returns(e18("0.0999"));
-        await buildReverts(request({ markets: [loanMarket()] }))
-          .to.be.revertedWithCustomError(builder, "InsufficientSeed")
-          .withArgs(usdt.address);
-      });
-
-      it("rejects a collateral supply cap worth more than the tier allows", async () => {
-        oracle.getPrice.whenCalledWith(colA.address).returns(e18("1000"));
-        await build(request({ markets: [collateralMarket(colA)] }));
-
-        oracle.getPrice.whenCalledWith(colA.address).returns(e18("1000.001"));
-        await buildReverts(request({ markets: [collateralMarket(colA)] }))
-          .to.be.revertedWithCustomError(builder, "ExceedsTierLimit")
-          .withArgs(colA.address);
-      });
-
-      it("rejects a collateral asset without bounded pricing", async () => {
-        boundedOracle.isBoundedPricingEnabled.whenCalledWith(colA.address).returns(false);
-        await buildReverts(request({ markets: [collateralMarket(colA)] }))
-          .to.be.revertedWithCustomError(builder, "DeviationBoundedOracleNotSet")
-          .withArgs(colA.address);
-      });
-
-      it("checks the markets against the tier", async () => {
-        await buildReverts(request({ markets: [loanMarket({ asset: colA.address })] }))
-          .to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed")
-          .withArgs(colA.address);
       });
     });
 
@@ -724,36 +578,6 @@ describe("SpokePoolBuilder", () => {
           [borrowedVToken.address, true],
         ],
       ]);
-    });
-  });
-
-  describe("accrueAndCheckResidualDebt", () => {
-    let comptroller: FakeContract<SpokeComptroller>;
-    let indebtedVToken: FakeContract<VToken>;
-    let clearVToken: FakeContract<VToken>;
-
-    beforeEach(async () => {
-      indebtedVToken = await smock.fake<VToken>("VToken");
-      indebtedVToken.totalBorrowsCurrent.returns(e18("3"));
-      indebtedVToken.badDebt.returns(e18("1"));
-      clearVToken = await smock.fake<VToken>("VToken");
-      comptroller = await fakeComptroller([indebtedVToken.address, clearVToken.address]);
-      oracle.getUnderlyingPrice.whenCalledWith(indebtedVToken.address).returns(e18("2"));
-    });
-
-    it("accepts borrows and bad debt worth up to the manager's maximum, pricing only markets with debt", async () => {
-      manager.maxResidualPoolDebtUsd.returns(e18("8"));
-      await builder.accrueAndCheckResidualDebt(comptroller.address, NO_ESTIMATE);
-      expect(indebtedVToken.totalBorrowsCurrent).to.have.been.calledOnce;
-      expect(clearVToken.totalBorrowsCurrent).to.have.been.calledOnce;
-      expect(oracle.getUnderlyingPrice).to.have.been.calledOnceWith(indebtedVToken.address);
-    });
-
-    it("rejects borrows and bad debt worth more than the manager's maximum", async () => {
-      manager.maxResidualPoolDebtUsd.returns(e18("7.99"));
-      await expect(builder.accrueAndCheckResidualDebt(comptroller.address))
-        .to.be.revertedWithCustomError(builder, "ResidualDebtExceeded")
-        .withArgs(e18("8"));
     });
   });
 });
