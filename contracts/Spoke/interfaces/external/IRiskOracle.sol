@@ -25,14 +25,14 @@ interface IRiskOracle {
     }
 
     /**
-     * @notice Publishes a new risk parameter update
-     * @param referenceId An external reference ID associated with the update
-     * @param newValue The new value of the risk parameter being updated
-     * @param updateType Type of update performed, must be previously authorized
-     * @param market Address for market of the parameter update
-     * @param poolId Pool identifier for eMode-style collateral configuration (0 for regular markets)
-     * @param dstEid Destination endpoint ID for cross-chain routing
-     * @param additionalData Additional data for the update
+     * @notice Publishes a risk parameter update
+     * @param referenceId The publisher's own id for the update
+     * @param newValue The new value
+     * @param updateType The update type, which must be authorized
+     * @param market The market
+     * @param poolId The eMode pool the update is for; zero for a regular market
+     * @param dstEid The LayerZero endpoint id the update is routed to, for a cross-chain update
+     * @param additionalData Any extra data for the update
      */
     function publishRiskParameterUpdate(
         string memory referenceId,
@@ -45,10 +45,10 @@ interface IRiskOracle {
     ) external;
 
     /**
-     * @notice Gets the latest update ID for a specific market and update type (string) combination
-     * @param updateType The update type string
-     * @param market The market address
-     * @return The latest update ID for the given market and update type, or 0 if none exists
+     * @notice Returns a market's latest update of a type
+     * @param updateType The update type
+     * @param market The market
+     * @return The update ID; zero when there is none
      */
     function getLatestUpdateIdByTypeAndMarket(string memory updateType, address market) external view returns (uint256);
 

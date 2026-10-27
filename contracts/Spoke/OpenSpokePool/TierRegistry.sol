@@ -26,7 +26,6 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
      */
     uint256[49] private __gap;
 
-    /// @notice Disables initializers on the implementation, so only proxies are initialized
     constructor() {
         _disableInitializers();
     }
@@ -41,7 +40,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
+    // Admin functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ITierRegistry
@@ -158,7 +157,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @dev Returns a tier's supply cap for a loan asset; zero when it does not offer the asset
-    function _loanSupplyCap(Tier storage tier, address asset) internal view returns (uint256) {
+    function _loanSupplyCap(Tier storage tier, address asset) private view returns (uint256) {
         LoanAsset[] storage loanAssets = tier.loanAssets;
         uint256 loanAssetCount = loanAssets.length;
         for (uint256 i; i < loanAssetCount; ++i) {

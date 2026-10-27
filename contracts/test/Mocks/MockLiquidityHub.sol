@@ -4,11 +4,14 @@ pragma solidity 0.8.25;
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { ERC4626 } from "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @dev An ERC-4626 Hub stand-in that can be paused, capped on deposits, limited in what it pays per call, made to
 ///   revert deposits without data, made to mint fee shares once per block before paying, as the Hub accrues its fees,
 ///   and given an exit fee rounded like the Hub's: down in `previewRedeem`, up in `maxWithdraw` and `previewWithdraw`
 contract MockLiquidityHub is ERC4626 {
+    using SafeERC20 for IERC20;
+
     uint256 private constant BPS = 10_000;
 
     bool public hubPaused;
@@ -38,7 +41,7 @@ contract MockLiquidityHub is ERC4626 {
     }
 
     function lose(uint256 amount) external {
-        IERC20(asset()).transfer(address(0xdead), amount);
+        IERC20(asset()).safeTransfer(address(0xdead), amount);
     }
 
     function setRevertWithoutData(bool revertWithoutData_) external {

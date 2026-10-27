@@ -9,12 +9,13 @@ pragma solidity ^0.8.25;
 interface ITierRegistry {
     /// @notice A tier's limits on its pools; mantissas are scaled by 1e18
     struct PoolLimits {
-        // The least share of the required bond the bond must be worth; below it the deployer's risk setters revert
+        // The least share of the required bond the bond must be worth; below it the deployer's requests and risk
+        // setters revert
         uint256 minCoverageRatio;
         uint256 maxCollateralFactor;
         uint256 maxLiquidationThreshold;
         uint256 maxCollateralMarkets;
-        // Per collateral market
+        // Per collateral market, in USD scaled by 1e18
         uint256 maxCollateralSupplyCapUsd;
     }
 
@@ -34,7 +35,8 @@ interface ITierRegistry {
         // The bond required before the bond asset's factor, in USD scaled by 1e18
         uint256 minBondUsd;
         PoolLimits limits;
-        // A live pool's loan markets get these caps when it moves to the tier
+        // The loan assets its pools may list; new loan markets get these caps, as do a live pool's loan markets when
+        // it moves to the tier
         LoanAsset[] loanAssets;
     }
 
