@@ -52,10 +52,9 @@ library SpokePoolRequestLib {
     /**
      * @notice Pulls a new pool request's bond from its deployer into escrow
      * @param request The pool request, with its bond stored
-     * @custom:error TransferAmountMismatch is thrown when the transfer delivers a different amount
      */
     function escrowBond(ISpokePoolManager.Request storage request) external {
-        _transferIn(request.bondAsset, request.deployer, request.bondAmount);
+        IERC20Upgradeable(request.bondAsset).safeTransferFrom(request.deployer, address(this), request.bondAmount);
     }
 
     /**

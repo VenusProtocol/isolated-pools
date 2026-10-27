@@ -74,7 +74,6 @@ interface ISpokePoolShortfall {
      * @param amount The bad debt to repay, in the market's asset, which the caller must have approved; capped at the
      *   market's bad debt
      * @custom:event Emits BadDebtRepaid; the market emits BadDebtRecovered
-     * @custom:error MarketNotListed is thrown when the market is not listed in its pool
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */

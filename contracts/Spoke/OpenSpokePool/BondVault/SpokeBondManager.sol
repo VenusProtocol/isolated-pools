@@ -178,12 +178,6 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     function setAccountImplementation(SourceType sourceType, address implementation) external {
         _checkAccessAllowed("setAccountImplementation(uint8,address)");
         ensureNonzeroAddress(implementation);
-        if (
-            IBondAccount(implementation).sourceType() != sourceType ||
-            IBondAccount(implementation).BOND_MANAGER() != address(this)
-        ) {
-            revert InvalidAccountImplementation(sourceType, implementation);
-        }
 
         emit AccountImplementationUpdated(sourceType, accountImplementations[sourceType], implementation);
         accountImplementations[sourceType] = implementation;
@@ -193,12 +187,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     function setAssetConfig(address asset, AssetConfig calldata config) external {
         _checkAccessAllowed("setAssetConfig(address,AssetConfig)");
         ensureNonzeroAddress(asset);
-        address implementation = accountImplementations[config.sourceType];
-        if (
-            config.factor == 0 ||
-            implementation == address(0) ||
-            !IBondAccount(implementation).isValidSource(asset, config.source)
-        ) {
+        if (config.factor == 0 || accountImplementations[config.sourceType] == address(0)) {
             revert InvalidAssetConfig(asset);
         }
 

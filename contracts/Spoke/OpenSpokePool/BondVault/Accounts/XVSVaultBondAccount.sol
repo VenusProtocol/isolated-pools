@@ -5,7 +5,6 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
-import { ISpokeBondManager } from "../../../interfaces/ISpokeBondManager.sol";
 import { IXVSVault } from "../../../interfaces/external/IXVSVault.sol";
 import { BaseBondAccount } from "./BaseBondAccount.sol";
 
@@ -118,24 +117,6 @@ contract XVSVaultBondAccount is BaseBondAccount {
         if (receiver == bondHolder && released) {
             _transferOut(bondHolder, _freeAssets(balance));
         }
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @inheritdoc IBondAccount
-    function isValidSource(address asset_, address source_) external view returns (bool) {
-        if (source_ == address(0) || IXVSVault(source_).xvsAddress() != asset_) {
-            return false;
-        }
-        (address token, , , , ) = IXVSVault(source_).poolInfos(asset_, XVS_POOL_ID);
-        return token == asset_;
-    }
-
-    /// @inheritdoc IBondAccount
-    function sourceType() external pure returns (ISpokeBondManager.SourceType) {
-        return ISpokeBondManager.SourceType.XVSVault;
     }
 
     // ──────────────────────────────────────────────────────────────────────

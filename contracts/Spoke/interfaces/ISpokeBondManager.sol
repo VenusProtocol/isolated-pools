@@ -117,15 +117,7 @@ interface ISpokeBondManager {
     error NotBondAccount(address account);
 
     /**
-     * @notice Thrown when an account implementation is for another source type or another bond manager
-     * @param sourceType The source type it was set for
-     * @param implementation The implementation
-     */
-    error InvalidAccountImplementation(SourceType sourceType, address implementation);
-
-    /**
-     * @notice Thrown when a source does not fit its type or asset, its type has no account implementation, or the
-     *   factor is zero
+     * @notice Thrown when a bond asset's source type has no account implementation, or its factor is zero
      * @param asset The asset
      */
     error InvalidAssetConfig(address asset);
@@ -233,12 +225,9 @@ interface ISpokeBondManager {
     /**
      * @notice Sets the account implementation new bonds of a source type are cloned from; existing accounts keep theirs
      * @param sourceType The source type
-     * @param implementation The implementation, whose `sourceType` must be `sourceType` and whose `BOND_MANAGER` must
-     *   be this contract
+     * @param implementation The implementation, an account of that source type serving this contract
      * @custom:event Emits AccountImplementationUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the implementation is zero
-     * @custom:error InvalidAccountImplementation is thrown when the implementation is for another source type or
-     *   another bond manager
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setAccountImplementation(SourceType sourceType, address implementation) external;
@@ -246,13 +235,11 @@ interface ISpokeBondManager {
     /**
      * @notice Sets a bond asset's config; bonds already deposited keep their source
      * @param asset The asset
-     * @param config The config; its source is checked by the type's account implementation: an XVSVault whose XVS
-     *   pool stakes the asset, a Liquidity Hub for the asset, or zero for Idle. Disallow the asset with `allowed`,
-     *   never with a zero factor
+     * @param config The config; its source must fit the asset: an XVSVault whose XVS pool stakes it, a Liquidity Hub
+     *   for it, or zero for Idle. Disallow the asset with `allowed`, never with a zero factor
      * @custom:event Emits AssetConfigUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the asset is zero
-     * @custom:error InvalidAssetConfig is thrown when the type has no account implementation, the source does not
-     *   fit the asset or the factor is zero
+     * @custom:error InvalidAssetConfig is thrown when the type has no account implementation or the factor is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setAssetConfig(address asset, AssetConfig calldata config) external;

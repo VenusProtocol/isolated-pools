@@ -65,34 +65,4 @@ interface IXVSVault {
         uint256 pid,
         address user
     ) external view returns (uint256);
-
-    /**
-     * @notice Returns the XVS token
-     * @return The XVS token
-     */
-    function xvsAddress() external view returns (address);
-
-    /**
-     * @notice Returns a vault pool
-     * @param rewardToken The pool's reward token
-     * @param pid The pool index
-     * @return token The staked token
-     * @return allocPoint The pool's share of the reward token's rewards
-     * @return lastRewardBlockOrSecond When the pool's rewards were last updated
-     * @return accRewardPerShare Rewards accumulated per staked token, scaled by 1e12
-     * @return lockPeriod Time between a withdrawal request and its execution, in seconds
-     */
-    function poolInfos(
-        address rewardToken,
-        uint256 pid
-    )
-        external
-        view
-        returns (
-            address token,
-            uint256 allocPoint,
-            uint256 lastRewardBlockOrSecond,
-            uint256 accRewardPerShare,
-            uint256 lockPeriod
-        );
 }

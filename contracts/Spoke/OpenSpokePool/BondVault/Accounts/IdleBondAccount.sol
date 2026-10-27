@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
-import { ISpokeBondManager } from "../../../interfaces/ISpokeBondManager.sol";
 import { BaseBondAccount } from "./BaseBondAccount.sol";
 
 /**
@@ -49,20 +48,6 @@ contract IdleBondAccount is BaseBondAccount {
         released = true;
         principal = 0;
         _transferOut(bondHolder, asset.balanceOf(address(this)));
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @inheritdoc IBondAccount
-    function isValidSource(address, address source_) external pure returns (bool) {
-        return source_ == address(0);
-    }
-
-    /// @inheritdoc IBondAccount
-    function sourceType() external pure returns (ISpokeBondManager.SourceType) {
-        return ISpokeBondManager.SourceType.Idle;
     }
 
     // ──────────────────────────────────────────────────────────────────────

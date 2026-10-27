@@ -3,8 +3,6 @@ pragma solidity ^0.8.25;
 
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 
-import { ISpokeBondManager } from "./ISpokeBondManager.sol";
-
 /**
  * @title IBondAccount
  * @author Venus
@@ -121,14 +119,6 @@ interface IBondAccount {
     function payReceiver(address receiver) external;
 
     /**
-     * @notice Returns whether `source_` can hold `asset_` for this kind of account; with no source, it must be zero
-     * @param asset_ The asset
-     * @param source_ The source
-     * @return Whether it fits
-     */
-    function isValidSource(address asset_, address source_) external view returns (bool);
-
-    /**
      * @notice Returns the principal the bond still covers: its principal, or less after a loss in the source or net of
      *   a Hub's exit fee
      * @return The amount, in the asset
@@ -181,10 +171,4 @@ interface IBondAccount {
      * @return The principal, in the asset
      */
     function principal() external view returns (uint256);
-
-    /**
-     * @notice Returns the kind of source this account puts the bond to work in
-     * @return The source type
-     */
-    function sourceType() external pure returns (ISpokeBondManager.SourceType);
 }

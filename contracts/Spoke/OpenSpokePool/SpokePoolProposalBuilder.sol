@@ -494,10 +494,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         bool[] memory unpriced,
         address oracle
     ) private view {
-        if (oracle == address(0)) {
-            return;
-        }
-
         (, , , uint256 maxStalePeriod, , , , ) = SPOKE_POOL_MANAGER.marketParams();
         uint256 marketCount = markets.length;
         FeedConfig[] memory configs = new FeedConfig[](marketCount);

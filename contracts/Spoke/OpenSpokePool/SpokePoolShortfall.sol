@@ -89,11 +89,9 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     /// @inheritdoc ISpokePoolShortfall
     function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
         _checkAccessAllowed("repayBadDebt(address,uint256)");
-        address comptroller = _ensureMarketListed(vToken);
-
         uint256 repaid = _repayBadDebt(vToken, amount);
 
-        emit BadDebtRepaid(comptroller, address(vToken), msg.sender, repaid);
+        emit BadDebtRepaid(address(vToken.comptroller()), address(vToken), msg.sender, repaid);
     }
 
     // ──────────────────────────────────────────────────────────────────────

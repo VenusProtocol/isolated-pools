@@ -5,7 +5,6 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
 import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
-import { ISpokeBondManager } from "../../../interfaces/ISpokeBondManager.sol";
 import { ILiquidityHub } from "../../../interfaces/external/ILiquidityHub.sol";
 import { BaseBondAccount } from "./BaseBondAccount.sol";
 
@@ -78,20 +77,6 @@ contract LiquidityHubBondAccount is BaseBondAccount {
         if (paid < total) {
             revert InsufficientLiquidity(total - paid);
         }
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // View functions
-    // ──────────────────────────────────────────────────────────────────────
-
-    /// @inheritdoc IBondAccount
-    function isValidSource(address asset_, address source_) external view returns (bool) {
-        return source_ != address(0) && ILiquidityHub(source_).asset() == asset_;
-    }
-
-    /// @inheritdoc IBondAccount
-    function sourceType() external pure returns (ISpokeBondManager.SourceType) {
-        return ISpokeBondManager.SourceType.LiquidityHub;
     }
 
     // ──────────────────────────────────────────────────────────────────────

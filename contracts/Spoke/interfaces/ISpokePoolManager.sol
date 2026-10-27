@@ -481,12 +481,6 @@ interface ISpokePoolManager {
     error BondManagerAlreadySet();
 
     /**
-     * @notice Thrown when a bond manager serves another manager
-     * @param bondManager The bond manager
-     */
-    error InvalidBondManager(address bondManager);
-
-    /**
      * @notice Thrown when Venus's market parameters have a zero model, block delta, staleness limit or bound deviation,
      *   a reserve factor above 1e18, or a bound deviation of 1e18 or above
      */
@@ -506,7 +500,6 @@ interface ISpokePoolManager {
      * @custom:error InvalidBondAsset is thrown when the bond manager does not allow the bond asset
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
      * @custom:error CoverageTooLow is thrown when the bond is worth less than the tier's minimum coverage ratio of it
-     * @custom:error TransferAmountMismatch is thrown when a transfer delivers a different amount
      * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
@@ -711,7 +704,6 @@ interface ISpokePoolManager {
      * @param amount The amount, in the bond's asset
      * @custom:event The bond manager emits BondToppedUp
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
-     * @custom:error TransferAmountMismatch is thrown when the transfer delivers a different amount
      * @custom:error The bond manager's `topUp` errors
      * @custom:error Reverts without data when the pool has no live bond, for example once it is released
      * @custom:access Only the pool's deployer
@@ -853,11 +845,9 @@ interface ISpokePoolManager {
 
     /**
      * @notice Sets the bond manager, once
-     * @param newBondManager The bond manager, whose `SPOKE_POOL_MANAGER` must be this contract
+     * @param newBondManager The bond manager, serving this contract
      * @custom:event Emits BondManagerSet
      * @custom:error BondManagerAlreadySet is thrown when the bond manager is already set
-     * @custom:error InvalidBondManager is thrown when its `SPOKE_POOL_MANAGER` is another contract
-     * @custom:error Reverts without data when the bond manager is not a contract with `SPOKE_POOL_MANAGER`
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setBondManager(ISpokeBondManager newBondManager) external;

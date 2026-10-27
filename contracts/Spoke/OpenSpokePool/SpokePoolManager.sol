@@ -307,12 +307,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _ensureDeployer(pools[comptroller].deployer);
         IERC20Upgradeable bondAsset = IBondAccount(bondManager.bondAccounts(comptroller)).asset();
 
-        uint256 balanceBefore = bondAsset.balanceOf(address(this));
         bondAsset.safeTransferFrom(msg.sender, address(this), amount);
-        if (bondAsset.balanceOf(address(this)) - balanceBefore != amount) {
-            revert TransferAmountMismatch(address(bondAsset));
-        }
-
         bondAsset.forceApprove(address(bondManager), amount);
         bondManager.topUp(comptroller, amount);
     }
@@ -476,9 +471,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _checkAccessAllowed("setBondManager(address)");
         if (address(bondManager) != address(0)) {
             revert BondManagerAlreadySet();
-        }
-        if (newBondManager.SPOKE_POOL_MANAGER() != address(this)) {
-            revert InvalidBondManager(address(newBondManager));
         }
 
         bondManager = newBondManager;

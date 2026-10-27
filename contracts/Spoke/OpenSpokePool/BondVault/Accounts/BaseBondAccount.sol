@@ -15,7 +15,7 @@ import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
  * beyond the principal, including assets sent here directly
  * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. Each
  * account moves the asset in `deposit`, `claimYield`, `seize` and `release`, keeping the books with `_recordSeizure`
- * and `_transferOut`, reports what it holds in `_bondAssets`, and defines `isValidSource` and `sourceType`
+ * and `_transferOut`, and reports what it holds in `_bondAssets`
  */
 abstract contract BaseBondAccount is Initializable, IBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
