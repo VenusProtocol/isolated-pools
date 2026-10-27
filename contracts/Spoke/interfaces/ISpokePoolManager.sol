@@ -874,9 +874,9 @@ interface ISpokePoolManager {
 
     /**
      * @notice Sets the oracles a new collateral asset's feeds may be set on, such as Venus's Chainlink, RedStone and
-     *   Atlas oracles; a zero entry leaves that slot empty. Each must be ChainlinkOracle-compatible, and the Normal
-     *   Timelock must be allowed to call its `setTokenConfig`. A removed oracle fails the build of a request whose
-     *   unpriced asset has a feed on it
+     *   Atlas oracles; a zero entry leaves that slot empty. Each must be ChainlinkOracle-compatible, with its
+     *   `setTokenConfigs` batch, and the Normal Timelock must be allowed to call its `setTokenConfig`. A removed oracle
+     *   fails the build of a request whose unpriced asset has a feed on it
      * @param oracles The oracles
      * @custom:event Emits SupportedOraclesUpdated
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock

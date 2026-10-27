@@ -38,8 +38,9 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * `lowerResourceCap` (it already holds the other comptroller setters and `setReduceReservesBlockDelta`); to the Risk
  * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the supply pause steward on `setCollateralFactor`
  * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `settleRequest(uint256)` and
- * `startWindDown(address)` on the manager, and, to price a new collateral asset, `setTokenConfig` on every supported
- * oracle, the ResilientOracle and the DeviationBoundedOracle, and `setValidateConfig` on the BoundValidator
+ * `startWindDown(address)` on the manager, and, to price new collateral assets, `setTokenConfig` on every supported
+ * oracle and the ResilientOracle, `setValidateConfig` on the BoundValidator, whose batch setters call these, and
+ * `setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])` on the DeviationBoundedOracle
  */
 contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev VIP actions being assembled, with room for a fixed number of them
@@ -48,6 +49,20 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         string[] signatures;
         bytes[] calldatas;
         uint256 length;
+    }
+
+    /// @dev A feed's config on a ChainlinkOracle-compatible oracle, as its `setTokenConfigs` takes it
+    struct FeedConfig {
+        address asset;
+        address feed;
+        uint256 maxStalePeriod;
+    }
+
+    /// @dev An asset's bounds on the BoundValidator, as its `setValidateConfigs` takes them
+    struct BoundConfig {
+        address asset;
+        uint256 upperBoundRatio;
+        uint256 lowerBoundRatio;
     }
 
     /// @dev GovernorBravo `ProposalType.NORMAL`, the route the VIPs use
@@ -63,18 +78,22 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     uint256 internal constant POOL_CREATION_ACTIONS = 3;
 
     /**
-     * @dev Most actions a VIP adds per new market: approve, `addMarket`, burn and `setReduceReservesBlockDelta`, plus a
-     *   collateral market's oracle configs, at most six: three feeds, the BoundValidator, the ResilientOracle and the
-     *   DeviationBoundedOracle. A loan market adds four instead: `setSupplyAllowlistEnabled`, `setAllowedSupplier`,
-     *   `addResource` and `lowerResourceCap`
+     * @dev Most oracle actions of a request's VIP, each a batch over its new collateral assets: one per supported
+     *   oracle, the BoundValidator, the ResilientOracle and the DeviationBoundedOracle
      */
-    uint256 internal constant MAX_ACTIONS_PER_MARKET = 10;
+    uint256 internal constant ORACLE_CONFIG_ACTIONS = 6;
+
+    /**
+     * @dev Most actions a VIP adds per new market: approve, `addMarket`, burn and `setReduceReservesBlockDelta`, plus a
+     *   loan market's `setSupplyAllowlistEnabled`, `setAllowedSupplier`, `addResource` and `lowerResourceCap`
+     */
+    uint256 internal constant MAX_ACTIONS_PER_MARKET = 8;
 
     /// @dev Actions of an exit VIP besides one per collateral market
     uint256 internal constant EXIT_ACTIONS = 4;
 
-    /// @dev Most actions a tier VIP adds per loan market: its supply, borrow and Hub caps
-    uint256 internal constant TIER_ACTIONS_PER_MARKET = 3;
+    /// @dev Actions of a tier VIP besides one Hub cap per loan market: `settleRequest` and the batched caps
+    uint256 internal constant TIER_ACTIONS = 3;
 
     /// @dev Loop limit every comptroller the builder deploys is initialized with
     uint256 internal constant MAX_LOOPS_LIMIT = 100;
@@ -146,8 +165,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         ensureNonzeroAddress(protocolShareReserve);
         ensureNonzeroAddress(shortfall);
 
-        uint256 maxMarketCount = (governorBravo.proposalMaxOperations() - POOL_CREATION_ACTIONS) /
-            MAX_ACTIONS_PER_MARKET;
+        uint256 maxMarketCount = (governorBravo.proposalMaxOperations() -
+            POOL_CREATION_ACTIONS -
+            ORACLE_CONFIG_ACTIONS) / MAX_ACTIONS_PER_MARKET;
         if (maxPoolMarkets > maxMarketCount) {
             revert TooManyMarkets(maxPoolMarkets, maxMarketCount);
         }
@@ -360,8 +380,8 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
     /**
      * @dev Returns a pool or markets request's VIP actions: a new pool's `acceptOwnership` and its listing with Venus's
-     *   current pool parameters, `settleRequest`, then the collateral markets' oracle configs and listings and the loan
-     *   markets' listings and Hub registrations
+     *   current pool parameters, `settleRequest`, the collateral assets' oracle configs, then the collateral markets'
+     *   listings and the loan markets' listings and Hub registrations
      */
     function _buildMarketsProposal(
         uint256 requestId,
@@ -370,7 +390,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address[] memory vTokens,
         address executor
     ) private view returns (Proposal memory proposal) {
-        proposal = _newProposal(POOL_CREATION_ACTIONS + MAX_ACTIONS_PER_MARKET * vTokens.length);
+        proposal = _newProposal(
+            POOL_CREATION_ACTIONS + ORACLE_CONFIG_ACTIONS + MAX_ACTIONS_PER_MARKET * vTokens.length
+        );
 
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
             (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral) = SPOKE_POOL_MANAGER
@@ -393,10 +415,12 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         // Settled before the listings: it sends the seeds to the Normal Timelock, which lists the markets with them
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
 
+        // Before the listings: a collateral market needs a price for its collateral factor
+        _addOracleConfigs(proposal, request.collateralMarkets);
+
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
-            _addOracleConfigs(proposal, market);
             _addMarketListing(
                 proposal,
                 market.asset,
@@ -436,90 +460,189 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /**
-     * @dev Adds a collateral asset's oracle configs with Venus's parameters. Unless the ResilientOracle prices the
-     *   asset already: each set feed on its own oracle, the BoundValidator's bounds when a pivot feed is set, and the
-     *   ResilientOracle config with each set feed's oracle enabled. Then its DeviationBoundedOracle config, unless
-     *   that oracle has the asset already
+     * @dev Adds the collateral assets' oracle configs with Venus's parameters, one batch per oracle. Each asset the
+     *   ResilientOracle does not price yet gets its set feeds, each on its own oracle, its BoundValidator bounds when a
+     *   pivot feed is set, and its ResilientOracle config with each set feed's oracle enabled. Each asset the
+     *   DeviationBoundedOracle does not have yet gets its config there
      */
     function _addOracleConfigs(
         Proposal memory proposal,
-        ISpokePoolManager.CollateralMarketRequestParams memory market
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets
     ) private view {
-        address asset = market.asset;
-        (
-            ,
-            ,
-            ,
-            uint256 maxStalePeriod,
-            uint64 cooldownPeriod,
-            uint256 triggerThreshold,
-            uint256 resetThreshold,
-            uint256 boundDeviation
-        ) = SPOKE_POOL_MANAGER.marketParams();
-
         IResilientOracle resilientOracle = IResilientOracle(address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE()));
-        if (resilientOracle.getTokenConfig(asset).asset == address(0)) {
-            // The manager checked each set feed's oracle is one it supports and differs from the others
-            address[3] memory oracles;
-            bool[3] memory enabled;
-            for (uint256 i; i < 3; ++i) {
-                ISpokePoolManager.OracleFeed memory feed = market.feeds[i];
-                if (feed.feed == address(0)) {
-                    continue;
-                }
-
-                oracles[i] = feed.oracle;
-                enabled[i] = true;
-                _addAction(
-                    proposal,
-                    feed.oracle,
-                    "setTokenConfig((address,address,uint256))",
-                    abi.encode(asset, feed.feed, maxStalePeriod)
-                );
-            }
-
-            // Only a pivot makes the ResilientOracle validate prices against it; the manager allows a fallback only
-            // with a pivot
-            if (enabled[1]) {
-                _addAction(
-                    proposal,
-                    resilientOracle.boundValidator(),
-                    "setValidateConfig((address,uint256,uint256))",
-                    abi.encode(asset, MANTISSA_ONE + boundDeviation, MANTISSA_ONE - boundDeviation)
-                );
-            }
-
-            _addAction(
-                proposal,
-                address(resilientOracle),
-                "setTokenConfig((address,address[3],bool[3],bool))",
-                abi.encode(
-                    IResilientOracle.TokenConfig({
-                        asset: asset,
-                        oracles: oracles,
-                        enableFlagsForOracles: enabled,
-                        cachingEnabled: false
-                    })
-                )
-            );
+        uint256 marketCount = markets.length;
+        bool[] memory unpriced = new bool[](marketCount);
+        for (uint256 i; i < marketCount; ++i) {
+            unpriced[i] = resilientOracle.getTokenConfig(markets[i].asset).asset == address(0);
         }
 
-        (, , , , , , address initializedAsset, , , ) = DEVIATION_BOUNDED_ORACLE.assetProtectionConfig(asset);
-        if (initializedAsset == address(0)) {
+        for (uint256 i; i < 3; ++i) {
+            _addFeedConfigs(proposal, markets, unpriced, SPOKE_POOL_MANAGER.supportedOracles(i));
+        }
+        _addBoundConfigs(proposal, markets, unpriced, resilientOracle.boundValidator());
+        _addResilientOracleConfigs(proposal, markets, unpriced);
+        _addDeviationBoundedOracleConfigs(proposal, markets);
+    }
+
+    /**
+     * @dev Adds `oracle`'s batch of the unpriced assets' feeds on it, if any. The manager checked each set feed is on a
+     *   supported oracle and that an asset's feeds are on distinct oracles
+     */
+    function _addFeedConfigs(
+        Proposal memory proposal,
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
+        bool[] memory unpriced,
+        address oracle
+    ) private view {
+        if (oracle == address(0)) {
+            return;
+        }
+
+        (, , , uint256 maxStalePeriod, , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        uint256 marketCount = markets.length;
+        FeedConfig[] memory configs = new FeedConfig[](marketCount);
+        uint256 count;
+        for (uint256 i; i < marketCount; ++i) {
+            if (!unpriced[i]) {
+                continue;
+            }
+
+            for (uint256 j; j < 3; ++j) {
+                ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
+                if (feed.feed != address(0) && feed.oracle == oracle) {
+                    configs[count] = FeedConfig(markets[i].asset, feed.feed, maxStalePeriod);
+                    ++count;
+                    break;
+                }
+            }
+        }
+
+        if (count != 0) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(configs, count)
+            }
+            _addAction(proposal, oracle, "setTokenConfigs((address,address,uint256)[])", abi.encode(configs));
+        }
+    }
+
+    /**
+     * @dev Adds the BoundValidator's batch of the unpriced assets' bounds, if any. Only a pivot makes the
+     *   ResilientOracle validate prices against it, and the manager allows a fallback only with a pivot
+     */
+    function _addBoundConfigs(
+        Proposal memory proposal,
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
+        bool[] memory unpriced,
+        address boundValidator
+    ) private view {
+        (, , , , , , , uint256 boundDeviation) = SPOKE_POOL_MANAGER.marketParams();
+        uint256 marketCount = markets.length;
+        BoundConfig[] memory configs = new BoundConfig[](marketCount);
+        uint256 count;
+        for (uint256 i; i < marketCount; ++i) {
+            if (unpriced[i] && markets[i].feeds[1].feed != address(0)) {
+                configs[count] = BoundConfig(
+                    markets[i].asset,
+                    MANTISSA_ONE + boundDeviation,
+                    MANTISSA_ONE - boundDeviation
+                );
+                ++count;
+            }
+        }
+
+        if (count != 0) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(configs, count)
+            }
+            _addAction(
+                proposal,
+                boundValidator,
+                "setValidateConfigs((address,uint256,uint256)[])",
+                abi.encode(configs)
+            );
+        }
+    }
+
+    /// @dev Adds the ResilientOracle's batch of the unpriced assets' configs, each with its set feeds' oracles enabled
+    function _addResilientOracleConfigs(
+        Proposal memory proposal,
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
+        bool[] memory unpriced
+    ) private view {
+        uint256 marketCount = markets.length;
+        IResilientOracle.TokenConfig[] memory configs = new IResilientOracle.TokenConfig[](marketCount);
+        uint256 count;
+        for (uint256 i; i < marketCount; ++i) {
+            if (!unpriced[i]) {
+                continue;
+            }
+
+            IResilientOracle.TokenConfig memory config = configs[count];
+            config.asset = markets[i].asset;
+            for (uint256 j; j < 3; ++j) {
+                ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
+                if (feed.feed != address(0)) {
+                    config.oracles[j] = feed.oracle;
+                    config.enableFlagsForOracles[j] = true;
+                }
+            }
+            ++count;
+        }
+
+        if (count != 0) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(configs, count)
+            }
+            _addAction(
+                proposal,
+                address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE()),
+                "setTokenConfigs((address,address[3],bool[3],bool)[])",
+                abi.encode(configs)
+            );
+        }
+    }
+
+    /// @dev Adds the DeviationBoundedOracle's batch of configs for the assets it does not have yet, if any
+    function _addDeviationBoundedOracleConfigs(
+        Proposal memory proposal,
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets
+    ) private view {
+        (, , , , uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold, ) = SPOKE_POOL_MANAGER
+            .marketParams();
+        uint256 marketCount = markets.length;
+        IDeviationBoundedOracle.TokenConfigInput[] memory configs = new IDeviationBoundedOracle.TokenConfigInput[](
+            marketCount
+        );
+        uint256 count;
+        for (uint256 i; i < marketCount; ++i) {
+            address asset = markets[i].asset;
+            (, , , , , , address initializedAsset, , , ) = DEVIATION_BOUNDED_ORACLE.assetProtectionConfig(asset);
+            if (initializedAsset == address(0)) {
+                configs[count] = IDeviationBoundedOracle.TokenConfigInput({
+                    asset: asset,
+                    cooldownPeriod: cooldownPeriod,
+                    triggerThreshold: triggerThreshold,
+                    resetThreshold: resetThreshold,
+                    enableBoundedPricing: true,
+                    enableCaching: false
+                });
+                ++count;
+            }
+        }
+
+        if (count != 0) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(configs, count)
+            }
             _addAction(
                 proposal,
                 address(DEVIATION_BOUNDED_ORACLE),
-                "setTokenConfig((address,uint64,uint256,uint256,bool,bool))",
-                abi.encode(
-                    IDeviationBoundedOracle.TokenConfigInput({
-                        asset: asset,
-                        cooldownPeriod: cooldownPeriod,
-                        triggerThreshold: triggerThreshold,
-                        resetThreshold: resetThreshold,
-                        enableBoundedPricing: true,
-                        enableCaching: false
-                    })
-                )
+                "setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])",
+                abi.encode(configs)
             );
         }
     }
@@ -568,7 +691,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         _addAction(proposal, yieldGroup, "lowerResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
     }
 
-    /// @dev Returns a tier request's VIP actions: `settleRequest`, then each loan market's caps set to the new tier's
+    /**
+     * @dev Returns a tier request's VIP actions: `settleRequest`, each loan market's Hub cap set to the new tier's,
+     *   then the loan markets' supply and borrow caps in one batch each
+     */
     function _buildTierProposal(
         uint256 requestId,
         address comptroller,
@@ -577,10 +703,13 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
         VToken[] memory listed = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
-        proposal = _newProposal(1 + TIER_ACTIONS_PER_MARKET * marketCount);
+        proposal = _newProposal(TIER_ACTIONS + marketCount);
 
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
 
+        address[] memory loanMarkets = new address[](marketCount);
+        uint256[] memory caps = new uint256[](marketCount);
+        uint256 loanCount;
         for (uint256 i; i < marketCount; ++i) {
             address vToken = address(listed[i]);
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(vToken)) {
@@ -593,21 +722,45 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 revert LoanAssetNotAllowed(asset);
             }
 
-            address[] memory markets = new address[](1);
-            markets[0] = vToken;
-            uint256[] memory caps = new uint256[](1);
-            caps[0] = supplyCap;
-            _addAction(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(markets, caps));
-            _addAction(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(markets, caps));
+            loanMarkets[loanCount] = vToken;
+            caps[loanCount] = supplyCap;
+            ++loanCount;
+            _addHubCap(proposal, asset, vToken, supplyCap);
+        }
 
-            address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
-            // On a YieldGroup zero means uncapped; an unchanged cap is skipped
-            uint256 resourceCap = IYieldGroup(yieldGroup).resourceCap(vToken);
-            if (resourceCap == 0 || supplyCap < resourceCap) {
-                _addAction(proposal, yieldGroup, "lowerResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
-            } else if (supplyCap > resourceCap) {
-                _addAction(proposal, yieldGroup, "raiseResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
+        // The comptroller's cap setters reject empty market arrays
+        if (loanCount != 0) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(loanMarkets, loanCount)
+                mstore(caps, loanCount)
             }
+            _addAction(
+                proposal,
+                comptroller,
+                "setMarketSupplyCaps(address[],uint256[])",
+                abi.encode(loanMarkets, caps)
+            );
+            _addAction(
+                proposal,
+                comptroller,
+                "setMarketBorrowCaps(address[],uint256[])",
+                abi.encode(loanMarkets, caps)
+            );
+        }
+    }
+
+    /**
+     * @dev Sets a loan market's Hub cap to `supplyCap`; zero means uncapped on a YieldGroup, and an unchanged cap is
+     *   skipped
+     */
+    function _addHubCap(Proposal memory proposal, address asset, address vToken, uint256 supplyCap) private view {
+        address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
+        uint256 resourceCap = IYieldGroup(yieldGroup).resourceCap(vToken);
+        if (resourceCap == 0 || supplyCap < resourceCap) {
+            _addAction(proposal, yieldGroup, "lowerResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
+        } else if (supplyCap > resourceCap) {
+            _addAction(proposal, yieldGroup, "raiseResourceCap(address,uint256)", abi.encode(vToken, supplyCap));
         }
     }
 
