@@ -18,7 +18,7 @@ import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ITierRegistry } from "../interfaces/ITierRegistry.sol";
-import { IGovernorBravo, PROPOSAL_TYPE_NORMAL } from "../interfaces/external/IGovernorBravo.sol";
+import { IGovernorBravo } from "../interfaces/external/IGovernorBravo.sol";
 import { IResilientOracle } from "../interfaces/external/IResilientOracle.sol";
 import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
 
@@ -28,16 +28,18 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * @notice Builds `SpokePoolManager`'s VIPs as ABI-encoded GovernorBravo `propose` calls on the Normal route. A
  * request's VIP settles it: for a pool or markets request the builder deploys the contracts before the vote and the
  * VIP lists them; for a tier request the VIP sets the pool's loan market caps to the new tier's. An exit's VIPs wind
- * the pool down. The manager checks a request's markets before it calls the builder
- * @dev The VIPs grant no roles. The onboarding VIP gives wildcard ACM grants once: to the pool registry on
+ * the pool down. The manager checks a request's markets and pulls its seeds before it calls the builder, which reads
+ * the seeds from `SPOKE_POOL_MANAGER.requestSeeds`
+ * @dev A loan market is one whose supply allowlist is on, as its listing VIP enables it for the Hub.
+ * The VIPs grant no roles. The onboarding VIP gives wildcard ACM grants once: to the pool registry on
  * `setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`, `setCollateralFactor`,
  * `setMarketSupplyCaps` and `setMarketBorrowCaps`; to the Normal Timelock on `setSupplyAllowlistEnabled`,
  * `setAllowedSupplier`, `setForcedLiquidation` and the YieldGroups' `addResource`, `raiseResourceCap` and
  * `lowerResourceCap` (it already holds the other comptroller setters and `setReduceReservesBlockDelta`); to the Risk
  * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the supply pause steward on `setCollateralFactor`
- * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `setTokenConfig` on every supported
- * oracle, the ResilientOracle and the DeviationBoundedOracle, and `setValidateConfig` on the BoundValidator, to price
- * a new collateral asset
+ * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `settleRequest(uint256)` and
+ * `startWindDown(address)` on the manager, and, to price a new collateral asset, `setTokenConfig` on every supported
+ * oracle, the ResilientOracle and the DeviationBoundedOracle, and `setValidateConfig` on the BoundValidator
  */
 contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev VIP actions being assembled, with room for a fixed number of them
@@ -47,6 +49,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         bytes[] calldatas;
         uint256 length;
     }
+
+    /// @dev GovernorBravo `ProposalType.NORMAL`, the route the VIPs use
+    uint8 internal constant PROPOSAL_TYPE_NORMAL = 0;
 
     /// @dev ERC-20 decimals of a new market's vToken
     uint8 internal constant VTOKEN_DECIMALS = 8;
@@ -159,7 +164,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // SpokePoolManager functions
+    // Request functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolProposalBuilder
@@ -180,14 +185,13 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             );
         }
         address executor = GOVERNOR_BRAVO.proposalTimelocks(PROPOSAL_TYPE_NORMAL);
-        // Only a pool request has no comptroller yet
-        if (comptroller == address(0)) {
+        string memory poolName;
+        if (request.requestType == ISpokePoolManager.RequestType.Pool) {
             comptroller = _deployComptroller(executor);
+            poolName = _poolName(requestId);
+        } else {
+            poolName = PoolRegistry(POOL_REGISTRY).getPoolByComptroller(comptroller).name;
         }
-        // A new pool is named after its request; a live pool's markets take its registered name
-        string memory poolName = request.requestType == ISpokePoolManager.RequestType.Pool
-            ? _poolName(requestId)
-            : PoolRegistry(POOL_REGISTRY).getPoolByComptroller(comptroller).name;
         vTokens = _deployMarkets(comptroller, poolName, request, executor);
         proposal = _encodeProposal(
             _buildMarketsProposal(requestId, request, comptroller, vTokens, executor),
@@ -196,7 +200,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // View functions
+    // Exit functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolProposalBuilder
@@ -230,7 +234,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         }
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = listed[i];
-            // A loan market is one whose supply allowlist is on, as its listing VIP enables it for the Hub
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
                 _addAction(
                     proposal,
@@ -254,7 +257,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         Proposal memory proposal = _newProposal(marketCount);
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = listed[i];
-            // A loan market is one whose supply allowlist is on, as its listing VIP enables it for the Hub
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
                 _addAction(
                     proposal,
@@ -274,7 +276,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @dev Deploys a new pool's comptroller with both oracles; the Normal Timelock accepts its ownership in the VIP
-    function _deployComptroller(address executor) internal returns (address comptroller) {
+    function _deployComptroller(address executor) private returns (address comptroller) {
         comptroller = address(new BeaconProxy(COMPTROLLER_BEACON, ""));
         SpokeComptroller(comptroller).initialize(
             MAX_LOOPS_LIMIT,
@@ -291,10 +293,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         string memory poolName,
         ISpokePoolManager.Request memory request,
         address executor
-    ) internal returns (address[] memory vTokens) {
+    ) private returns (address[] memory vTokens) {
         uint256 collateralCount = request.collateralMarkets.length;
-        uint256 marketCount = collateralCount + request.loanMarkets.length;
-        vTokens = new address[](marketCount);
+        uint256 loanCount = request.loanMarkets.length;
+        vTokens = new address[](collateralCount + loanCount);
         (address collateralInterestRateModel, , , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
         for (uint256 i; i < collateralCount; ++i) {
             vTokens[i] = _deployMarket(
@@ -305,7 +307,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 executor
             );
         }
-        for (uint256 i; i < request.loanMarkets.length; ++i) {
+        for (uint256 i; i < loanCount; ++i) {
             ISpokePoolManager.LoanMarketRequestParams memory market = request.loanMarkets[i];
             vTokens[collateralCount + i] = _deployMarket(
                 comptroller,
@@ -327,7 +329,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address asset,
         address interestRateModel,
         address executor
-    ) internal returns (address vToken) {
+    ) private returns (address vToken) {
         (, uint256 reserveFactor, , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
         string memory assetSymbol = IERC20MetadataUpgradeable(asset).symbol();
         vToken = address(new BeaconProxy(VTOKEN_BEACON, ""));
@@ -347,9 +349,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /**
-     * @dev Returns a pool or markets request's VIP actions: a new pool's listing with Venus's current pool parameters,
-     *   `settleRequest`, then the collateral markets' oracle configs and listings and the loan markets' listings and
-     *   Hub registrations
+     * @dev Returns a pool or markets request's VIP actions: a new pool's `acceptOwnership` and its listing with Venus's
+     *   current pool parameters, `settleRequest`, then the collateral markets' oracle configs and listings and the loan
+     *   markets' listings and Hub registrations
      */
     function _buildMarketsProposal(
         uint256 requestId,
@@ -357,7 +359,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address comptroller,
         address[] memory vTokens,
         address executor
-    ) internal view returns (Proposal memory proposal) {
+    ) private view returns (Proposal memory proposal) {
         proposal = _newProposal(POOL_CREATION_ACTIONS + MAX_ACTIONS_PER_MARKET * vTokens.length);
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
             (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral) = SPOKE_POOL_MANAGER
@@ -420,15 +422,15 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /**
-     * @dev Adds a collateral asset's oracle configs with Venus's parameters. Unless the ResilientOracle prices the asset
-     *   already: each set feed on its own oracle, the BoundValidator's bounds when a pivot or fallback feed is set, and the
-     *   ResilientOracle config with each set feed's oracle enabled. Then its DeviationBoundedOracle config, unless that
-     *   oracle has the asset already
+     * @dev Adds a collateral asset's oracle configs with Venus's parameters. Unless the ResilientOracle prices the
+     *   asset already: each set feed on its own oracle, the BoundValidator's bounds when a pivot feed is set, and the
+     *   ResilientOracle config with each set feed's oracle enabled. Then its DeviationBoundedOracle config, unless
+     *   that oracle has the asset already
      */
     function _addOracleConfigs(
         Proposal memory proposal,
         ISpokePoolManager.CollateralMarketRequestParams memory market
-    ) internal view {
+    ) private view {
         address asset = market.asset;
         (
             ,
@@ -459,8 +461,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                     abi.encode(asset, feed.feed, maxStalePeriod)
                 );
             }
-            // The ResilientOracle checks the main and fallback prices against the pivot, and each other
-            if (enabled[1] || enabled[2]) {
+            // Only a pivot makes the ResilientOracle validate prices against it; the manager allows a fallback only
+            // with a pivot
+            if (enabled[1]) {
                 _addAction(
                     proposal,
                     resilientOracle.boundValidator(),
@@ -507,7 +510,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         Proposal memory proposal,
         address asset,
         PoolRegistry.AddMarketInput memory input
-    ) internal view {
+    ) private view {
         _addAction(proposal, asset, "approve(address,uint256)", abi.encode(POOL_REGISTRY, input.initialSupply));
         _addAction(
             proposal,
@@ -530,7 +533,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address asset,
         address vToken,
         uint256 supplyCap
-    ) internal view {
+    ) private view {
         address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
         _addAction(proposal, comptroller, "setSupplyAllowlistEnabled(address,bool)", abi.encode(vToken, true));
         _addAction(
@@ -549,7 +552,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 requestId,
         address comptroller,
         uint256 tierId
-    ) internal view returns (Proposal memory proposal) {
+    ) private view returns (Proposal memory proposal) {
         ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
         VToken[] memory listed = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
@@ -584,7 +587,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /// @dev Returns a pool's listed markets, in `getAllMarkets` order
-    function _listedMarkets(address comptroller) internal view returns (VToken[] memory listed) {
+    function _listedMarkets(address comptroller) private view returns (VToken[] memory listed) {
         VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = vTokens.length;
         listed = new VToken[](marketCount);
@@ -602,7 +605,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /// @dev Returns empty VIP actions with room for `capacity` of them
-    function _newProposal(uint256 capacity) internal pure returns (Proposal memory proposal) {
+    function _newProposal(uint256 capacity) private pure returns (Proposal memory proposal) {
         proposal.targets = new address[](capacity);
         proposal.signatures = new string[](capacity);
         proposal.calldatas = new bytes[](capacity);
@@ -614,7 +617,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address target,
         string memory signature,
         bytes memory callData
-    ) internal pure {
+    ) private pure {
         uint256 index = proposal.length;
         proposal.targets[index] = target;
         proposal.signatures[index] = signature;
@@ -626,7 +629,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     function _encodeProposal(
         Proposal memory proposal,
         string calldata description
-    ) internal pure returns (bytes memory) {
+    ) private pure returns (bytes memory) {
         address[] memory targets = proposal.targets;
         string[] memory signatures = proposal.signatures;
         bytes[] memory calldatas = proposal.calldatas;
@@ -645,16 +648,17 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /// @dev Returns a new pool's name, set from its request: `Spoke Pool <request id>`
-    function _poolName(uint256 requestId) internal pure returns (string memory) {
+    function _poolName(uint256 requestId) private pure returns (string memory) {
         return string.concat("Spoke Pool ", Strings.toString(requestId));
     }
 
     /// @dev Returns `name` with its spaces removed, for a market's symbol
-    function _withoutSpaces(string memory name) internal pure returns (string memory) {
+    function _withoutSpaces(string memory name) private pure returns (string memory) {
         bytes memory source = bytes(name);
-        bytes memory result = new bytes(source.length);
+        uint256 sourceLength = source.length;
+        bytes memory result = new bytes(sourceLength);
         uint256 length;
-        for (uint256 i; i < source.length; ++i) {
+        for (uint256 i; i < sourceLength; ++i) {
             if (source[i] != " ") {
                 result[length] = source[i];
                 ++length;

@@ -36,7 +36,8 @@ interface ISpokePoolProposalBuilder {
 
     /**
      * @notice Deploys a request's contracts and builds its VIP, which settles it; a tier request deploys nothing and
-     *   its VIP sets the pool's loan market caps to the new tier's
+     *   its VIP sets the pool's loan market caps to the new tier's. The markets' seeds come from the manager's
+     *   `requestSeeds`
      * @param requestId The request
      * @param description The VIP's description
      * @return comptroller The pool's comptroller, deployed for a pool request
@@ -53,8 +54,9 @@ interface ISpokePoolProposalBuilder {
     ) external returns (address comptroller, address[] memory vTokens, bytes memory proposal);
 
     /**
-     * @notice Builds a pool's exit VIP, which freezes its markets, sets each collateral market's collateral factor to
-     *   zero and its liquidation threshold to the given one, and starts the wind-down
+     * @notice Builds a pool's exit VIP, which pauses mint, borrow and enter-market and zeroes the supply and borrow
+     *   caps in every market, sets each collateral market's collateral factor to zero and its liquidation threshold to
+     *   the given one, and starts the wind-down
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets

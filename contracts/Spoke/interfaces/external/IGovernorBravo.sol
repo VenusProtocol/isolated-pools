@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.25;
 
-/// @dev GovernorBravo `ProposalType.NORMAL`, the route open spoke pool proposals use
-uint8 constant PROPOSAL_TYPE_NORMAL = 0;
-
 /**
  * @title IGovernorBravo
  * @author Venus
