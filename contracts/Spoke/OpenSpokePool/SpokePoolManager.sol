@@ -113,9 +113,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _storeMarkets(request, collateralMarkets, loanMarkets);
         request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
-        SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
-        SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
-        SpokePoolRequestLib.escrowBond(escrowedAmounts, pool.bondAsset, msg.sender, pool.bondAmount);
+        SpokePoolRequestLib.validateNewRequest(contracts, request);
+        SpokePoolRequestLib.escrowBond(escrowedAmounts, request);
 
         emit RequestSubmitted(requestId, RequestType.Pool, msg.sender, address(0));
     }
@@ -137,8 +136,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _storeMarkets(request, collateralMarkets, loanMarkets);
         request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
-        SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
-        SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
+        SpokePoolRequestLib.validateNewRequest(contracts, request);
 
         emit RequestSubmitted(requestId, RequestType.Markets, msg.sender, comptroller);
     }
@@ -149,6 +147,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (!TIER_REGISTRY.isUpgrade(fromTierId, tierId)) {
             revert NotAnUpgrade(fromTierId, tierId);
         }
+
         SpokePoolRequestLib.validateBond(_contracts(), comptroller, tierId);
 
         requestId = ++requestCount;
@@ -210,7 +209,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
         if (requestType != RequestType.Tier) {
             SpokePoolRequestLib.Contracts memory contracts = _contracts();
-            SpokePoolRequestLib.validateBuild(contracts, isLoanMarket, request);
+            SpokePoolRequestLib.validateMarkets(contracts, request);
             SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
         }
 

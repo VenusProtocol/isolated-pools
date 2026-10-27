@@ -51,26 +51,23 @@ library SpokePoolRequestLib {
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Pulls a new pool request's bond from `from` into escrow
+     * @notice Pulls a new pool request's bond from its deployer into escrow
      * @param escrowedAmounts The manager's escrowed amounts by token
-     * @param bondAsset The bond's asset
-     * @param from The deployer
-     * @param bondAmount The bond's amount
+     * @param request The pool request, with its bond stored
      * @custom:error TransferAmountMismatch is thrown when the transfer delivers a different amount
      */
     function escrowBond(
         mapping(address => uint256) storage escrowedAmounts,
-        address bondAsset,
-        address from,
-        uint256 bondAmount
+        ISpokePoolManager.Request storage request
     ) external {
-        _transferIn(bondAsset, from, bondAmount);
+        address bondAsset = request.bondAsset;
+        uint256 bondAmount = request.bondAmount;
+        _transferIn(bondAsset, request.deployer, bondAmount);
         escrowedAmounts[bondAsset] += bondAmount;
     }
 
     /**
-     * @notice Tops each new market's seed up to $10 at current prices, pulling what its escrow lacks from the request's
-     *   deployer. An escrowed seed is never reduced, so a price rise after the request costs nothing
+     * @notice Pulls each new market's seed, worth $10 at current prices, from the request's deployer at its build
      * @param contracts The manager's contracts
      * @param escrowedAmounts The manager's escrowed amounts by token
      * @param request The pool or markets request, with its markets stored
@@ -85,27 +82,24 @@ library SpokePoolRequestLib {
         mapping(address => uint256) storage escrowedAmounts,
         ISpokePoolManager.Request storage request
     ) external {
-        uint256 seedCount = request.seeds.length;
-        for (uint256 i; i < seedCount; ++i) {
-            (address asset, uint256 price, uint256 supplyCap) = _seedMarket(contracts, request, i);
-            uint256 escrowed = request.seeds[i];
-
-            // $10 of the asset, rounded up so the seed is never worth less
-            uint256 seed = (MIN_SEED_USD * EXP_SCALE + price - 1) / price;
-            // Keep a larger seed escrowed earlier, as the price may have risen since
-            if (seed < escrowed) {
-                seed = escrowed;
-            }
-            // The seed is supplied at listing, so it must fit in the market's supply cap
-            if (seed > supplyCap) {
-                revert ISpokePoolManager.InvalidMarketParams(asset);
-            }
-            // Pull only what the escrow lacks
-            if (seed > escrowed) {
-                _transferIn(asset, request.deployer, seed - escrowed);
-                escrowedAmounts[asset] += seed - escrowed;
-                request.seeds[i] = seed;
-            }
+        uint256 collateralCount = request.collateralMarkets.length;
+        // Collateral markets: priced by the ResilientOracle or their main feed, capped by the deployer
+        for (uint256 i; i < collateralCount; ++i) {
+            ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
+            _pullSeed(request, escrowedAmounts, i, market.asset, _collateralPrice(contracts, market), market.supplyCap);
+        }
+        // Loan markets: priced by the ResilientOracle, capped by their tier
+        uint256 loanCount = request.loanMarkets.length;
+        for (uint256 i; i < loanCount; ++i) {
+            address asset = request.loanMarkets[i].asset;
+            _pullSeed(
+                request,
+                escrowedAmounts,
+                collateralCount + i,
+                asset,
+                contracts.resilientOracle.getPrice(asset),
+                contracts.tierRegistry.getLoanSupplyCap(request.tierId, asset)
+            );
         }
     }
 
@@ -189,7 +183,7 @@ library SpokePoolRequestLib {
         if (!allowed) {
             revert ISpokePoolManager.InvalidBondAsset(bondAsset);
         }
-        // A bond not deposited yet has no loss or exit fee, so its value is its amount
+        // A bond not deposited yet has no yeild, loss or exit fee, so its value is its amount
         _checkBondCoverageAndAmount(
             contracts,
             bondAsset,
@@ -228,37 +222,18 @@ library SpokePoolRequestLib {
      *   at most the tier's maximum. The supply caps are priced here and on a feed change, not at build
      * @param contracts The manager's contracts
      * @param request The request, with its markets stored
-     * @custom:error The `_validateMarkets` errors
+     * @custom:error The `validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
      */
-    function validateNewRequest(
-        Contracts memory contracts,
-        mapping(address => bool) storage isLoanMarket,
-        ISpokePoolManager.Request storage request
-    ) external view {
-        ITierRegistry.PoolLimits memory limits = _validateMarkets(contracts, isLoanMarket, request);
+    function validateNewRequest(Contracts memory contracts, ISpokePoolManager.Request storage request) external view {
+        ITierRegistry.PoolLimits memory limits = validateMarkets(contracts, request);
         uint256 collateralMarketCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralMarketCount; ++i) {
             _checkSupplyCapUsd(contracts, request.collateralMarkets[i], limits.maxCollateralSupplyCapUsd);
         }
-    }
-
-    /**
-     * @notice Checks a request's markets again at build, against its pool and its tier's current limits, without prices
-     * @param contracts The manager's contracts
-     * @param isLoanMarket The manager's loan market flags by vToken
-     * @param request The pool or markets request
-     * @custom:error The `_validateMarkets` errors
-     */
-    function validateBuild(
-        Contracts memory contracts,
-        mapping(address => bool) storage isLoanMarket,
-        ISpokePoolManager.Request storage request
-    ) external view {
-        _validateMarkets(contracts, isLoanMarket, request);
     }
 
     /**
@@ -280,6 +255,83 @@ library SpokePoolRequestLib {
         _checkSupplyCapUsd(contracts, market, limits.maxCollateralSupplyCapUsd);
     }
 
+    /**
+     * @notice Checks a request's markets against its pool and its tier's current limits, without prices: the market
+     *   counts, each collateral market's factors, each loan market's asset and model, and that no asset repeats. The
+     *   manager calls it again at build, as the pool and the tier may have changed since the request
+     * @param contracts The manager's contracts
+     * @param request The pool or markets request, with its markets stored
+     * @return limits The tier's current limits
+     * @custom:error InvalidArrayLength is thrown when the request has no market
+     * @custom:error TooManyMarkets is thrown when the pool would have more markets, or collateral markets, than allowed
+     * @custom:error InvalidMarketParams is thrown when a collateral factor is above its liquidation threshold
+     * @custom:error ExceedsTierLimit is thrown when a collateral factor or liquidation threshold is above the tier's
+     * @custom:error LoanAssetNotAllowed is thrown when the tier does not offer a loan asset
+     * @custom:error InterestRateModelNotAllowed is thrown when the tier does not allow a loan market's model
+     * @custom:error DuplicateAsset is thrown when an asset repeats in the request or is already in the pool
+     */
+    function validateMarkets(
+        Contracts memory contracts,
+        ISpokePoolManager.Request storage request
+    ) public view returns (ITierRegistry.PoolLimits memory limits) {
+        ISpokePoolManager.CollateralMarketRequestParams[] memory collateralMarkets = request.collateralMarkets;
+        ISpokePoolManager.LoanMarketRequestParams[] memory loanMarkets = request.loanMarkets;
+        uint256 collateralCount = collateralMarkets.length;
+        uint256 marketCount = collateralCount + loanMarkets.length;
+        if (marketCount == 0) {
+            revert ISpokePoolManager.InvalidArrayLength();
+        }
+        // Zero, or not yet listed, for a new pool
+        address comptroller = request.comptroller;
+        uint256 tierId = request.tierId;
+        (, , limits) = contracts.tierRegistry.getTierTerms(tierId);
+        (uint256 poolMarketCount, uint256 poolCollateralCount) = _countPoolMarkets(comptroller);
+        poolMarketCount += marketCount;
+
+        uint256 maxPoolMarkets = contracts.proposalBuilder.MAX_POOL_MARKETS();
+        if (poolMarketCount > maxPoolMarkets) {
+            revert ISpokePoolManager.TooManyMarkets(poolMarketCount, maxPoolMarkets);
+        }
+        poolCollateralCount += collateralCount;
+        if (poolCollateralCount > limits.maxCollateralMarkets) {
+            revert ISpokePoolManager.TooManyMarkets(poolCollateralCount, limits.maxCollateralMarkets);
+        }
+
+        // Validate Collateral Markets
+        address[] memory assets = new address[](marketCount);
+        for (uint256 i; i < collateralCount; ++i) {
+            ISpokePoolManager.CollateralMarketRequestParams memory market = collateralMarkets[i];
+            assets[i] = market.asset;
+            if (market.collateralFactor > market.liquidationThreshold) {
+                revert ISpokePoolManager.InvalidMarketParams(market.asset);
+            }
+            if (
+                market.collateralFactor > limits.maxCollateralFactor ||
+                market.liquidationThreshold > limits.maxLiquidationThreshold
+            ) {
+                revert ISpokePoolManager.ExceedsTierLimit(market.asset);
+            }
+        }
+
+        // Validate Loan Markets
+        ITierRegistry tierRegistry = contracts.tierRegistry;
+        for (uint256 i; i < loanMarkets.length; ++i) {
+            ISpokePoolManager.LoanMarketRequestParams memory market = loanMarkets[i];
+            assets[collateralCount + i] = market.asset;
+            if (tierRegistry.getLoanSupplyCap(tierId, market.asset) == 0) {
+                revert ISpokePoolManager.LoanAssetNotAllowed(market.asset);
+            }
+            if (!tierRegistry.isAllowedInterestRateModel(tierId, market.asset, market.interestRateModel)) {
+                revert ISpokePoolManager.InterestRateModelNotAllowed(market.interestRateModel);
+            }
+        }
+
+        address poolRegistry = contracts.proposalBuilder.POOL_REGISTRY();
+        for (uint256 i; i < marketCount; ++i) {
+            _checkUniqueAsset(poolRegistry, comptroller, assets, i);
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // Private functions
     // ──────────────────────────────────────────────────────────────────────
@@ -290,10 +342,18 @@ library SpokePoolRequestLib {
         mapping(address => uint256) storage escrowedAmounts,
         address to
     ) private {
+        uint256 collateralCount = request.collateralMarkets.length;
         uint256 seedCount = request.seeds.length;
         for (uint256 i; i < seedCount; ++i) {
-            address asset = _seedAsset(request, i);
             uint256 seed = request.seeds[i];
+            // A request not built yet has no seed
+            if (seed == 0) {
+                continue;
+            }
+            // The collateral markets' seeds come first, then the loan markets'
+            address asset = i < collateralCount
+                ? request.collateralMarkets[i].asset
+                : request.loanMarkets[i - collateralCount].asset;
             escrowedAmounts[asset] -= seed;
             IERC20Upgradeable(asset).safeTransfer(to, seed);
         }
@@ -309,78 +369,30 @@ library SpokePoolRequestLib {
         }
     }
 
-    /// @dev Returns the asset of the seed at `index`: the collateral markets' come first, then the loan markets'
-    function _seedAsset(ISpokePoolManager.Request storage request, uint256 index) private view returns (address) {
-        uint256 collateralCount = request.collateralMarkets.length;
-        return
-            index < collateralCount
-                ? request.collateralMarkets[index].asset
-                : request.loanMarkets[index - collateralCount].asset;
+    /// @dev Pulls the seed at `index` from the request's deployer, $10 of `asset` at `price`
+    function _pullSeed(
+        ISpokePoolManager.Request storage request,
+        mapping(address => uint256) storage escrowedAmounts,
+        uint256 index,
+        address asset,
+        uint256 price,
+        uint256 supplyCap
+    ) private {
+        // $10 of the asset, rounded up so the seed is never worth less
+        uint256 seed = (MIN_SEED_USD * EXP_SCALE + price - 1) / price;
+        // The seed is supplied at listing, so it must fit in the market's supply cap
+        if (seed > supplyCap) {
+            revert ISpokePoolManager.InvalidMarketParams(asset);
+        }
+        _transferIn(asset, request.deployer, seed);
+        escrowedAmounts[asset] += seed;
+        request.seeds[index] = seed;
     }
 
     /**
-     * @dev Checks a request's markets against its pool and its tier's current limits, without prices, and returns the
-     *   limits. Reverts with InvalidArrayLength, TooManyMarkets, DuplicateAsset, InvalidMarketParams,
-     *   ExceedsTierLimit, LoanAssetNotAllowed or InterestRateModelNotAllowed
+     * @dev Returns how many markets a pool has and how many of them are collateral; zero for a new pool. A loan market
+     *   is one whose supply allowlist is on, as its listing VIP enables it for the Hub
      */
-    function _validateMarkets(
-        Contracts memory contracts,
-        ISpokePoolManager.Request storage request
-    ) private view returns (ITierRegistry.PoolLimits memory limits) {
-        ISpokePoolManager.CollateralMarketRequestParams[] memory collateralMarkets = request.collateralMarkets;
-        ISpokePoolManager.LoanMarketRequestParams[] memory loanMarkets = request.loanMarkets;
-        uint256 collateralCount = collateralMarkets.length;
-        uint256 marketCount = collateralCount + loanMarkets.length;
-        if (marketCount == 0) {
-            revert ISpokePoolManager.InvalidArrayLength();
-        }
-        // Zero, or not yet listed, for a new pool
-        address comptroller = request.comptroller;
-        uint256 tierId = request.tierId;
-        (, , limits) = contracts.tierRegistry.getTierTerms(tierId);
-        (uint256 poolMarketCount, uint256 poolCollateralCount) = _countPoolMarkets(comptroller);
-        poolMarketCount += marketCount;
-        uint256 maxPoolMarkets = contracts.proposalBuilder.MAX_POOL_MARKETS();
-        if (poolMarketCount > maxPoolMarkets) {
-            revert ISpokePoolManager.TooManyMarkets(poolMarketCount, maxPoolMarkets);
-        }
-        poolCollateralCount += collateralCount;
-        if (poolCollateralCount > limits.maxCollateralMarkets) {
-            revert ISpokePoolManager.TooManyMarkets(poolCollateralCount, limits.maxCollateralMarkets);
-        }
-
-        address[] memory assets = new address[](marketCount);
-        for (uint256 i; i < collateralCount; ++i) {
-            ISpokePoolManager.CollateralMarketRequestParams memory market = collateralMarkets[i];
-            assets[i] = market.asset;
-            if (market.collateralFactor > market.liquidationThreshold) {
-                revert ISpokePoolManager.InvalidMarketParams(market.asset);
-            }
-            if (
-                market.collateralFactor > limits.maxCollateralFactor ||
-                market.liquidationThreshold > limits.maxLiquidationThreshold
-            ) {
-                revert ISpokePoolManager.ExceedsTierLimit(market.asset);
-            }
-        }
-        ITierRegistry tierRegistry = contracts.tierRegistry;
-        for (uint256 i; i < loanMarkets.length; ++i) {
-            ISpokePoolManager.LoanMarketRequestParams memory market = loanMarkets[i];
-            assets[collateralCount + i] = market.asset;
-            if (tierRegistry.getLoanSupplyCap(tierId, market.asset) == 0) {
-                revert ISpokePoolManager.LoanAssetNotAllowed(market.asset);
-            }
-            if (!tierRegistry.isAllowedInterestRateModel(tierId, market.asset, market.interestRateModel)) {
-                revert ISpokePoolManager.InterestRateModelNotAllowed(market.interestRateModel);
-            }
-        }
-        address poolRegistry = contracts.proposalBuilder.POOL_REGISTRY();
-        for (uint256 i; i < marketCount; ++i) {
-            _checkUniqueAsset(poolRegistry, comptroller, assets, i);
-        }
-    }
-
-    /// @dev Returns how many markets a pool has and how many of them are collateral; zero for a new pool
     function _countPoolMarkets(
         address comptroller
     ) private view returns (uint256 marketCount, uint256 collateralMarketCount) {
@@ -415,26 +427,6 @@ library SpokePoolRequestLib {
         ) {
             revert ISpokePoolManager.DuplicateAsset(asset);
         }
-    }
-
-    /**
-     * @dev Returns what the seed at `index` is priced and capped with: a collateral market is priced by the
-     *   ResilientOracle or its main feed and capped by the deployer, a loan market priced by the ResilientOracle and
-     *   capped by its tier
-     */
-    function _seedMarket(
-        Contracts memory contracts,
-        ISpokePoolManager.Request storage request,
-        uint256 index
-    ) private view returns (address asset, uint256 price, uint256 supplyCap) {
-        uint256 collateralCount = request.collateralMarkets.length;
-        if (index < collateralCount) {
-            ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[index];
-            return (market.asset, _collateralPrice(contracts, market), market.supplyCap);
-        }
-        asset = request.loanMarkets[index - collateralCount].asset;
-        price = contracts.resilientOracle.getPrice(asset);
-        supplyCap = contracts.tierRegistry.getLoanSupplyCap(request.tierId, asset);
     }
 
     /// @dev Checks a collateral market's supply cap is worth at most `maxSupplyCapUsd`

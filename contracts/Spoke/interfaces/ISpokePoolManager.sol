@@ -115,7 +115,8 @@ interface ISpokePoolManager {
         // Pool and markets requests
         CollateralMarketRequestParams[] collateralMarkets;
         LoanMarketRequestParams[] loanMarkets;
-        // Each new market's escrowed seed, in its asset: the collateral markets', then the loan markets'
+        // Each new market's escrowed seed, in its asset, pulled at the build: the collateral markets', then the loan
+        // markets'; zero before it
         uint256[] seeds;
     }
 
@@ -514,9 +515,9 @@ interface ISpokePoolManager {
     error InsufficientAmount(address token, uint256 amount);
 
     /**
-     * @notice Requests a new pool of a tier, pulling the bond and each market's seed worth $10; both are refunded on
-     *   reject or cancel
-     * @param pool The requested tier, the pool's name and the bond
+     * @notice Requests a new pool of a tier, pulling the bond; each market's seed worth $10 is pulled at the build.
+     *   The bond and any pulled seeds are refunded on reject or cancel
+     * @param pool The requested tier and the bond
      * @param collateralMarkets The pool's collateral markets
      * @param loanMarkets The pool's loan markets
      * @return requestId The request
@@ -528,12 +529,11 @@ interface ISpokePoolManager {
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
      * @custom:error CoverageTooLow is thrown when the bond is worth less than the tier's minimum coverage ratio of it
      * @custom:error TransferAmountMismatch is thrown when a transfer delivers a different amount
-     * @custom:error The `SpokePoolRequestLib._validateMarkets` errors
+     * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
-     * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:access Not restricted
      */
     function requestPool(
@@ -543,7 +543,7 @@ interface ISpokePoolManager {
     ) external returns (uint256 requestId);
 
     /**
-     * @notice Requests new markets in the caller's pool, pulling each one's seed worth $10
+     * @notice Requests new markets in the caller's pool; each one's seed worth $10 is pulled at the build
      * @param comptroller The pool's comptroller
      * @param collateralMarkets The new collateral markets
      * @param loanMarkets The new loan markets
@@ -555,13 +555,11 @@ interface ISpokePoolManager {
      * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:error InsufficientBondValue is thrown when the bond's principal is worth less than the tier requires
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
-     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
-     * @custom:error The `SpokePoolRequestLib._validateMarkets` errors
+     * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
-     * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:access Only the pool's deployer
      */
     function requestNewMarkets(
@@ -625,7 +623,7 @@ interface ISpokePoolManager {
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
-     * @custom:error The `SpokePoolRequestLib._validateMarkets` errors
+     * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
