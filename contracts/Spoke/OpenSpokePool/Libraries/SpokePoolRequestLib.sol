@@ -110,7 +110,7 @@ library SpokePoolRequestLib {
     }
 
     /**
-     * @notice Refunds a closing request's escrowed bond, for a pool request, and seeds to its deployer
+     * @notice Refunds a canceled or rejected request's escrowed bond, for a pool request, and seeds to its deployer
      * @param request The request
      * @param seeds The request's seeds by asset, from the manager's `requestSeeds`
      */
@@ -165,7 +165,7 @@ library SpokePoolRequestLib {
         if (!allowed) {
             revert ISpokePoolManager.InvalidBondAsset(bondAsset);
         }
-        // A bond not deposited yet has no yeild, loss or exit fee, so its value is its amount
+        // A bond not deposited yet has no yield, loss or exit fee, so its value is its amount
         _checkBondCoverageAndAmount(
             contracts,
             bondAsset,
@@ -259,14 +259,16 @@ library SpokePoolRequestLib {
         ISpokePoolManager.CollateralMarketRequestParams[] memory collateralMarkets = request.collateralMarkets;
         ISpokePoolManager.LoanMarketRequestParams[] memory loanMarkets = request.loanMarkets;
         uint256 collateralCount = collateralMarkets.length;
-        uint256 marketCount = collateralCount + loanMarkets.length;
+        uint256 loanCount = loanMarkets.length;
+        uint256 marketCount = collateralCount + loanCount;
         if (marketCount == 0) {
             revert ISpokePoolManager.InvalidArrayLength();
         }
         // Zero, or not yet listed, for a new pool
         address comptroller = request.comptroller;
         uint256 tierId = request.tierId;
-        (, , limits) = contracts.tierRegistry.getTierTerms(tierId);
+        ITierRegistry tierRegistry = contracts.tierRegistry;
+        (, , limits) = tierRegistry.getTierTerms(tierId);
         (uint256 poolMarketCount, uint256 poolCollateralCount) = _countPoolMarkets(comptroller);
         poolMarketCount += marketCount;
 
@@ -279,7 +281,6 @@ library SpokePoolRequestLib {
             revert ISpokePoolManager.TooManyMarkets(poolCollateralCount, limits.maxCollateralMarkets);
         }
 
-        // Validate Collateral Markets
         address[] memory assets = new address[](marketCount);
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = collateralMarkets[i];
@@ -295,9 +296,7 @@ library SpokePoolRequestLib {
             }
         }
 
-        // Validate Loan Markets
-        ITierRegistry tierRegistry = contracts.tierRegistry;
-        for (uint256 i; i < loanMarkets.length; ++i) {
+        for (uint256 i; i < loanCount; ++i) {
             ISpokePoolManager.LoanMarketRequestParams memory market = loanMarkets[i];
             assets[collateralCount + i] = market.asset;
             if (tierRegistry.getLoanSupplyCap(tierId, market.asset) == 0) {

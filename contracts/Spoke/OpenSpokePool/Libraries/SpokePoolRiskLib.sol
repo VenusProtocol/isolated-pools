@@ -17,7 +17,8 @@ import { SpokePoolRequestLib } from "./SpokePoolRequestLib.sol";
  * @author Venus
  * @notice The pool risk checks of `SpokePoolManager`: it checks a deployer's collateral factor and supply cap updates
  * against the market, the pool's tier and its bond's coverage, and a supply pause against the market, then publishes
- * them to the RiskOracle, and checks a winding-down pool's residual debt before it closes. Linked to keep the manager under the EIP-170 size limit
+ * them to the RiskOracle, and checks a winding-down pool's residual debt before it closes. Linked to keep the manager
+ * under the EIP-170 size limit
  * @dev The manager calls it through DELEGATECALL, so `address(this)` and `msg.sender` are the manager's, and the
  * manager is the RiskOracle sender. It writes no manager state and emits no events; the errors are
  * `ISpokePoolManager`'s. It uses `SpokePoolRequestLib.Contracts` as a type only, so the two are linked separately
@@ -34,7 +35,7 @@ library SpokePoolRiskLib {
 
     /**
      * @notice Checks a deployer's new collateral factor and liquidation threshold for a collateral market against the
-     * market, the pool's tier and its bond's coverage, then publishes them to the RiskOracle
+     *   market, the pool's tier and its bond's coverage, then publishes them to the RiskOracle
      * @param contracts The manager's contracts
      * @param tierId The pool's tier
      * @param comptroller The pool's comptroller
@@ -78,7 +79,7 @@ library SpokePoolRiskLib {
 
     /**
      * @notice Checks a deployer's new supply cap for a collateral market against the market, the pool's tier and its
-     * bond's coverage, then publishes it to the RiskOracle
+     *   bond's coverage, then publishes it to the RiskOracle
      * @param contracts The manager's contracts
      * @param tierId The pool's tier
      * @param comptroller The pool's comptroller

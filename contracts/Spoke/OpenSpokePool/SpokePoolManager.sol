@@ -25,14 +25,14 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 /**
  * @title SpokePoolManager
  * @author Venus
- * @notice Entry point of open spoke pools. A deployer requests a pool of a tier, escrowing a bond and its markets'
- * seeds; the Venus team builds the request's VIP through the proposal builder, and the VIP's `settleRequest` starts the
- * pool and moves the bond to the bond manager. The deployer tunes the pool's collateral markets through the
- * RiskOracle, within its tier's current terms
+ * @notice Entry point of open spoke pools. A deployer requests a pool of a tier, escrowing a bond; the Venus team
+ * builds the request's VIP through the proposal builder, pulling each new market's seed from the deployer, and the
+ * VIP's `settleRequest` starts the pool and moves the bond to the bond manager. The deployer tunes the pool's
+ * collateral markets through the RiskOracle, within its tier's current terms
  * @dev Needs to be a RiskOracle authorized sender. Three linked libraries keep it under the EIP-170 size limit:
  * `SpokePoolRequestLib` checks requests and moves the escrowed bonds and seeds, `SpokePoolRiskLib` checks and publishes
  * the deployer's risk updates and checks a closing pool's debt, and `SpokePoolProposalLib` builds and records the VIPs.
- * This contract keeps the access checks, the counters and every other state change
+ * This contract keeps the access checks, the request counter and every other state change
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, SpokePoolManagerStorage {
@@ -123,7 +123,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         address comptroller,
         CollateralMarketRequestParams[] calldata collateralMarkets,
         LoanMarketRequestParams[] calldata loanMarkets
-    ) external nonReentrant returns (uint256 requestId) {
+    ) external returns (uint256 requestId) {
         uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
 
         SpokePoolRequestLib.Contracts memory contracts = _contracts();
@@ -169,7 +169,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function setOracleFeeds(uint256 requestId, address asset, OracleFeed[3] calldata feeds) external {
-        _checkAccessAllowed("setOracleFeeds(uint256,address,(address,address)[3])");
+        _checkAccessAllowed("setOracleFeeds(uint256,address,OracleFeed[3])");
         Request storage request = requests[requestId];
         if (request.status != RequestStatus.Pending) {
             revert InvalidRequestStatus(requestId);
@@ -315,14 +315,18 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function seizeBond(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow) {
+    function seizeBond(
+        address comptroller,
+        uint256 amount,
+        address receiver
+    ) external nonReentrant returns (uint256 paidNow) {
         _checkAccessAllowed("seizeBond(address,uint256,address)");
 
         paidNow = bondManager.seize(comptroller, amount, receiver);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function releaseBond(address comptroller) external {
+    function releaseBond(address comptroller) external nonReentrant {
         _checkAccessAllowed("releaseBond(address)");
 
         // The bond stays after a close or handover, still seizable, until governance accepts the pool's remaining debt
@@ -547,7 +551,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function sweepToken(address token, address to, uint256 amount) external {
+    function sweepToken(address token, address to, uint256 amount) external nonReentrant {
         _checkAccessAllowed("sweepToken(address,address,uint256)");
         ensureNonzeroAddress(to);
         IERC20Upgradeable(token).safeTransfer(to, amount);
@@ -637,7 +641,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         emit DeployerPausedUpdated(comptroller, paused);
     }
 
-    /// @dev Returns whether a request is open: pending or built, so it can still be built, settled or closed
+    /// @dev Returns whether a request is open: pending or built, so it can be built, settled, canceled or rejected
     function _isRequestOpen(Request storage request) private view returns (bool) {
         RequestStatus status = request.status;
         return status == RequestStatus.Pending || status == RequestStatus.Built;
@@ -670,7 +674,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Returns the manager's contracts the library checks read
+    /// @dev Returns the manager's contracts the libraries read
     function _contracts() private view returns (SpokePoolRequestLib.Contracts memory) {
         return
             SpokePoolRequestLib.Contracts(

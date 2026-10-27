@@ -11,12 +11,11 @@ import { ISpokePoolManager } from "../../interfaces/ISpokePoolManager.sol";
  * proposal builder and records each build. Linked to keep the manager under the EIP-170 size limit
  * @dev The manager calls it through DELEGATECALL, so `address(this)`, `msg.sender` and the storage are the manager's,
  * and the builder sees the manager as its caller. It writes only what a build records and emits the build events; the
- * manager keeps the access checks and the build counter. The errors are `ISpokePoolManager`'s
+ * manager keeps the access checks and the request checks. The errors are `ISpokePoolManager`'s
  */
 library SpokePoolProposalLib {
     /**
-     * @notice Builds a request's VIP and records the build: the pool's comptroller, the request as built and its VIP
-     *   payload
+     * @notice Builds a request's VIP and records the pool's comptroller, the Built status and the VIP payload
      * @param proposalBuilder The proposal builder
      * @param request The request, checked and funded by the manager
      * @param requestProposals The manager's VIP payloads by request id

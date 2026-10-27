@@ -62,9 +62,9 @@ interface ISpokePoolManager {
         uint256 collateralFactor;
         uint256 liquidationThreshold;
         uint256 supplyCap;
-        // The asset's feeds in the ResilientOracle's order: main, pivot, fallback, each on its own supported oracle. The VIP
-        // sets them unless the ResilientOracle prices the asset already; the main feed is required then, the pivot and
-        // fallback are optional
+        // The asset's feeds in the ResilientOracle's order: main, pivot, fallback, each on its own supported oracle.
+        // The VIP sets them unless the ResilientOracle prices the asset already; the main feed is required then, the
+        // pivot and fallback are optional
         OracleFeed[3] feeds;
     }
 
@@ -79,14 +79,15 @@ interface ISpokePoolManager {
         address collateralInterestRateModel;
         uint256 reserveFactor;
         uint256 reduceReservesBlockDelta;
-        // A new collateral asset's oracle configs: its feeds' staleness limit, in seconds, set unless the ResilientOracle
-        // prices the asset already, and its DeviationBoundedOracle config, set unless that oracle has the asset already
+        // A new collateral asset's oracle configs: its feeds' staleness limit, in seconds, set unless the
+        // ResilientOracle prices the asset already, and its DeviationBoundedOracle config, set unless that oracle has
+        // the asset already
         uint256 maxStalePeriod;
         uint64 cooldownPeriod;
         uint256 triggerThreshold;
         uint256 resetThreshold;
         // The most the main or fallback price may deviate from the price it is checked against, scaled by 1e18, set on
-        // the BoundValidator when a pivot or fallback feed is set; 0.05e18 is 5%
+        // the BoundValidator when a pivot feed is set, as a fallback feed needs one; 0.05e18 is 5%
         uint256 boundDeviation;
     }
 
@@ -106,7 +107,7 @@ interface ISpokePoolManager {
         address comptroller;
         // Pool: the requested tier; markets: the pool's tier; tier: the target tier
         uint256 tierId;
-        // Pool requests only; the pool is named after the request, see the builder's `buildRequestProposal`
+        // Pool requests only
         address bondAsset;
         uint256 bondAmount;
         // Pool and markets requests
@@ -323,11 +324,11 @@ interface ISpokePoolManager {
     error InvalidBondAsset(address asset);
 
     /**
-     * @notice Thrown when a bond is worth less than the tier requires
-     * @param bondUsd The bond's value, in USD
+     * @notice Thrown when a bond's principal is worth less than the tier requires
+     * @param principalUsd The bond's principal value, in USD
      * @param requiredBondUsd The required bond, in USD
      */
-    error InsufficientBondValue(uint256 bondUsd, uint256 requiredBondUsd);
+    error InsufficientBondValue(uint256 principalUsd, uint256 requiredBondUsd);
 
     /// @notice Thrown when a request has no market
     error InvalidArrayLength();
@@ -347,8 +348,8 @@ interface ISpokePoolManager {
     error DuplicateAsset(address asset);
 
     /**
-     * @notice Thrown when a collateral market's collateral factor is above its liquidation threshold, a seed is above its
-     *   market's supply cap, or a request has no collateral market of the asset
+     * @notice Thrown when a collateral market's collateral factor is above its liquidation threshold, a seed is above
+     *   its market's supply cap, or a request has no collateral market of the asset
      * @param asset The market's asset
      */
     error InvalidMarketParams(address asset);
@@ -461,7 +462,7 @@ interface ISpokePoolManager {
     error RedundantUpdate(address vToken);
 
     /**
-     * @notice Thrown when a pool's bond covers less than its tier's minimum coverage ratio
+     * @notice Thrown when a bond covers less than its tier's minimum coverage ratio
      * @param coverage The bond's value to required bond ratio, scaled by 1e18
      * @param minCoverageRatio The tier's minimum, scaled by 1e18
      */
@@ -486,8 +487,8 @@ interface ISpokePoolManager {
     error InvalidBondManager(address bondManager);
 
     /**
-     * @notice Thrown when Venus's market parameters have a zero model, block delta, staleness limit or bound deviation, a
-     *   reserve factor above 1e18, or a bound deviation of 1e18 or above
+     * @notice Thrown when Venus's market parameters have a zero model, block delta, staleness limit or bound deviation,
+     *   a reserve factor above 1e18, or a bound deviation of 1e18 or above
      */
     error InvalidProtocolMarketParams();
 
@@ -564,7 +565,7 @@ interface ISpokePoolManager {
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);
 
     /**
-     * @notice Cancels the caller's request before it is built, refunding its bond
+     * @notice Cancels the caller's request before it is built, refunding a pool request's bond
      * @param requestId The request
      * @custom:event Emits RequestCanceled
      * @custom:error NotDeployer is thrown when the caller is not the request's deployer
@@ -718,8 +719,8 @@ interface ISpokePoolManager {
     function topUpBond(address comptroller, uint256 amount) external;
 
     /**
-     * @notice Takes part of a pool's bond for a receiver; an XVSVault bond owes what it cannot pay now and pays it later,
-     *   any other bond reverts
+     * @notice Takes part of a pool's bond for a receiver; an XVSVault bond owes what it cannot pay now and pays it
+     *   later, any other bond reverts
      * @param comptroller The pool's comptroller
      * @param amount The amount, in the bond's asset
      * @param receiver The receiver
@@ -856,6 +857,7 @@ interface ISpokePoolManager {
      * @custom:event Emits BondManagerSet
      * @custom:error BondManagerAlreadySet is thrown when the bond manager is already set
      * @custom:error InvalidBondManager is thrown when its `SPOKE_POOL_MANAGER` is another contract
+     * @custom:error Reverts without data when the bond manager is not a contract with `SPOKE_POOL_MANAGER`
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setBondManager(ISpokeBondManager newBondManager) external;
@@ -873,8 +875,8 @@ interface ISpokePoolManager {
     /**
      * @notice Sets the oracles a new collateral asset's feeds may be set on, such as Venus's Chainlink, RedStone and
      *   Atlas oracles; a zero entry leaves that slot empty. Each must be ChainlinkOracle-compatible, and the Normal
-     *   Timelock must be allowed to call its `setTokenConfig`. A removed oracle fails the build of a request whose unpriced
-     *   asset has a feed on it
+     *   Timelock must be allowed to call its `setTokenConfig`. A removed oracle fails the build of a request whose
+     *   unpriced asset has a feed on it
      * @param oracles The oracles
      * @custom:event Emits SupportedOraclesUpdated
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
@@ -891,7 +893,8 @@ interface ISpokePoolManager {
     function setPoolParams(PoolParams calldata params) external;
 
     /**
-     * @notice Sets Venus's parameters of new markets, read when a VIP is built
+     * @notice Sets Venus's parameters of new markets, read when a VIP is built; the staleness limit is also read when
+     *   an unpriced collateral asset is priced, at request, `setOracleFeeds` and build
      * @param params The new parameters; the DeviationBoundedOracle checks its config when the VIP runs
      * @custom:event Emits MarketParamsUpdated
      * @custom:error InvalidProtocolMarketParams is thrown when the interest rate model, reduce reserves block delta,
@@ -1071,7 +1074,7 @@ interface ISpokePoolManager {
      * @notice Returns a request's escrowed seed for a new market, pulled at the build
      * @param requestId The request
      * @param asset The market's asset
-     * @return The seed, in the asset; zero before the build
+     * @return The seed, in the asset; zero before the build; kept after the seed is released
      */
     function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
 
