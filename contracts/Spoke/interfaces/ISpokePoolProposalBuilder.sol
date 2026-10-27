@@ -38,9 +38,8 @@ interface ISpokePoolProposalBuilder {
      * @notice Deploys a request's contracts and builds its VIP, which settles it; a tier request deploys nothing and
      *   its VIP sets the pool's loan market caps to the new tier's
      * @param requestId The request
-     * @param buildId The build the VIP settles
      * @param description The VIP's description
-     * @return comptroller The pool's comptroller, deployed on a pool request's first build
+     * @return comptroller The pool's comptroller, deployed for a pool request
      * @return vTokens The deployed markets, the collateral markets' then the loan markets'; empty for a tier request
      * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
@@ -50,7 +49,6 @@ interface ISpokePoolProposalBuilder {
      */
     function buildRequestProposal(
         uint256 requestId,
-        uint256 buildId,
         string calldata description
     ) external returns (address comptroller, address[] memory vTokens, bytes memory proposal);
 
@@ -58,7 +56,6 @@ interface ISpokePoolProposalBuilder {
      * @notice Builds a pool's exit VIP, which freezes its markets, sets each collateral market's collateral factor to
      *   zero and its liquidation threshold to the given one, and starts the wind-down
      * @param comptroller The pool's comptroller
-     * @param buildId The build the VIP starts the wind-down with
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets
      * @param description The VIP's description
@@ -68,7 +65,6 @@ interface ISpokePoolProposalBuilder {
      */
     function buildExitProposal(
         address comptroller,
-        uint256 buildId,
         uint256[] calldata liquidationThresholds,
         string calldata description
     ) external view returns (bytes memory proposal);

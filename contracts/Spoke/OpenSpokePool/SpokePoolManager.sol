@@ -174,7 +174,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     function setOracleFeeds(uint256 requestId, address asset, OracleFeed[3] calldata feeds) external {
         _checkAccessAllowed("setOracleFeeds(uint256,address,(address,address)[3])");
         Request storage request = requests[requestId];
-        if (!_isRequestOpen(request)) {
+        if (request.status != RequestStatus.Pending) {
             revert InvalidRequestStatus(requestId);
         }
         uint256 collateralCount = request.collateralMarkets.length;
@@ -185,8 +185,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
                     market.feeds[j] = feeds[j];
                 }
                 SpokePoolRequestLib.checkSupplyCapUsd(_contracts(), request.tierId, market);
-                request.buildId = 0;
-                request.status = RequestStatus.Pending;
 
                 emit OracleFeedsUpdated(requestId, asset, feeds);
                 return;
@@ -199,7 +197,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     function buildRequestProposal(uint256 requestId, string calldata description) external nonReentrant {
         _checkAccessAllowed("buildRequestProposal(uint256,string)");
         Request storage request = requests[requestId];
-        if (!_isRequestOpen(request)) {
+        if (request.status != RequestStatus.Pending) {
             revert InvalidRequestStatus(requestId);
         }
 
@@ -213,23 +211,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
         }
 
-        SpokePoolProposalLib.buildRequestProposal(
-            proposalBuilder,
-            request,
-            isLoanMarket,
-            requestProposals,
-            requestId,
-            ++buildCount,
-            description
-        );
+        SpokePoolProposalLib.buildRequestProposal(proposalBuilder, request, requestProposals, requestId, description);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function settleRequest(uint256 requestId, uint256 buildId) external nonReentrant {
-        _checkAccessAllowed("settleRequest(uint256,uint256)");
+    function settleRequest(uint256 requestId) external nonReentrant {
+        _checkAccessAllowed("settleRequest(uint256)");
         Request storage request = requests[requestId];
-        if (request.status != RequestStatus.Built || buildId != request.buildId) {
-            revert InvalidBuild(buildId);
+        if (request.status != RequestStatus.Built) {
+            revert InvalidRequestStatus(requestId);
         }
 
         address comptroller = request.comptroller;
@@ -379,19 +369,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             pools[comptroller],
             exitProposals,
             comptroller,
-            ++buildCount,
             liquidationThresholds,
             description
         );
     }
 
     /// @inheritdoc ISpokePoolManager
-    function startWindDown(address comptroller, uint256 buildId) external {
-        _checkAccessAllowed("startWindDown(address,uint256)");
-        Pool storage pool = pools[comptroller];
-        if (pool.status != PoolStatus.ExitProposed || buildId != pool.exitBuildId) {
-            revert InvalidBuild(buildId);
-        }
+    function startWindDown(address comptroller) external {
+        _checkAccessAllowed("startWindDown(address)");
+        Pool storage pool = _ensurePoolStatus(comptroller, PoolStatus.ExitProposed);
 
         pool.status = PoolStatus.WindingDown;
         pool.windDownStartedAt = uint64(block.timestamp);
@@ -435,7 +421,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
 
         pool.status = PoolStatus.Live;
-        pool.exitBuildId = 0;
 
         emit ExitRejected(comptroller);
     }

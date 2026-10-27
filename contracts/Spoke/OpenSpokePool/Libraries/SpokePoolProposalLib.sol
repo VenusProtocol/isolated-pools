@@ -21,7 +21,6 @@ library SpokePoolProposalLib {
      * @param request The request, checked and funded by the manager
      * @param requestProposals The manager's VIP payloads by request id
      * @param requestId The request's id
-     * @param buildId The new build's id
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
      * @custom:error The builder's `buildRequestProposal` errors
@@ -31,29 +30,25 @@ library SpokePoolProposalLib {
         ISpokePoolManager.Request storage request,
         mapping(uint256 => bytes) storage requestProposals,
         uint256 requestId,
-        uint256 buildId,
         string calldata description
     ) external {
         (address comptroller, address[] memory vTokens, bytes memory proposal) = proposalBuilder.buildRequestProposal(
             requestId,
-            buildId,
             description
         );
         request.comptroller = comptroller;
         request.status = ISpokePoolManager.RequestStatus.Built;
-        request.buildId = buildId;
         requestProposals[requestId] = proposal;
 
-        emit ISpokePoolManager.RequestBuilt(requestId, buildId, vTokens);
+        emit ISpokePoolManager.RequestBuilt(requestId, vTokens);
     }
 
     /**
-     * @notice Builds a live or exiting pool's exit VIP and records it as the pool's latest exit build
+     * @notice Builds a live or exiting pool's exit VIP and stores it as the pool's latest
      * @param proposalBuilder The proposal builder
      * @param pool The pool
      * @param exitProposals The manager's exit VIP payloads by comptroller
      * @param comptroller The pool's comptroller
-     * @param buildId The new build's id
      * @param liquidationThresholds Each listed market's liquidation threshold for the wind-down
      * @param description The VIP's description
      * @custom:event Emits ExitBuilt
@@ -65,7 +60,6 @@ library SpokePoolProposalLib {
         ISpokePoolManager.Pool storage pool,
         mapping(address => bytes) storage exitProposals,
         address comptroller,
-        uint256 buildId,
         uint256[] calldata liquidationThresholds,
         string calldata description
     ) external {
@@ -79,15 +73,9 @@ library SpokePoolProposalLib {
         }
 
         pool.status = ISpokePoolManager.PoolStatus.ExitProposed;
-        pool.exitBuildId = buildId;
-        exitProposals[comptroller] = proposalBuilder.buildExitProposal(
-            comptroller,
-            buildId,
-            liquidationThresholds,
-            description
-        );
+        exitProposals[comptroller] = proposalBuilder.buildExitProposal(comptroller, liquidationThresholds, description);
 
-        emit ISpokePoolManager.ExitBuilt(comptroller, buildId);
+        emit ISpokePoolManager.ExitBuilt(comptroller);
     }
 
     /**

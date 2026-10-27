@@ -102,14 +102,11 @@ interface ISpokePoolManager {
         RequestType requestType;
         RequestStatus status;
         address deployer;
-        // Zero for a pool request until its first build
+        // Zero for a pool request until it is built
         address comptroller;
         // Pool: the requested tier; markets: the pool's tier; tier: the target tier
         uint256 tierId;
-        // The latest build; zero when there is none or after an oracle feed update
-        uint256 buildId;
-        // Pool requests only
-        string poolName;
+        // Pool requests only; the pool is named after the request, see the builder's `buildRequestProposal`
         address bondAsset;
         uint256 bondAmount;
         // Pool and markets requests
@@ -128,8 +125,6 @@ interface ISpokePoolManager {
         uint64 windDownStartedAt;
         // The deployer's changes are checked against this tier's current terms
         uint256 tierId;
-        // The latest exit build; zero when there is none or after rejectExit
-        uint256 exitBuildId;
     }
 
     /**
@@ -163,10 +158,9 @@ interface ISpokePoolManager {
     /**
      * @notice Emitted when a request's VIP payload is built and stored
      * @param requestId The request
-     * @param buildId The build
      * @param vTokens The markets deployed for it: the collateral markets', then the loan markets'
      */
-    event RequestBuilt(uint256 indexed requestId, uint256 buildId, address[] vTokens);
+    event RequestBuilt(uint256 indexed requestId, address[] vTokens);
 
     /**
      * @notice Emitted when a new pool goes live and its deployer's rights start
@@ -206,9 +200,8 @@ interface ISpokePoolManager {
     /**
      * @notice Emitted when a pool's exit VIP payload is built and stored
      * @param comptroller The pool's comptroller
-     * @param buildId The build
      */
-    event ExitBuilt(address indexed comptroller, uint256 buildId);
+    event ExitBuilt(address indexed comptroller);
 
     /**
      * @notice Emitted when a pool's exit VIP starts its wind-down
@@ -441,12 +434,6 @@ interface ISpokePoolManager {
     error UnsupportedOracle(address oracle);
 
     /**
-     * @notice Thrown when a VIP carries a build that is not the latest
-     * @param buildId The build
-     */
-    error InvalidBuild(uint256 buildId);
-
-    /**
      * @notice Thrown when a market is not listed in the pool
      * @param vToken The market
      */
@@ -587,7 +574,7 @@ interface ISpokePoolManager {
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);
 
     /**
-     * @notice Cancels the caller's request before it is built, refunding its bond and seeds
+     * @notice Cancels the caller's request before it is built, refunding its bond
      * @param requestId The request
      * @custom:event Emits RequestCanceled
      * @custom:error NotDeployer is thrown when the caller is not the request's deployer
@@ -597,14 +584,14 @@ interface ISpokePoolManager {
     function cancelRequest(uint256 requestId) external;
 
     /**
-     * @notice Replaces a pending or built request's collateral market oracle feeds without the deployer's approval; a
-     *   built request goes back to pending, so its VIP no longer settles
+     * @notice Replaces a pending request's collateral market oracle feeds without the deployer's approval; a built
+     *   request is final, and changing it takes a new request
      * @param requestId The request
      * @param asset The collateral market's asset
      * @param feeds The new feeds: main, pivot, fallback, each on its own supported oracle; a zero feed for no pivot or
      *   fallback
      * @custom:event Emits OracleFeedsUpdated
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
+     * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
      * @custom:error InvalidOracleFeed is thrown when an unpriced asset's new main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
@@ -615,13 +602,13 @@ interface ISpokePoolManager {
     function setOracleFeeds(uint256 requestId, address asset, OracleFeed[3] calldata feeds) external;
 
     /**
-     * @notice Builds a pending or built request's VIP under a new build id. For a pool or markets request it checks the
-     *   markets again without prices, then pulls from the deployer what each seed now lacks of $10. The bond and the
-     *   supply caps were priced at request and are not priced again
+     * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. For a pool or markets
+     *   request it checks the markets again without prices, then pulls each seed from the deployer, worth $10 at
+     *   current prices. The bond and the supply caps were priced at request and are not priced again
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
-     * @custom:error InvalidRequestStatus is thrown when the request is neither pending nor built
+     * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
      * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
@@ -637,14 +624,13 @@ interface ISpokePoolManager {
     /**
      * @notice Settles a request from its VIP, sending the seeds to the caller to list the markets with
      * @param requestId The request
-     * @param buildId The build the VIP carries; only the latest settles
      * @custom:event Emits PoolActivated for a pool request, PoolTierUpgraded for a tier request, and RequestSettled
-     * @custom:error InvalidBuild is thrown when the request is not built, or not with this build
+     * @custom:error InvalidRequestStatus is thrown when the request is not built
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
      * @custom:error The bond manager's `createBond` errors
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function settleRequest(uint256 requestId, uint256 buildId) external;
+    function settleRequest(uint256 requestId) external;
 
     /**
      * @notice Rejects a request and refunds its bond and seeds; a VIP already built for it then reverts
@@ -779,8 +765,8 @@ interface ISpokePoolManager {
     function requestExit(address comptroller) external;
 
     /**
-     * @notice Builds a pool's exit VIP under a new build id; this ends the deployer's controls and voids earlier exit
-     *   VIPs
+     * @notice Builds a pool's exit VIP; this ends the deployer's controls. It can be built again, and the first exit
+     *   VIP to execute starts the wind-down, so any other then reverts
      * @param comptroller The pool's comptroller
      * @param liquidationThresholds Each listed market's new liquidation threshold, in `getAllMarkets` order; ignored
      *   for loan markets
@@ -799,12 +785,11 @@ interface ISpokePoolManager {
     /**
      * @notice Starts a pool's wind-down; the last call of its exit VIP
      * @param comptroller The pool's comptroller
-     * @param buildId The exit build the VIP carries; only the latest starts it
      * @custom:event Emits WindDownStarted
-     * @custom:error InvalidBuild is thrown when the pool's exit is not built, or not with this build
+     * @custom:error InvalidPoolStatus is thrown when the pool's exit is not built
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function startWindDown(address comptroller, uint256 buildId) external;
+    function startWindDown(address comptroller) external;
 
     /**
      * @notice Builds a winding-down pool's force-close VIP and stores it in place of the exit VIP
@@ -1064,12 +1049,6 @@ interface ISpokePoolManager {
     function requestCount() external view returns (uint256);
 
     /**
-     * @notice Returns the number of builds, which is also the latest build id; request and exit builds share it
-     * @return The count
-     */
-    function buildCount() external view returns (uint256);
-
-    /**
      * @notice Returns the Hub YieldGroup that supplies an asset's loan markets
      * @param asset The loan asset
      * @return The YieldGroup; zero when the asset has none
@@ -1106,9 +1085,9 @@ interface ISpokePoolManager {
     function escrowedAmounts(address token) external view returns (uint256);
 
     /**
-     * @notice Returns a request's latest VIP payload, an ABI-encoded GovernorBravo `propose` call
+     * @notice Returns a request's VIP payload, an ABI-encoded GovernorBravo `propose` call
      * @param requestId The request
-     * @return The payload; empty before the first build
+     * @return The payload; empty before the build
      */
     function requestProposals(uint256 requestId) external view returns (bytes memory);
 

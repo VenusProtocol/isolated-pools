@@ -165,7 +165,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @inheritdoc ISpokePoolProposalBuilder
     function buildRequestProposal(
         uint256 requestId,
-        uint256 buildId,
         string calldata description
     ) external returns (address comptroller, address[] memory vTokens, bytes memory proposal) {
         if (msg.sender != address(SPOKE_POOL_MANAGER)) {
@@ -177,11 +176,11 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             return (
                 comptroller,
                 vTokens,
-                _encodeProposal(_buildTierProposal(requestId, buildId, comptroller, request.tierId), description)
+                _encodeProposal(_buildTierProposal(requestId, comptroller, request.tierId), description)
             );
         }
         address executor = GOVERNOR_BRAVO.proposalTimelocks(PROPOSAL_TYPE_NORMAL);
-        // Only a pool request's first build has no comptroller yet
+        // Only a pool request has no comptroller yet
         if (comptroller == address(0)) {
             comptroller = _deployComptroller(executor);
         }
@@ -191,7 +190,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             : PoolRegistry(POOL_REGISTRY).getPoolByComptroller(comptroller).name;
         vTokens = _deployMarkets(comptroller, poolName, request, executor);
         proposal = _encodeProposal(
-            _buildMarketsProposal(requestId, buildId, request, comptroller, vTokens, executor),
+            _buildMarketsProposal(requestId, request, comptroller, vTokens, executor),
             description
         );
     }
@@ -203,7 +202,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @inheritdoc ISpokePoolProposalBuilder
     function buildExitProposal(
         address comptroller,
-        uint256 buildId,
         uint256[] calldata liquidationThresholds,
         string calldata description
     ) external view returns (bytes memory) {
@@ -242,12 +240,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 );
             }
         }
-        _addAction(
-            proposal,
-            address(SPOKE_POOL_MANAGER),
-            "startWindDown(address,uint256)",
-            abi.encode(comptroller, buildId)
-        );
+        _addAction(proposal, address(SPOKE_POOL_MANAGER), "startWindDown(address)", abi.encode(comptroller));
         return _encodeProposal(proposal, description);
     }
 
@@ -360,7 +353,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
      */
     function _buildMarketsProposal(
         uint256 requestId,
-        uint256 buildId,
         ISpokePoolManager.Request memory request,
         address comptroller,
         address[] memory vTokens,
@@ -385,12 +377,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             );
         }
         // Settled before the listings: it sends the seeds to the Normal Timelock, which lists the markets with them
-        _addAction(
-            proposal,
-            address(SPOKE_POOL_MANAGER),
-            "settleRequest(uint256,uint256)",
-            abi.encode(requestId, buildId)
-        );
+        _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
@@ -559,7 +546,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev Returns a tier request's VIP actions: `settleRequest`, then each loan market's caps set to the new tier's
     function _buildTierProposal(
         uint256 requestId,
-        uint256 buildId,
         address comptroller,
         uint256 tierId
     ) internal view returns (Proposal memory proposal) {
@@ -567,12 +553,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         VToken[] memory listed = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
         proposal = _newProposal(1 + TIER_ACTIONS_PER_MARKET * marketCount);
-        _addAction(
-            proposal,
-            address(SPOKE_POOL_MANAGER),
-            "settleRequest(uint256,uint256)",
-            abi.encode(requestId, buildId)
-        );
+        _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
         for (uint256 i; i < marketCount; ++i) {
             address vToken = address(listed[i]);
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(vToken)) {
