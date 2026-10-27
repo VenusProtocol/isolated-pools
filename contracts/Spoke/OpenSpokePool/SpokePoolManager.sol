@@ -57,28 +57,22 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /**
      * @param resilientOracle The oracle bonds, seeds, caps and debts are priced with
-     * @param riskOracle The oracle deployer updates are published to
-     * @param riskStewardReceiver The receiver that applies the published updates
+     * @param riskStewardReceiver The receiver that applies the published updates; deployer updates are published to the
+     *   RiskOracle it reads
      * @param tierRegistry The registry of pool tiers
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
-     * @custom:error InvalidRiskStewardReceiver is thrown when the receiver reads another RiskOracle
      */
     constructor(
         ResilientOracleInterface resilientOracle,
-        IRiskOracle riskOracle,
         IRiskStewardReceiver riskStewardReceiver,
         ITierRegistry tierRegistry
     ) {
         ensureNonzeroAddress(address(resilientOracle));
-        ensureNonzeroAddress(address(riskOracle));
         ensureNonzeroAddress(address(riskStewardReceiver));
         ensureNonzeroAddress(address(tierRegistry));
-        if (riskStewardReceiver.RISK_ORACLE() != address(riskOracle)) {
-            revert InvalidRiskStewardReceiver(address(riskStewardReceiver));
-        }
 
         RESILIENT_ORACLE = resilientOracle;
-        RISK_ORACLE = riskOracle;
+        RISK_ORACLE = IRiskOracle(riskStewardReceiver.RISK_ORACLE());
         RISK_STEWARD_RECEIVER = riskStewardReceiver;
         TIER_REGISTRY = tierRegistry;
 

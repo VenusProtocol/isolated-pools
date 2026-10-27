@@ -27,7 +27,8 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const riskStewardReceiver = await toAddress(preconfiguredAddresses.RiskStewardReceiver);
   const tierRegistry = await toAddress("TierRegistry");
 
-  const args = [resilientOracle, riskOracle, riskStewardReceiver, tierRegistry];
+  // The manager reads its RiskOracle from the receiver; the configured one is only checked against it below
+  const args = [resilientOracle, riskStewardReceiver, tierRegistry];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );

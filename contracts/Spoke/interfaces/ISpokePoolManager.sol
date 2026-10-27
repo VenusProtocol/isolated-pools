@@ -318,12 +318,6 @@ interface ISpokePoolManager {
     event SweepToken(address indexed token, address indexed to, uint256 amount);
 
     /**
-     * @notice Thrown when a RiskStewardReceiver reads another RiskOracle
-     * @param receiver The receiver
-     */
-    error InvalidRiskStewardReceiver(address receiver);
-
-    /**
      * @notice Thrown when a deployer requests a pool while it has an active one
      * @param deployer The deployer
      */
@@ -989,7 +983,7 @@ interface ISpokePoolManager {
     function RESILIENT_ORACLE() external view returns (ResilientOracleInterface);
 
     /**
-     * @notice Returns the oracle deployer updates are published to
+     * @notice Returns the oracle deployer updates are published to: the one `RISK_STEWARD_RECEIVER` reads
      * @return The RiskOracle
      */
     // solhint-disable-next-line func-name-mixedcase
