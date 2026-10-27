@@ -13,7 +13,7 @@ import { BaseBondAccount } from "./BaseBondAccount.sol";
  * @author Venus
  * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. A seizure or the release
  * reverts when the Hub cannot pay it at once. The position is valued net of the Hub's exit fee. A Hub loss lowers the
- * bond's value, and no yield is paid until the position grows back above the principal
+ * bond's value, and no yield is paid until the position grows back above the deposits
  * @custom:oz-upgrades-unsafe-allow constructor
  */
 contract LiquidityHubBondAccount is BaseBondAccount {
@@ -32,7 +32,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
 
     /// @inheritdoc IBondAccount
     function deposit(uint256 amount) external onlyBondManager {
-        principal += amount;
+        _recordDeposit(amount);
         uint256 balance = asset.balanceOf(address(this));
         if (released || balance == 0) {
             return;
@@ -47,12 +47,12 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function claimYield() external onlyBondManager returns (uint256 amount) {
+    function claimYield(uint256 floor) external onlyBondManager returns (uint256 amount) {
         _accrueFees();
         (uint256 balance, uint256 inHub) = _holdings();
-        uint256 bondAssets = balance + inHub;
-        if (bondAssets > principal) {
-            amount = _pay(bondHolder, bondAssets - principal, balance, inHub);
+        uint256 yield = _claimable(floor, balance + inHub);
+        if (yield != 0) {
+            amount = _pay(bondHolder, yield, balance, inHub);
         }
     }
 
@@ -60,7 +60,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
         _accrueFees();
         (uint256 balance, uint256 inHub) = _holdings();
-        _recordSeizure(amount, balance + inHub);
+        _ensureSeizable(amount, balance + inHub);
         paidNow = _pay(receiver, amount, balance, inHub);
         if (paidNow < amount) {
             revert InsufficientLiquidity(amount - paidNow);
@@ -70,7 +70,7 @@ contract LiquidityHubBondAccount is BaseBondAccount {
     /// @inheritdoc IBondAccount
     function release() external onlyBondManager {
         released = true;
-        principal = 0;
+        deposited = 0;
         _accrueFees();
         (uint256 balance, uint256 inHub) = _holdings();
         uint256 total = balance + inHub;

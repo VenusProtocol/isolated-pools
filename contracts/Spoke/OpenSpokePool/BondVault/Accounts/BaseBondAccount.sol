@@ -11,11 +11,13 @@ import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
 /**
  * @title BaseBondAccount
  * @author Venus
- * @notice Base of the bond accounts: keeps a bond's principal and takes seizures from yield first; yield is everything
- * beyond the principal, including assets sent here directly
+ * @notice Base of the bond accounts: keeps what a bond holder has deposited, the floor above which yield is paid, and
+ * what the bond holds. Yield is everything beyond the deposits and the bond the tier requires, including assets sent
+ * here directly; a seizure takes from what the bond holds and leaves the deposits as they are, so no yield is paid
+ * until the bond grows back or a top-up forgives the loss
  * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. Each
- * account moves the asset in `deposit`, `claimYield`, `seize` and `release`, keeping the books with `_recordSeizure`
- * and `_transferOut`, and reports what it holds in `_bondAssets`
+ * account moves the asset in `deposit`, `claimYield`, `seize` and `release`, keeping the books with `_recordDeposit`,
+ * `_claimable`, `_ensureSeizable` and `_transferOut`, and reports what it holds in `_bondAssets`
  * @custom:oz-upgrades-unsafe-allow constructor
  */
 abstract contract BaseBondAccount is Initializable, IBondAccount {
@@ -37,7 +39,7 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     address public source;
 
     /// @inheritdoc IBondAccount
-    uint256 public principal;
+    uint256 public deposited;
 
     /// @dev Reverts unless the caller is `BOND_MANAGER`
     modifier onlyBondManager() {
@@ -80,14 +82,8 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    function value() external view returns (uint256) {
-        uint256 bondAssets = _bondAssets();
-        return bondAssets < principal ? bondAssets : principal;
-    }
-
-    /// @inheritdoc IBondAccount
     function seizableAmount() external view returns (uint256) {
-        return _bondAssets();
+        return released ? 0 : _bondAssets();
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -95,17 +91,16 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * @dev Records a seizure of `amount` against `bondAssets`, what the bond holds now: yield first, then principal.
-     *   Reverts with InsufficientFunds when the bond holds less
+     * @dev Adds `amount`, already in the account, to `deposited`, first lowering that to what the bond held before the
+     *   deposit, so a seizure or loss is forgiven and later growth counts as yield again
      */
-    function _recordSeizure(uint256 amount, uint256 bondAssets) internal {
-        if (amount > bondAssets) {
-            revert InsufficientFunds(amount, bondAssets);
+    function _recordDeposit(uint256 amount) internal {
+        uint256 bondAssets = _bondAssets();
+        uint256 before = bondAssets > amount ? bondAssets - amount : 0;
+        if (before < deposited) {
+            deposited = before;
         }
-        uint256 yield = bondAssets > principal ? bondAssets - principal : 0;
-        if (amount > yield) {
-            principal -= amount - yield;
-        }
+        deposited += amount;
     }
 
     /// @dev Sends `amount` of the asset to `receiver`, if any
@@ -116,6 +111,19 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
         }
     }
 
+    /// @dev Returns the yield in `bondAssets`: what is beyond the higher of `deposited` and `floor`
+    function _claimable(uint256 floor, uint256 bondAssets) internal view returns (uint256) {
+        uint256 kept = deposited > floor ? deposited : floor;
+        return bondAssets > kept ? bondAssets - kept : 0;
+    }
+
     /// @dev Returns what the bond holds, as the views read it: what is in the account and its source, less what it owes
     function _bondAssets() internal view virtual returns (uint256);
+
+    /// @dev Checks a seizure of `amount` fits in `bondAssets`, what the bond holds now; reverts with InsufficientFunds
+    function _ensureSeizable(uint256 amount, uint256 bondAssets) internal pure {
+        if (amount > bondAssets) {
+            revert InsufficientFunds(amount, bondAssets);
+        }
+    }
 }

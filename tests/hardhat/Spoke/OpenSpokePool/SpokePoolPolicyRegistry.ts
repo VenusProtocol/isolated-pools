@@ -4,13 +4,13 @@ import chai from "chai";
 import { BigNumberish, constants } from "ethers";
 import { ethers } from "hardhat";
 
-import { AccessControlManager, TierRegistry, TierRegistry__factory } from "../../../../typechain";
+import { AccessControlManager, SpokePoolPolicyRegistry, SpokePoolPolicyRegistry__factory } from "../../../../typechain";
 import { deployProxy, e18 } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
 
-/// Fields in `ITierRegistry.PoolLimits` declaration order, so `Object.values` gives the struct tuple.
+/// Fields in `ISpokePoolPolicyRegistry.PoolLimits` declaration order, so `Object.values` gives the struct tuple.
 const LIMITS = {
   minCoverageRatio: e18("0.8"),
   maxCollateralFactor: e18("0.5"),
@@ -19,18 +19,45 @@ const LIMITS = {
   maxCollateralSupplyCapUsd: e18("1000000"),
 };
 const ZERO_TIER = [false, 0, [0, 0, 0, 0, 0], []];
+const POOL_PARAMS = {
+  closeFactor: e18("0.5"),
+  liquidationIncentive: e18("1.1"),
+  minLiquidatableCollateral: e18("100"),
+};
+const NEW_POOL_PARAMS = {
+  closeFactor: e18("0.4"),
+  liquidationIncentive: e18("1.2"),
+  minLiquidatableCollateral: e18("50"),
+};
+const MARKET_PARAMS = (irm: string) => ({
+  collateralInterestRateModel: irm,
+  reserveFactor: e18("0.1"),
+  reduceReservesBlockDelta: 28800,
+  maxStalePeriod: 86400,
+  cooldownPeriod: 60 * 60,
+  triggerThreshold: e18("0.1"),
+  resetThreshold: e18("0.05"),
+  boundDeviation: e18("0.05"),
+});
+
+/// Checks each field of `expected` on a struct returned by a getter.
+const expectFields = (actual: object, expected: object) => {
+  for (const [key, value] of Object.entries(expected)) {
+    expect((actual as Record<string, unknown>)[key]).to.equal(value);
+  }
+};
 
 type LoanAsset = { asset: string; supplyCap: BigNumberish; interestRateModels: string[] };
-type Tier = { enabled: boolean; minBondUsd: BigNumberish; limits: typeof LIMITS; loanAssets: LoanAsset[] };
+type Tier = { enabled: boolean; minTierBondUsd: BigNumberish; limits: typeof LIMITS; loanAssets: LoanAsset[] };
 
 const tierTuple = (tier: Tier) => [
   tier.enabled,
-  tier.minBondUsd,
+  tier.minTierBondUsd,
   Object.values(tier.limits),
   tier.loanAssets.map(({ asset, supplyCap, interestRateModels }) => [asset, supplyCap, interestRateModels]),
 ];
 
-describe("TierRegistry", () => {
+describe("SpokePoolPolicyRegistry", () => {
   let owner: SignerWithAddress;
   let usdt: SignerWithAddress;
   let usdc: SignerWithAddress;
@@ -38,7 +65,7 @@ describe("TierRegistry", () => {
   let otherIrm: SignerWithAddress;
   let other: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
-  let registry: TierRegistry;
+  let registry: SpokePoolPolicyRegistry;
   let usdtAsset: LoanAsset;
   let usdcAsset: LoanAsset;
   let tier: Tier;
@@ -47,7 +74,7 @@ describe("TierRegistry", () => {
     [owner, usdt, usdc, irm, otherIrm, other] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     acm.isAllowedToCall.returns(true);
-    registry = await deployProxy(await new TierRegistry__factory(owner).deploy(), acm.address);
+    registry = await deployProxy(await new SpokePoolPolicyRegistry__factory(owner).deploy(), acm.address);
 
     usdtAsset = { asset: usdt.address, supplyCap: e18("500000"), interestRateModels: [irm.address] };
     usdcAsset = {
@@ -55,7 +82,7 @@ describe("TierRegistry", () => {
       supplyCap: e18("250000"),
       interestRateModels: [irm.address, otherIrm.address],
     };
-    tier = { enabled: true, minBondUsd: e18("100000"), limits: LIMITS, loanAssets: [usdtAsset] };
+    tier = { enabled: true, minTierBondUsd: e18("100000"), limits: LIMITS, loanAssets: [usdtAsset] };
   });
 
   describe("initialize", () => {
@@ -71,7 +98,7 @@ describe("TierRegistry", () => {
     });
 
     it("cannot initialize the implementation", async () => {
-      const implementation = await new TierRegistry__factory(owner).deploy();
+      const implementation = await new SpokePoolPolicyRegistry__factory(owner).deploy();
       await expect(implementation.initialize(acm.address)).to.be.revertedWith(
         "Initializable: contract is already initialized",
       );
@@ -118,10 +145,11 @@ describe("TierRegistry", () => {
       const invalidTiers = [
         { ...tier, limits: { ...LIMITS, maxLiquidationThreshold: e18("1.01") } },
         { ...tier, limits: { ...LIMITS, maxCollateralFactor: e18("0.66") } },
-        { ...tier, minBondUsd: 0 },
-        { ...tier, minBondUsd: 0, enabled: false },
+        { ...tier, minTierBondUsd: 0 },
+        { ...tier, minTierBondUsd: 0, enabled: false },
         { ...tier, limits: { ...LIMITS, minCoverageRatio: 0 } },
         { ...tier, limits: { ...LIMITS, minCoverageRatio: 0 }, enabled: false },
+        { ...tier, limits: { ...LIMITS, minCoverageRatio: e18("1").add(1) } },
       ];
       for (const invalidTier of invalidTiers) {
         await expect(registry.setTier(1, invalidTier))
@@ -183,9 +211,9 @@ describe("TierRegistry", () => {
     });
 
     it("returns a tier's terms without its loan assets, and zeros for an unset tier", async () => {
-      const [enabled, minBondUsd, limits] = await registry.getTierTerms(1);
+      const [enabled, minTierBondUsd, limits] = await registry.getTierTerms(1);
       expect(enabled).to.equal(true);
-      expect(minBondUsd).to.equal(tier.minBondUsd);
+      expect(minTierBondUsd).to.equal(tier.minTierBondUsd);
       expect(limits).to.deep.equal(Object.values(LIMITS));
 
       const [unsetEnabled, unsetMinBondUsd, unsetLimits] = await registry.getTierTerms(2);
@@ -212,6 +240,108 @@ describe("TierRegistry", () => {
     });
   });
 
+  describe("bond asset factors", () => {
+    it("sets a bond asset's factor and emits BondAssetFactorUpdated", async () => {
+      await expect(registry.setBondAssetFactor(usdt.address, e18("1.5")))
+        .to.emit(registry, "BondAssetFactorUpdated")
+        .withArgs(usdt.address, 0, e18("1.5"));
+      expect(await registry.bondAssetFactors(usdt.address)).to.equal(e18("1.5"));
+    });
+
+    it("rejects a zero asset", async () => {
+      await expect(registry.setBondAssetFactor(constants.AddressZero, e18("1"))).to.be.revertedWithCustomError(
+        registry,
+        "ZeroAddressNotAllowed",
+      );
+    });
+
+    it("needs the ACM role", async () => {
+      acm.isAllowedToCall.returns(false);
+      await expect(registry.connect(other).setBondAssetFactor(usdt.address, e18("1")))
+        .to.be.revertedWithCustomError(registry, "Unauthorized")
+        .withArgs(other.address, registry.address, "setBondAssetFactor(address,uint256)");
+    });
+
+    it("returns the bond a tier requires in an asset: its minimum times the asset's factor", async () => {
+      await registry.setTier(1, tierTuple(tier));
+      await registry.setBondAssetFactor(usdt.address, e18("1.5"));
+      await registry.setBondAssetFactor(usdc.address, e18("0.8"));
+      expect(await registry.getRequiredBondUsd(1, usdt.address)).to.equal(e18("150000"));
+      expect(await registry.getRequiredBondUsd(1, usdc.address)).to.equal(e18("80000"));
+      expect(await registry.getRequiredBondUsd(2, usdt.address)).to.equal(0);
+    });
+
+    it("reverts for an asset with no factor", async () => {
+      await registry.setTier(1, tierTuple(tier));
+      await expect(registry.getRequiredBondUsd(1, usdt.address))
+        .to.be.revertedWithCustomError(registry, "BondAssetNotAllowed")
+        .withArgs(usdt.address);
+      await registry.setBondAssetFactor(usdt.address, e18("1"));
+      await registry.setBondAssetFactor(usdt.address, 0);
+      await expect(registry.getRequiredBondUsd(1, usdt.address))
+        .to.be.revertedWithCustomError(registry, "BondAssetNotAllowed")
+        .withArgs(usdt.address);
+    });
+  });
+
+  describe("pool and market params", () => {
+    it("setPoolParams sets new pools' params within the comptroller's bounds", async () => {
+      await registry.setPoolParams(POOL_PARAMS);
+      await expect(registry.setPoolParams(NEW_POOL_PARAMS))
+        .to.emit(registry, "PoolParamsUpdated")
+        .withArgs(Object.values(POOL_PARAMS), Object.values(NEW_POOL_PARAMS));
+      expectFields(await registry.poolParams(), NEW_POOL_PARAMS);
+
+      const bounds = [
+        { ...POOL_PARAMS, closeFactor: e18("0.05") },
+        { ...POOL_PARAMS, closeFactor: e18("0.9") },
+        { ...POOL_PARAMS, liquidationIncentive: e18("1.05") },
+      ];
+      for (const params of bounds) {
+        await registry.setPoolParams(params);
+      }
+      for (const params of [
+        { ...POOL_PARAMS, closeFactor: e18("0.049") },
+        { ...POOL_PARAMS, closeFactor: e18("0.91") },
+        { ...POOL_PARAMS, liquidationIncentive: e18("1.049") },
+      ]) {
+        await expect(registry.setPoolParams(params)).to.be.revertedWithCustomError(registry, "InvalidPoolParams");
+      }
+    });
+
+    it("setMarketParams sets new markets' params", async () => {
+      await registry.setMarketParams(MARKET_PARAMS(irm.address));
+      const params = { ...MARKET_PARAMS(otherIrm.address), reserveFactor: e18("1") };
+      await expect(registry.setMarketParams(params))
+        .to.emit(registry, "MarketParamsUpdated")
+        .withArgs(Object.values(MARKET_PARAMS(irm.address)), Object.values(params));
+      expectFields(await registry.marketParams(), params);
+      for (const invalid of [
+        MARKET_PARAMS(constants.AddressZero),
+        { ...params, reserveFactor: e18("1").add(1) },
+        { ...params, reduceReservesBlockDelta: 0 },
+        { ...params, maxStalePeriod: 0 },
+        { ...params, boundDeviation: 0 },
+        { ...params, boundDeviation: e18("1") },
+      ]) {
+        await expect(registry.setMarketParams(invalid)).to.be.revertedWithCustomError(
+          registry,
+          "InvalidProtocolMarketParams",
+        );
+      }
+    });
+
+    it("need the ACM role", async () => {
+      acm.isAllowedToCall.returns(false);
+      await expect(registry.connect(other).setPoolParams(POOL_PARAMS))
+        .to.be.revertedWithCustomError(registry, "Unauthorized")
+        .withArgs(other.address, registry.address, "setPoolParams(PoolParams)");
+      await expect(registry.connect(other).setMarketParams(MARKET_PARAMS(irm.address)))
+        .to.be.revertedWithCustomError(registry, "Unauthorized")
+        .withArgs(other.address, registry.address, "setMarketParams(ProtocolMarketParams)");
+    });
+  });
+
   describe("isUpgrade", () => {
     const HIGHER_LIMITS = {
       ...LIMITS,
@@ -224,7 +354,7 @@ describe("TierRegistry", () => {
     beforeEach(async () => {
       higherTier = {
         enabled: true,
-        minBondUsd: e18("200000"),
+        minTierBondUsd: e18("200000"),
         limits: HIGHER_LIMITS,
         loanAssets: [{ ...usdtAsset, supplyCap: e18("1000000") }],
       };
@@ -246,7 +376,7 @@ describe("TierRegistry", () => {
 
       const nonUpgrades = [
         { tier: { enabled: false } },
-        { tier: { minBondUsd: tier.minBondUsd } },
+        { tier: { minTierBondUsd: tier.minTierBondUsd } },
         { limits: { maxCollateralFactor: e18("0.4") } },
         { limits: { maxLiquidationThreshold: e18("0.6") } },
         { limits: { maxCollateralMarkets: 2 } },

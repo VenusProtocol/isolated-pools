@@ -46,7 +46,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
 
     /// @inheritdoc IBondAccount
     function deposit(uint256 amount) external onlyBondManager {
-        principal += amount;
+        _recordDeposit(amount);
         uint256 free = _freeAssets(asset.balanceOf(address(this)));
         if (released || free == 0) {
             return;
@@ -61,13 +61,12 @@ contract XVSVaultBondAccount is BaseBondAccount {
     }
 
     /// @inheritdoc IBondAccount
-    function claimYield() external onlyBondManager returns (uint256 amount) {
+    function claimYield(uint256 floor) external onlyBondManager returns (uint256 amount) {
         _claimRewards();
         uint256 balance = asset.balanceOf(address(this));
-        uint256 bondAssets = _bondAssets();
-        if (bondAssets > principal) {
+        uint256 yield = _claimable(floor, _bondAssets());
+        if (yield != 0) {
             uint256 free = _freeAssets(balance);
-            uint256 yield = bondAssets - principal;
             amount = yield < free ? yield : free;
             _transferOut(bondHolder, amount);
         }
@@ -77,7 +76,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
         _claimRewards();
         uint256 balance = asset.balanceOf(address(this));
-        _recordSeizure(amount, _bondAssets());
+        _ensureSeizable(amount, _bondAssets());
         uint256 free = _freeAssets(balance);
         paidNow = amount < free ? amount : free;
         _transferOut(receiver, paidNow);
@@ -94,7 +93,7 @@ contract XVSVaultBondAccount is BaseBondAccount {
     /// @inheritdoc IBondAccount
     function release() external onlyBondManager {
         released = true;
-        principal = 0;
+        deposited = 0;
         _requestWithdrawal(type(uint256).max);
     }
 

@@ -17,7 +17,7 @@ import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
-import { ITierRegistry } from "../interfaces/ITierRegistry.sol";
+import { ISpokePoolPolicyRegistry } from "../interfaces/ISpokePoolPolicyRegistry.sol";
 import { IGovernorBravo } from "../interfaces/external/IGovernorBravo.sol";
 import { IResilientOracle } from "../interfaces/external/IResilientOracle.sol";
 import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
@@ -102,6 +102,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     ISpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
     /// @inheritdoc ISpokePoolProposalBuilder
+    ISpokePoolPolicyRegistry public immutable POLICY_REGISTRY;
+
+    /// @inheritdoc ISpokePoolProposalBuilder
     IGovernorBravo public immutable GOVERNOR_BRAVO;
 
     /// @inheritdoc ISpokePoolProposalBuilder
@@ -173,6 +176,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         }
 
         SPOKE_POOL_MANAGER = spokePoolManager;
+        POLICY_REGISTRY = spokePoolManager.POLICY_REGISTRY();
         GOVERNOR_BRAVO = governorBravo;
         POOL_REGISTRY = poolRegistry;
         DEVIATION_BOUNDED_ORACLE = deviationBoundedOracle;
@@ -326,7 +330,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 collateralCount = request.collateralMarkets.length;
         uint256 loanCount = request.loanMarkets.length;
         vTokens = new address[](collateralCount + loanCount);
-        (address collateralInterestRateModel, , , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (address collateralInterestRateModel, , , , , , , ) = POLICY_REGISTRY.marketParams();
 
         for (uint256 i; i < collateralCount; ++i) {
             vTokens[i] = _deployMarket(
@@ -360,7 +364,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address interestRateModel,
         address executor
     ) private returns (address vToken) {
-        (, uint256 reserveFactor, , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (, uint256 reserveFactor, , , , , , ) = POLICY_REGISTRY.marketParams();
         string memory assetSymbol = IERC20MetadataUpgradeable(asset).symbol();
         vToken = address(new BeaconProxy(VTOKEN_BEACON, ""));
         VToken(vToken).initialize(
@@ -395,7 +399,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         );
 
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
-            (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral) = SPOKE_POOL_MANAGER
+            (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral) = POLICY_REGISTRY
                 .poolParams();
             _addAction(proposal, comptroller, "acceptOwnership()", "");
             _addAction(
@@ -436,11 +440,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             );
         }
 
-        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
         for (uint256 i; i < request.loanMarkets.length; ++i) {
             address asset = request.loanMarkets[i].asset;
             address vToken = vTokens[collateralCount + i];
-            uint256 supplyCap = tierRegistry.getLoanSupplyCap(request.tierId, asset);
+            uint256 supplyCap = POLICY_REGISTRY.getLoanSupplyCap(request.tierId, asset);
             uint256 seed = SPOKE_POOL_MANAGER.requestSeeds(requestId, asset);
             _addMarketListing(
                 proposal,
@@ -494,7 +497,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         bool[] memory unpriced,
         address oracle
     ) private view {
-        (, , , uint256 maxStalePeriod, , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (, , , uint256 maxStalePeriod, , , , ) = POLICY_REGISTRY.marketParams();
         uint256 marketCount = markets.length;
         FeedConfig[] memory configs = new FeedConfig[](marketCount);
         uint256 count;
@@ -532,7 +535,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         bool[] memory unpriced,
         address boundValidator
     ) private view {
-        (, , , , , , , uint256 boundDeviation) = SPOKE_POOL_MANAGER.marketParams();
+        (, , , , , , , uint256 boundDeviation) = POLICY_REGISTRY.marketParams();
         uint256 marketCount = markets.length;
         BoundConfig[] memory configs = new BoundConfig[](marketCount);
         uint256 count;
@@ -606,7 +609,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         Proposal memory proposal,
         ISpokePoolManager.CollateralMarketRequestParams[] memory markets
     ) private view {
-        (, , , , uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold, ) = SPOKE_POOL_MANAGER
+        (, , , , uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold, ) = POLICY_REGISTRY
             .marketParams();
         uint256 marketCount = markets.length;
         IDeviationBoundedOracle.TokenConfigInput[] memory configs = new IDeviationBoundedOracle.TokenConfigInput[](
@@ -662,7 +665,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 seedVTokens = (input.initialSupply * EXP_SCALE) / VToken(vToken).exchangeRateStored();
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(address(0), seedVTokens));
 
-        (, , uint256 reduceReservesBlockDelta, , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+        (, , uint256 reduceReservesBlockDelta, , , , , ) = POLICY_REGISTRY.marketParams();
         _addAction(proposal, vToken, "setReduceReservesBlockDelta(uint256)", abi.encode(reduceReservesBlockDelta));
     }
 
@@ -696,7 +699,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address comptroller,
         uint256 tierId
     ) private view returns (Proposal memory proposal) {
-        ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
         VToken[] memory listed = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
         proposal = _newProposal(TIER_ACTIONS + marketCount);
@@ -713,7 +715,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             }
 
             address asset = VToken(vToken).underlying();
-            uint256 supplyCap = tierRegistry.getLoanSupplyCap(tierId, asset);
+            uint256 supplyCap = POLICY_REGISTRY.getLoanSupplyCap(tierId, asset);
             if (supplyCap == 0) {
                 revert LoanAssetNotAllowed(asset);
             }

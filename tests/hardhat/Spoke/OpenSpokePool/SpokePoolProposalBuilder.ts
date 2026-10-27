@@ -19,10 +19,10 @@ import {
   SpokeComptroller,
   SpokeComptroller__factory,
   SpokePoolManager,
+  SpokePoolPolicyRegistry,
+  SpokePoolPolicyRegistry__factory,
   SpokePoolProposalBuilder,
   SpokePoolProposalBuilder__factory,
-  TierRegistry,
-  TierRegistry__factory,
   VToken,
   VToken__factory,
   WhitePaperInterestRateModel,
@@ -94,7 +94,7 @@ describe("SpokePoolProposalBuilder", () => {
   let boundedOracle: FakeContract<IDeviationBoundedOracle>;
   let oracle: FakeContract<IResilientOracle>;
   let yieldGroup: FakeContract<IYieldGroup>;
-  let registry: TierRegistry;
+  let registry: SpokePoolPolicyRegistry;
   let usdt: MockToken;
   let colA: MockToken;
   let colB: MockToken;
@@ -104,7 +104,7 @@ describe("SpokePoolProposalBuilder", () => {
   let vTokenBeacon: string;
   let builder: SpokePoolProposalBuilder;
 
-  const tier = (loanAssets: object[]) => ({ enabled: true, minBondUsd: e18("100000"), limits: LIMITS, loanAssets });
+  const tier = (loanAssets: object[]) => ({ enabled: true, minTierBondUsd: e18("100000"), limits: LIMITS, loanAssets });
   const usdtLoanAsset = (supplyCap: BigNumberish = LOAN_CAP) => ({
     asset: usdt.address,
     supplyCap,
@@ -328,28 +328,24 @@ describe("SpokePoolProposalBuilder", () => {
     loanIrm = await irmFactory.deploy(0, e18("0.1"), false, BLOCKS_PER_YEAR);
     collateralIrm = await irmFactory.deploy(0, 0, false, BLOCKS_PER_YEAR);
 
-    registry = await deployProxy(await new TierRegistry__factory(deployer).deploy(), acm.address);
+    registry = await deployProxy(await new SpokePoolPolicyRegistry__factory(deployer).deploy(), acm.address);
     await registry.setTier(TIER_ID, tier([usdtLoanAsset()]));
 
     manager = await smock.fake<SpokePoolManager>("SpokePoolManager");
-    manager.TIER_REGISTRY.returns(registry.address);
+    manager.POLICY_REGISTRY.returns(registry.address);
     manager.RESILIENT_ORACLE.returns(oracle.address);
     manager.accessControlManager.returns(acm.address);
-    manager.marketParams.returns([
-      collateralIrm.address,
-      RESERVE_FACTOR,
-      REDUCE_RESERVES_BLOCK_DELTA,
-      MAX_STALE_PERIOD,
-      COOLDOWN_PERIOD,
-      TRIGGER_THRESHOLD,
-      RESET_THRESHOLD,
-      BOUND_DEVIATION,
-    ]);
-    manager.poolParams.returns([
-      POOL_PARAMS.closeFactor,
-      POOL_PARAMS.liquidationIncentive,
-      POOL_PARAMS.minLiquidatableCollateral,
-    ]);
+    await registry.setMarketParams({
+      collateralInterestRateModel: collateralIrm.address,
+      reserveFactor: RESERVE_FACTOR,
+      reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA,
+      maxStalePeriod: MAX_STALE_PERIOD,
+      cooldownPeriod: COOLDOWN_PERIOD,
+      triggerThreshold: TRIGGER_THRESHOLD,
+      resetThreshold: RESET_THRESHOLD,
+      boundDeviation: BOUND_DEVIATION,
+    });
+    await registry.setPoolParams(POOL_PARAMS);
     manager.hubYieldGroups.returns(yieldGroup.address);
     manager.requestSeeds.returns(SEED);
     for (const [i, supported] of [chainlinkOracle, redstoneOracle, binanceOracle].entries()) {

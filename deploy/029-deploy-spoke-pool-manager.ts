@@ -25,16 +25,16 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const resilientOracle = await toAddress("ResilientOracle");
   const riskOracle = await toAddress(preconfiguredAddresses.RiskOracle);
   const riskStewardReceiver = await toAddress(preconfiguredAddresses.RiskStewardReceiver);
-  const tierRegistry = await toAddress("TierRegistry");
+  const policyRegistry = await toAddress("SpokePoolPolicyRegistry");
 
   // The manager reads its RiskOracle from the receiver; the configured one is only checked against it below
-  const args = [resilientOracle, riskStewardReceiver, tierRegistry];
+  const args = [resilientOracle, riskStewardReceiver, policyRegistry];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
-  // The manager's linked libraries: request checks and escrow, risk updates, and VIP builds
+  // The manager's linked libraries: the request checks, and the VIP builds and risk updates
   const libraries: Record<string, string> = {};
-  for (const name of ["SpokePoolRequestLib", "SpokePoolRiskLib", "SpokePoolProposalLib"]) {
+  for (const name of ["SpokePoolValidationLib", "SpokePoolGovernanceLib"]) {
     const library = await deploy(name, {
       from: deployer,
       log: true,
@@ -71,7 +71,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       await readBackAddress(() => manager.RISK_STEWARD_RECEIVER(), riskStewardReceiver),
       riskStewardReceiver,
     ],
-    ["TIER_REGISTRY", await readBackAddress(() => manager.TIER_REGISTRY(), tierRegistry), tierRegistry],
+    ["POLICY_REGISTRY", await readBackAddress(() => manager.POLICY_REGISTRY(), policyRegistry), policyRegistry],
     [
       "access control manager",
       await readBackAddress(() => manager.accessControlManager(), accessControlManager),
@@ -102,7 +102,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];
-func.dependencies = ["TierRegistry"];
+func.dependencies = ["SpokePoolPolicyRegistry"];
 // GovernorBravo exists on the BSC networks only
 func.skip = async (hre: HardhatRuntimeEnvironment) =>
   !(await getConfig(hre.getNetworkName())).preconfiguredAddresses.GovernorBravo;

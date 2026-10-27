@@ -59,8 +59,9 @@ interface IBondAccount {
     function initialize(address bondHolder_, IERC20Upgradeable asset_, address source_) external;
 
     /**
-     * @notice Adds `amount`, which `BOND_MANAGER` sent here, to the principal, then deposits the account's balance
-     *   beyond what it owes receivers in the source, keeping it here if refused; nothing is deposited after release
+     * @notice Adds `amount`, which `BOND_MANAGER` sent here, to `deposited`, first lowering that to what the bond held
+     *   before so a seizure or loss is forgiven, then deposits the account's balance beyond what it owes receivers in
+     *   the source, keeping it here if refused; nothing is deposited after release
      * @param amount The amount; zero only retries depositing the balance
      * @custom:event Emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
@@ -69,18 +70,20 @@ interface IBondAccount {
     function deposit(uint256 amount) external;
 
     /**
-     * @notice Pays the yield, what the bond holds beyond its principal, to the bond holder; a Liquidity Hub account
-     *   withdraws from the Hub as needed, an XVSVault account pays only from its balance beyond what it owes
+     * @notice Pays the yield, what the bond holds beyond the higher of `deposited` and `floor`, to the bond holder; a
+     *   Liquidity Hub account withdraws from the Hub as needed, an XVSVault account pays only from its balance beyond
+     *   what it owes
+     * @param floor The bond the pool's tier requires, in the asset; nothing below it is paid out as yield
      * @return amount The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `BOND_MANAGER`
      */
-    function claimYield() external returns (uint256 amount);
+    function claimYield(uint256 floor) external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from the bond, yield first, and pays `receiver` what is liquid now. An XVSVault account
+     * @notice Takes `amount` from the bond and pays `receiver` what is liquid now. An XVSVault account
      *   owes the rest, such as XVS in its lock period, and pays it by `payReceiver`; any other account reverts
      * @param amount The amount to take
      * @param receiver The receiver
@@ -119,16 +122,9 @@ interface IBondAccount {
     function payReceiver(address receiver) external;
 
     /**
-     * @notice Returns the principal the bond still covers: its principal, or less after a loss in the source or net of
-     *   a Hub's exit fee
-     * @return The amount, in the asset
-     * @custom:error The source's errors when it cannot report the bond's position
-     */
-    function value() external view returns (uint256);
-
-    /**
-     * @notice Returns the most a seizure can take: what the bond holds beyond what it owes receivers. It is read before
-     *   yield accrues, so `seize` may see a different amount, such as more once unclaimed XVS rewards are claimed
+     * @notice Returns what the bond holds and a seizure can take: its deposits and yield, net of a source loss, a Hub's
+     *   exit fee and what it owes receivers; zero once released. It is read before yield accrues, so `seize` may see a
+     *   different amount, such as more once unclaimed XVS rewards are claimed
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
@@ -167,8 +163,9 @@ interface IBondAccount {
     function source() external view returns (address);
 
     /**
-     * @notice Returns the bond's principal, held in the account or in the source
-     * @return The principal, in the asset
+     * @notice Returns what the bond holder has deposited, less what seizures and losses took as of the latest deposit.
+     *   Only the yield beyond it is claimable
+     * @return The amount, in the asset
      */
-    function principal() external view returns (uint256);
+    function deposited() external view returns (uint256);
 }

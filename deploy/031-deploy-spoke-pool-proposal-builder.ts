@@ -25,6 +25,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     );
   }
   const manager = await toAddress("SpokePoolManager");
+  const policyRegistry = await toAddress("SpokePoolPolicyRegistry");
   const governorBravo = await toAddress(preconfiguredAddresses.GovernorBravo);
   const poolRegistry = await toAddress("SpokePoolRegistry");
   const deviationBoundedOracle = await toAddress("DeviationBoundedOracle");
@@ -58,6 +59,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const builder = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [
     ["SPOKE_POOL_MANAGER", await readBackAddress(() => builder.SPOKE_POOL_MANAGER(), manager), manager],
+    ["POLICY_REGISTRY", await readBackAddress(() => builder.POLICY_REGISTRY(), policyRegistry), policyRegistry],
     ["GOVERNOR_BRAVO", await readBackAddress(() => builder.GOVERNOR_BRAVO(), governorBravo), governorBravo],
     ["POOL_REGISTRY", await readBackAddress(() => builder.POOL_REGISTRY(), poolRegistry), poolRegistry],
     [

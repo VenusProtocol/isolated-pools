@@ -5,7 +5,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 
 import { ISpokeBondManager } from "./ISpokeBondManager.sol";
 import { ISpokePoolProposalBuilder } from "./ISpokePoolProposalBuilder.sol";
-import { ITierRegistry } from "./ITierRegistry.sol";
+import { ISpokePoolPolicyRegistry } from "./ISpokePoolPolicyRegistry.sol";
 import { IRiskOracle } from "./external/IRiskOracle.sol";
 import { IRiskStewardReceiver } from "./external/IRiskStewardReceiver.sol";
 
@@ -49,13 +49,6 @@ interface ISpokePoolManager {
         address feed;
     }
 
-    /// @notice A pool request's parameters set by the deployer, besides its markets
-    struct PoolRequestParams {
-        uint256 tierId;
-        address bondAsset;
-        uint256 bondAmount;
-    }
-
     /// @notice A new collateral market's parameters set by the deployer
     struct CollateralMarketRequestParams {
         address asset;
@@ -74,28 +67,14 @@ interface ISpokePoolManager {
         address interestRateModel;
     }
 
-    /// @notice A new market's parameters set by Venus
-    struct ProtocolMarketParams {
-        address collateralInterestRateModel;
-        uint256 reserveFactor;
-        uint256 reduceReservesBlockDelta;
-        // A new collateral asset's oracle configs: its feeds' staleness limit, in seconds, set unless the
-        // ResilientOracle prices the asset already, and its DeviationBoundedOracle config, set unless that oracle has
-        // the asset already
-        uint256 maxStalePeriod;
-        uint64 cooldownPeriod;
-        uint256 triggerThreshold;
-        uint256 resetThreshold;
-        // The most the main or fallback price may deviate from the price it is checked against, scaled by 1e18, set on
-        // the BoundValidator when a pivot feed is set, as a fallback feed needs one; 0.05e18 is 5%
-        uint256 boundDeviation;
-    }
-
-    /// @notice A new pool's comptroller parameters
-    struct PoolParams {
-        uint256 closeFactor;
-        uint256 liquidationIncentive;
-        uint256 minLiquidatableCollateral;
+    /// @notice The manager's contracts its libraries read, passed to them on each call
+    struct Contracts {
+        ResilientOracleInterface resilientOracle;
+        IRiskOracle riskOracle;
+        IRiskStewardReceiver riskStewardReceiver;
+        ISpokePoolPolicyRegistry policyRegistry;
+        ISpokeBondManager bondManager;
+        ISpokePoolProposalBuilder proposalBuilder;
     }
 
     /// @notice A deployer's request; only the fields of its type are set
@@ -270,20 +249,6 @@ interface ISpokePoolManager {
     event SupportedOraclesUpdated(address[3] oldOracles, address[3] newOracles);
 
     /**
-     * @notice Emitted when the parameters of new pools are changed
-     * @param oldParams The previous parameters
-     * @param newParams The new parameters
-     */
-    event PoolParamsUpdated(PoolParams oldParams, PoolParams newParams);
-
-    /**
-     * @notice Emitted when Venus's parameters of new markets are changed
-     * @param oldParams The previous parameters
-     * @param newParams The new parameters
-     */
-    event MarketParamsUpdated(ProtocolMarketParams oldParams, ProtocolMarketParams newParams);
-
-    /**
      * @notice Emitted when the wind-down period is changed
      * @param oldWindDownPeriod The previous period, in seconds
      * @param newWindDownPeriod The new period, in seconds
@@ -318,17 +283,11 @@ interface ISpokePoolManager {
     error TierDisabled(uint256 tierId);
 
     /**
-     * @notice Thrown when the bond manager does not allow a bond asset
-     * @param asset The bond asset
-     */
-    error InvalidBondAsset(address asset);
-
-    /**
-     * @notice Thrown when a bond's principal is worth less than the tier requires
-     * @param principalUsd The bond's principal value, in USD
+     * @notice Thrown when a bond is worth less than the tier requires
+     * @param bondUsd The bond's value, in USD
      * @param requiredBondUsd The required bond, in USD
      */
-    error InsufficientBondValue(uint256 principalUsd, uint256 requiredBondUsd);
+    error InsufficientBondValue(uint256 bondUsd, uint256 requiredBondUsd);
 
     /// @notice Thrown when a request has no market
     error InvalidArrayLength();
@@ -415,9 +374,6 @@ interface ISpokePoolManager {
      */
     error InvalidRequestStatus(uint256 requestId);
 
-    /// @notice Thrown when pool parameters are outside the bounds the comptroller accepts
-    error InvalidPoolParams();
-
     /**
      * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, two of its
      *   feeds share an oracle, or it has a fallback feed without a pivot feed
@@ -481,15 +437,11 @@ interface ISpokePoolManager {
     error BondManagerAlreadySet();
 
     /**
-     * @notice Thrown when Venus's market parameters have a zero model, block delta, staleness limit or bound deviation,
-     *   a reserve factor above 1e18, or a bound deviation of 1e18 or above
-     */
-    error InvalidProtocolMarketParams();
-
-    /**
      * @notice Requests a new pool of a tier, pulling the bond; each market's seed worth $10 is pulled at the build.
      *   The bond and any pulled seeds are refunded on reject or cancel
-     * @param pool The requested tier and the bond
+     * @param tierId The requested tier
+     * @param bondAsset The bond's asset
+     * @param bondAmount The bond's amount
      * @param collateralMarkets The pool's collateral markets
      * @param loanMarkets The pool's loan markets
      * @return requestId The request
@@ -497,18 +449,15 @@ interface ISpokePoolManager {
      * @custom:error ActivePoolExists is thrown while the caller has an active pool
      * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:error TierDisabled is thrown when the tier is disabled
-     * @custom:error InvalidBondAsset is thrown when the bond manager does not allow the bond asset
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
-     * @custom:error CoverageTooLow is thrown when the bond is worth less than the tier's minimum coverage ratio of it
-     * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
-     * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
+     * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:access Not restricted
      */
     function requestPool(
-        PoolRequestParams calldata pool,
+        uint256 tierId,
+        address bondAsset,
+        uint256 bondAmount,
         CollateralMarketRequestParams[] calldata collateralMarkets,
         LoanMarketRequestParams[] calldata loanMarkets
     ) external returns (uint256 requestId);
@@ -524,13 +473,9 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error OpenRequestExists is thrown while the caller has an open request
-     * @custom:error InsufficientBondValue is thrown when the bond's principal is worth less than the tier requires
-     * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
-     * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
-     * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
+     * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
+     * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:access Only the pool's deployer
      */
     function requestNewMarkets(
@@ -550,9 +495,9 @@ interface ISpokePoolManager {
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:error NotAnUpgrade is thrown when the target tier is not an upgrade of the pool's tier
-     * @custom:error InsufficientBondValue is thrown when the bond's principal is worth less than the target tier
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
+     * @custom:error InsufficientBondValue is thrown when the bond is worth less than the target tier
      *   requires
-     * @custom:error CoverageTooLow is thrown when the bond covers less than the target tier's minimum coverage ratio
      * @custom:access Only the pool's deployer
      */
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);
@@ -587,17 +532,14 @@ interface ISpokePoolManager {
 
     /**
      * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. For a pool or markets
-     *   request it checks the markets again without prices, then pulls each seed from the deployer, worth $10 at
-     *   current prices. The bond and the supply caps were priced at request and are not priced again
+     *   request it checks the markets again at current prices, then pulls each seed from the deployer, worth $10 at
+     *   current prices. The bond was priced at request and is not priced again
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
-     * @custom:error The `SpokePoolRequestLib.validateMarkets` errors
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
+     * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
      * @custom:error The builder's `buildRequestProposal` errors
@@ -643,6 +585,7 @@ interface ISpokePoolManager {
      *   or the liquidation threshold is below the applied one
      * @custom:error RedundantUpdate is thrown when both values equal the applied ones
      * @custom:error ExceedsTierLimit is thrown when either value is above the tier's limits
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:access Only the pool's deployer
      */
@@ -668,6 +611,7 @@ interface ISpokePoolManager {
      *   applied
      * @custom:error RedundantUpdate is thrown when the cap equals the applied one
      * @custom:error ExceedsTierLimit is thrown when the cap is worth more than the tier's limit
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:access Only the pool's deployer
      */
@@ -689,10 +633,13 @@ interface ISpokePoolManager {
     function pauseCollateralSupply(address comptroller, address vToken) external;
 
     /**
-     * @notice Pays the pool's bond yield to its deployer, in any pool status while its bond is live, even while paused
+     * @notice Pays the pool's bond yield to its deployer, in any pool status while its bond is live, even while paused.
+     *   The yield is what the bond holds beyond its deposits and the bond its tier requires at current prices, so a
+     *   claim never thins the bond below what the tier asks for
      * @param comptroller The pool's comptroller
      * @custom:event The bond manager emits YieldClaimed when something is paid
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `claimYield` errors
      * @custom:access Only the pool's deployer
      */
@@ -874,27 +821,6 @@ interface ISpokePoolManager {
     function setSupportedOracles(address[3] calldata oracles) external;
 
     /**
-     * @notice Sets the comptroller parameters of new pools, read when a pool's VIP is built
-     * @param params The new parameters
-     * @custom:event Emits PoolParamsUpdated
-     * @custom:error InvalidPoolParams is thrown when the parameters are out of bounds
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setPoolParams(PoolParams calldata params) external;
-
-    /**
-     * @notice Sets Venus's parameters of new markets, read when a VIP is built; the staleness limit is also read when
-     *   an unpriced collateral asset is priced, at request, `setOracleFeeds` and build
-     * @param params The new parameters; the DeviationBoundedOracle checks its config when the VIP runs
-     * @custom:event Emits MarketParamsUpdated
-     * @custom:error InvalidProtocolMarketParams is thrown when the interest rate model, reduce reserves block delta,
-     *   staleness limit or bound deviation is zero, the reserve factor is above 1e18, or the bound deviation is 1e18 or
-     *   above
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setMarketParams(ProtocolMarketParams calldata params) external;
-
-    /**
      * @notice Sets the wind-down period
      * @param newWindDownPeriod The new period, in seconds
      * @custom:event Emits WindDownPeriodUpdated
@@ -959,11 +885,12 @@ interface ISpokePoolManager {
     function RISK_STEWARD_RECEIVER() external view returns (IRiskStewardReceiver);
 
     /**
-     * @notice Returns the registry of pool tiers
-     * @return The TierRegistry
+     * @notice Returns the registry of the policy open pools run under: tiers, bond assets and new pool and market
+     *   parameters
+     * @return The SpokePoolPolicyRegistry
      */
     // solhint-disable-next-line func-name-mixedcase
-    function TIER_REGISTRY() external view returns (ITierRegistry);
+    function POLICY_REGISTRY() external view returns (ISpokePoolPolicyRegistry);
 
     /**
      * @notice Returns the builder that builds the VIPs
@@ -988,42 +915,6 @@ interface ISpokePoolManager {
      * @return The maximum, in USD
      */
     function maxResidualPoolDebtUsd() external view returns (uint256);
-
-    /**
-     * @notice Returns the comptroller parameters of new pools
-     * @return closeFactor The close factor
-     * @return liquidationIncentive The liquidation incentive
-     * @return minLiquidatableCollateral The minimum liquidatable collateral, in USD
-     */
-    function poolParams()
-        external
-        view
-        returns (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral);
-
-    /**
-     * @notice Returns Venus's parameters of new markets
-     * @return collateralInterestRateModel The interest rate model of collateral markets
-     * @return reserveFactor The reserve factor
-     * @return reduceReservesBlockDelta The blocks between reserve reductions
-     * @return maxStalePeriod The staleness limit of a new collateral asset's feeds, in seconds
-     * @return cooldownPeriod The DeviationBoundedOracle cooldown of a new collateral asset, in seconds
-     * @return triggerThreshold Its DeviationBoundedOracle trigger threshold, scaled by 1e18
-     * @return resetThreshold Its DeviationBoundedOracle reset threshold, scaled by 1e18
-     * @return boundDeviation Its BoundValidator deviation, scaled by 1e18
-     */
-    function marketParams()
-        external
-        view
-        returns (
-            address collateralInterestRateModel,
-            uint256 reserveFactor,
-            uint256 reduceReservesBlockDelta,
-            uint256 maxStalePeriod,
-            uint64 cooldownPeriod,
-            uint256 triggerThreshold,
-            uint256 resetThreshold,
-            uint256 boundDeviation
-        );
 
     /**
      * @notice Returns the number of requests, which is also the latest request id

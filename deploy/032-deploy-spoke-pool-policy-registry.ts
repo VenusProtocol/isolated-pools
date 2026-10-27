@@ -6,7 +6,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 import { getConfig } from "../helpers/deploymentConfig";
 import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "../helpers/deploymentUtils";
 
-const DEPLOYMENT_NAME = "TierRegistry";
+const DEPLOYMENT_NAME = "SpokePoolPolicyRegistry";
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
@@ -35,11 +35,11 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
   await verifyProxyDeployment(hre, DEPLOYMENT_NAME, deployment);
 
-  const tierRegistry = await ethers.getContract(DEPLOYMENT_NAME);
+  const policyRegistry = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [
     [
       "access control manager",
-      await readBackAddress(() => tierRegistry.accessControlManager(), accessControlManager),
+      await readBackAddress(() => policyRegistry.accessControlManager(), accessControlManager),
       accessControlManager,
     ],
   ];
@@ -51,14 +51,14 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 
   // `Ownable2Step`: this only nominates; the Normal Timelock accepts in the setup VIP
-  if (sameAddress(await tierRegistry.owner(), owner) || sameAddress(await tierRegistry.pendingOwner(), owner)) {
+  if (sameAddress(await policyRegistry.owner(), owner) || sameAddress(await policyRegistry.pendingOwner(), owner)) {
     console.log(`${DEPLOYMENT_NAME} is already owned by, or nominated, ${owner}`);
   } else {
-    await (await tierRegistry.transferOwnership(owner)).wait(1);
-    const nominated = await readBackAddress(() => tierRegistry.pendingOwner(), owner);
+    await (await policyRegistry.transferOwnership(owner)).wait(1);
+    const nominated = await readBackAddress(() => policyRegistry.pendingOwner(), owner);
     if (!sameAddress(nominated, owner)) {
       throw new Error(
-        `${DEPLOYMENT_NAME} ${tierRegistry.address} still reports pendingOwner ${nominated} after ` +
+        `${DEPLOYMENT_NAME} ${policyRegistry.address} still reports pendingOwner ${nominated} after ` +
           `transferOwnership(${owner}). Re-run this script once the nomination has landed.`,
       );
     }

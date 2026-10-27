@@ -4,6 +4,7 @@ pragma solidity ^0.8.25;
 import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
 
 import { ISpokePoolManager } from "./ISpokePoolManager.sol";
+import { ISpokePoolPolicyRegistry } from "./ISpokePoolPolicyRegistry.sol";
 import { IGovernorBravo } from "./external/IGovernorBravo.sol";
 
 /**
@@ -90,6 +91,13 @@ interface ISpokePoolProposalBuilder {
      */
     // solhint-disable-next-line func-name-mixedcase
     function SPOKE_POOL_MANAGER() external view returns (ISpokePoolManager);
+
+    /**
+     * @notice Returns the policy registry the VIPs' pool and market parameters are read from, the manager's
+     * @return The SpokePoolPolicyRegistry
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function POLICY_REGISTRY() external view returns (ISpokePoolPolicyRegistry);
 
     /**
      * @notice Returns the governor the VIPs are proposed to

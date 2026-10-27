@@ -92,9 +92,14 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
             revert BondAlreadyExists(comptroller);
         }
 
-        // The manager bonds only allowed assets, and `setAssetConfig` ensures their type has an implementation
+        // The manager bonds any asset the policy registry accepts, so one never configured here is held Idle. A clone
+        // of a missing implementation accepts the bond with no code to move it out, so it reverts instead
         AssetConfig memory assetConfig = assetConfigs[asset];
-        account = Clones.clone(accountImplementations[assetConfig.sourceType]);
+        address implementation = accountImplementations[assetConfig.sourceType];
+        if (implementation == address(0)) {
+            revert InvalidAssetConfig(asset);
+        }
+        account = Clones.clone(implementation);
         IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetConfig.source);
         bondAccounts[comptroller] = account;
         isBondAccount[account] = true;
@@ -116,8 +121,11 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     }
 
     /// @inheritdoc ISpokeBondManager
-    function claimYield(address comptroller) external onlySpokePoolManager nonReentrant returns (uint256 amount) {
-        amount = _ensureBondExists(comptroller).claimYield();
+    function claimYield(
+        address comptroller,
+        uint256 floor
+    ) external onlySpokePoolManager nonReentrant returns (uint256 amount) {
+        amount = _ensureBondExists(comptroller).claimYield(floor);
 
         if (amount != 0) {
             emit YieldClaimed(comptroller, amount);
@@ -187,7 +195,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     function setAssetConfig(address asset, AssetConfig calldata config) external {
         _checkAccessAllowed("setAssetConfig(address,AssetConfig)");
         ensureNonzeroAddress(asset);
-        if (config.factor == 0 || accountImplementations[config.sourceType] == address(0)) {
+        if (accountImplementations[config.sourceType] == address(0)) {
             revert InvalidAssetConfig(asset);
         }
 

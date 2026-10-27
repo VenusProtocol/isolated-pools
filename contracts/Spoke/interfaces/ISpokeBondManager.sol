@@ -14,16 +14,11 @@ interface ISpokeBondManager {
         LiquidityHub
     }
 
-    /// @notice How a bond asset is accepted and where it earns yield
+    /// @notice How a bond asset is held and where it earns yield; the policy registry says whether pools may use it
     struct AssetConfig {
         SourceType sourceType;
         // The XVSVault or Hub; zero for an idle asset
         address source;
-        // False stops new pool requests from using the asset; live pools keep working
-        bool allowed;
-        // Multiplier on a tier's minimum USD bond for a bond in this asset, so a volatile asset such as XVS must
-        // cover more than a stablecoin; scaled by 1e18
-        uint256 factor;
     }
 
     /**
@@ -117,7 +112,7 @@ interface ISpokeBondManager {
     error NotBondAccount(address account);
 
     /**
-     * @notice Thrown when a bond asset's source type has no account implementation, or its factor is zero
+     * @notice Thrown when a bond asset's source type has no account implementation
      * @param asset The asset
      */
     error InvalidAssetConfig(address asset);
@@ -133,6 +128,7 @@ interface ISpokeBondManager {
      * @custom:event Emits BondCreated; the account emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondAlreadyExists is thrown when the pool already has a live bond
+     * @custom:error InvalidAssetConfig is thrown when the asset's source type has no account implementation
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function createBond(
@@ -154,9 +150,10 @@ interface ISpokeBondManager {
     function topUp(address comptroller, uint256 amount) external;
 
     /**
-     * @notice Pays a pool's bond yield to its bond holder; an XVSVault account pays it only from its balance beyond
-     *   what it owes receivers
+     * @notice Pays a pool's bond yield, what its bond holds beyond its deposits and `floor`, to its bond holder; an
+     *   XVSVault account pays it only from its balance beyond what it owes receivers
      * @param comptroller The pool's comptroller
+     * @param floor The bond the pool's tier requires, in the asset; nothing below it is paid out as yield
      * @return amount The amount paid
      * @custom:event Emits YieldClaimed, and the account emits Paid, when something is paid
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
@@ -164,7 +161,7 @@ interface ISpokeBondManager {
      * @custom:error The source's errors, such as the XVSVault's while it is paused
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
-    function claimYield(address comptroller) external returns (uint256 amount);
+    function claimYield(address comptroller, uint256 floor) external returns (uint256 amount);
 
     /**
      * @notice Takes `amount` from a pool's bond, yield first, and pays `receiver` what is liquid now. An XVSVault
@@ -236,10 +233,10 @@ interface ISpokeBondManager {
      * @notice Sets a bond asset's config; bonds already deposited keep their source
      * @param asset The asset
      * @param config The config; its source must fit the asset: an XVSVault whose XVS pool stakes it, a Liquidity Hub
-     *   for it, or zero for Idle. Disallow the asset with `allowed`, never with a zero factor
+     *   for it, or zero for Idle
      * @custom:event Emits AssetConfigUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the asset is zero
-     * @custom:error InvalidAssetConfig is thrown when the type has no account implementation or the factor is zero
+     * @custom:error InvalidAssetConfig is thrown when the type has no account implementation
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setAssetConfig(address asset, AssetConfig calldata config) external;
@@ -274,12 +271,8 @@ interface ISpokeBondManager {
      * @param asset The asset
      * @return sourceType The source type; Idle for an asset never set
      * @return source The XVSVault or Liquidity Hub; zero for Idle
-     * @return allowed Whether new pool requests may use the asset
-     * @return factor The factor that multiplies a tier's minimum bond, scaled by 1e18
      */
-    function assetConfigs(
-        address asset
-    ) external view returns (SourceType sourceType, address source, bool allowed, uint256 factor);
+    function assetConfigs(address asset) external view returns (SourceType sourceType, address source);
 
     /**
      * @notice Returns the live bond's account of a pool

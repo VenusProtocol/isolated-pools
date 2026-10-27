@@ -25,21 +25,18 @@ contract IdleBondAccount is BaseBondAccount {
 
     /// @inheritdoc IBondAccount
     function deposit(uint256 amount) external onlyBondManager {
-        principal += amount;
+        _recordDeposit(amount);
     }
 
     /// @inheritdoc IBondAccount
-    function claimYield() external onlyBondManager returns (uint256 amount) {
-        uint256 bondAssets = _bondAssets();
-        if (bondAssets > principal) {
-            amount = bondAssets - principal;
-            _transferOut(bondHolder, amount);
-        }
+    function claimYield(uint256 floor) external onlyBondManager returns (uint256 amount) {
+        amount = _claimable(floor, _bondAssets());
+        _transferOut(bondHolder, amount);
     }
 
     /// @inheritdoc IBondAccount
     function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
-        _recordSeizure(amount, _bondAssets());
+        _ensureSeizable(amount, _bondAssets());
         _transferOut(receiver, amount);
         paidNow = amount;
     }
@@ -47,7 +44,7 @@ contract IdleBondAccount is BaseBondAccount {
     /// @inheritdoc IBondAccount
     function release() external onlyBondManager {
         released = true;
-        principal = 0;
+        deposited = 0;
         _transferOut(bondHolder, asset.balanceOf(address(this)));
     }
 

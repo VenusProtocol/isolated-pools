@@ -1,33 +1,130 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity 0.8.25;
 
-import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
-
 import { VToken } from "../../../VToken.sol";
 import { EXP_SCALE } from "../../../lib/constants.sol";
 import { SpokeComptroller } from "../../SpokeComptroller.sol";
 import { IBondAccount } from "../../interfaces/IBondAccount.sol";
+import { ISpokePoolProposalBuilder } from "../../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../../interfaces/ISpokePoolManager.sol";
-import { ITierRegistry } from "../../interfaces/ITierRegistry.sol";
+import { ISpokePoolPolicyRegistry } from "../../interfaces/ISpokePoolPolicyRegistry.sol";
 import { IRiskStewardReceiver } from "../../interfaces/external/IRiskStewardReceiver.sol";
-import { SpokePoolRequestLib } from "./SpokePoolRequestLib.sol";
 
 /**
- * @title SpokePoolRiskLib
+ * @title SpokePoolGovernanceLib
  * @author Venus
- * @notice The pool risk checks of `SpokePoolManager`: it checks a deployer's collateral factor and supply cap updates
- * against the market, the pool's tier and its bond's coverage, and a supply pause against the market, then publishes
- * them to the RiskOracle, and checks a winding-down pool's residual debt before it closes. Linked to keep the manager
- * under the EIP-170 size limit
- * @dev The manager calls it through DELEGATECALL, so `address(this)` and `msg.sender` are the manager's, and the
- * manager is the RiskOracle sender. It writes no manager state and emits no events; the errors are
- * `ISpokePoolManager`'s. It uses `SpokePoolRequestLib.Contracts` as a type only, so the two are linked separately
+ * @notice The outbound actions of `SpokePoolManager`, linked to keep the manager under the EIP-170 size limit: it
+ * builds a request's, an exit's and a force close's VIP through the proposal builder and records each build, and
+ * checks and publishes the deployer's risk updates to the RiskOracle for the Risk Stewards
+ * @dev The manager calls it through DELEGATECALL, so `address(this)`, `msg.sender` and the storage are the manager's:
+ * the builder sees the manager as its caller and the manager is the RiskOracle sender. It writes only what a build
+ * records and emits the build events; the manager keeps the access checks and `SpokePoolValidationLib` the request
+ * checks. The errors are `ISpokePoolManager`'s
  */
-library SpokePoolRiskLib {
+library SpokePoolGovernanceLib {
     /// @dev The RiskOracle update types the deployer publishes; each one selects the Risk Steward that applies it
     string internal constant COLLATERAL_FACTORS_UPDATE = "collateralFactors";
     string internal constant SUPPLY_CAP_UPDATE = "supplyCap";
     string internal constant SUPPLY_PAUSE_UPDATE = "supplyPause";
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Build functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Builds a request's VIP and records the pool's comptroller, the Built status and the VIP payload
+     * @param proposalBuilder The proposal builder
+     * @param request The request, checked and funded by the manager
+     * @param requestProposals The manager's VIP payloads by request id
+     * @param requestId The request's id
+     * @param description The VIP's description
+     * @custom:event Emits RequestBuilt
+     * @custom:error The builder's `buildRequestProposal` errors
+     */
+    function buildRequestProposal(
+        ISpokePoolProposalBuilder proposalBuilder,
+        ISpokePoolManager.Request storage request,
+        mapping(uint256 => bytes) storage requestProposals,
+        uint256 requestId,
+        string calldata description
+    ) external {
+        (address comptroller, address[] memory vTokens, bytes memory proposal) = proposalBuilder.buildRequestProposal(
+            requestId,
+            description
+        );
+        request.comptroller = comptroller;
+        request.status = ISpokePoolManager.RequestStatus.Built;
+        requestProposals[requestId] = proposal;
+
+        emit ISpokePoolManager.RequestBuilt(requestId, vTokens);
+    }
+
+    /**
+     * @notice Builds a live or exiting pool's exit VIP and stores it as the pool's latest
+     * @param proposalBuilder The proposal builder
+     * @param pool The pool
+     * @param exitProposals The manager's exit VIP payloads by comptroller
+     * @param comptroller The pool's comptroller
+     * @param liquidationThresholds Each listed market's liquidation threshold for the wind-down
+     * @param description The VIP's description
+     * @custom:event Emits ExitBuilt
+     * @custom:error InvalidPoolStatus is thrown unless the pool is live or its exit is requested or built
+     * @custom:error The builder's `buildExitProposal` errors
+     */
+    function buildExitProposal(
+        ISpokePoolProposalBuilder proposalBuilder,
+        ISpokePoolManager.Pool storage pool,
+        mapping(address => bytes) storage exitProposals,
+        address comptroller,
+        uint256[] calldata liquidationThresholds,
+        string calldata description
+    ) external {
+        ISpokePoolManager.PoolStatus status = pool.status;
+        if (
+            status != ISpokePoolManager.PoolStatus.Live &&
+            status != ISpokePoolManager.PoolStatus.ExitRequested &&
+            status != ISpokePoolManager.PoolStatus.ExitProposed
+        ) {
+            revert ISpokePoolManager.InvalidPoolStatus(comptroller);
+        }
+
+        pool.status = ISpokePoolManager.PoolStatus.ExitProposed;
+        exitProposals[comptroller] = proposalBuilder.buildExitProposal(comptroller, liquidationThresholds, description);
+
+        emit ISpokePoolManager.ExitBuilt(comptroller);
+    }
+
+    /**
+     * @notice Builds a winding-down pool's force-close VIP once its wind-down period ends, in place of its exit VIP
+     * @param proposalBuilder The proposal builder
+     * @param pool The pool
+     * @param exitProposals The manager's exit VIP payloads by comptroller
+     * @param comptroller The pool's comptroller
+     * @param windDownPeriod The manager's wind-down period
+     * @param description The VIP's description
+     * @custom:event Emits ForceCloseBuilt
+     * @custom:error InvalidPoolStatus is thrown when the pool is not winding down
+     * @custom:error WindDownPeriodNotElapsed is thrown before the wind-down period ends
+     */
+    function buildForceCloseProposal(
+        ISpokePoolProposalBuilder proposalBuilder,
+        ISpokePoolManager.Pool storage pool,
+        mapping(address => bytes) storage exitProposals,
+        address comptroller,
+        uint256 windDownPeriod,
+        string calldata description
+    ) external {
+        if (pool.status != ISpokePoolManager.PoolStatus.WindingDown) {
+            revert ISpokePoolManager.InvalidPoolStatus(comptroller);
+        }
+        if (block.timestamp < pool.windDownStartedAt + windDownPeriod) {
+            revert ISpokePoolManager.WindDownPeriodNotElapsed();
+        }
+
+        exitProposals[comptroller] = proposalBuilder.buildForceCloseProposal(comptroller, description);
+
+        emit ISpokePoolManager.ForceCloseBuilt(comptroller);
+    }
 
     // ──────────────────────────────────────────────────────────────────────
     // Risk control functions
@@ -45,7 +142,7 @@ library SpokePoolRiskLib {
      * @custom:error See `ISpokePoolManager.setCollateralFactor`
      */
     function publishCollateralFactorUpdate(
-        SpokePoolRequestLib.Contracts memory contracts,
+        ISpokePoolManager.Contracts memory contracts,
         uint256 tierId,
         address comptroller,
         address vToken,
@@ -65,11 +162,11 @@ library SpokePoolRiskLib {
             revert ISpokePoolManager.RedundantUpdate(vToken);
         }
 
-        (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = contracts.tierRegistry.getTierTerms(tierId);
+        (, , ISpokePoolPolicyRegistry.PoolLimits memory limits) = contracts.policyRegistry.getTierTerms(tierId);
         if (collateralFactor > limits.maxCollateralFactor || liquidationThreshold > limits.maxLiquidationThreshold) {
             revert ISpokePoolManager.ExceedsTierLimit(vToken);
         }
-        _checkBondCoverage(contracts, comptroller, minBondUsd, limits.minCoverageRatio);
+        _checkBondCoverage(contracts, comptroller, tierId, limits.minCoverageRatio);
 
         _publishUpdate(
             contracts,
@@ -90,7 +187,7 @@ library SpokePoolRiskLib {
      * @custom:error See `ISpokePoolManager.setCollateralSupplyCap`
      */
     function publishSupplyCapUpdate(
-        SpokePoolRequestLib.Contracts memory contracts,
+        ISpokePoolManager.Contracts memory contracts,
         uint256 tierId,
         address comptroller,
         address vToken,
@@ -103,12 +200,12 @@ library SpokePoolRiskLib {
             revert ISpokePoolManager.RedundantUpdate(vToken);
         }
 
-        (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = contracts.tierRegistry.getTierTerms(tierId);
+        (, , ISpokePoolPolicyRegistry.PoolLimits memory limits) = contracts.policyRegistry.getTierTerms(tierId);
         uint256 supplyCapUsd = (supplyCap * contracts.resilientOracle.getUnderlyingPrice(vToken)) / EXP_SCALE;
         if (supplyCapUsd > limits.maxCollateralSupplyCapUsd) {
             revert ISpokePoolManager.ExceedsTierLimit(vToken);
         }
-        _checkBondCoverage(contracts, comptroller, minBondUsd, limits.minCoverageRatio);
+        _checkBondCoverage(contracts, comptroller, tierId, limits.minCoverageRatio);
 
         _publishUpdate(contracts, SUPPLY_CAP_UPDATE, vToken, abi.encode(supplyCap));
     }
@@ -122,7 +219,7 @@ library SpokePoolRiskLib {
      * @custom:error See `ISpokePoolManager.pauseCollateralSupply`
      */
     function publishSupplyPause(
-        SpokePoolRequestLib.Contracts memory contracts,
+        ISpokePoolManager.Contracts memory contracts,
         address comptroller,
         address vToken
     ) external {
@@ -132,45 +229,12 @@ library SpokePoolRiskLib {
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Exit checks
-    // ──────────────────────────────────────────────────────────────────────
-
-    /**
-     * @notice Checks a pool's debt, its borrows plus bad debt priced in USD, is at most `maxDebtUsd`
-     * @dev Not a view: `totalBorrowsCurrent` accrues each market's interest. It writes no manager state
-     * @param resilientOracle The oracle the debt is priced with
-     * @param comptroller The pool's comptroller
-     * @param maxDebtUsd The debt the pool may close with
-     * @custom:error ResidualDebtExceeded is thrown when the debt is above `maxDebtUsd`
-     */
-    function ensureResidualDebtBelowMax(
-        ResilientOracleInterface resilientOracle,
-        address comptroller,
-        uint256 maxDebtUsd
-    ) external {
-        VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
-        uint256 marketCount = vTokens.length;
-        uint256 debtUsd;
-        for (uint256 i; i < marketCount; ++i) {
-            VToken vToken = vTokens[i];
-            uint256 debt = vToken.totalBorrowsCurrent() + vToken.badDebt();
-            if (debt != 0) {
-                debtUsd += (debt * resilientOracle.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
-            }
-        }
-
-        if (debtUsd > maxDebtUsd) {
-            revert ISpokePoolManager.ResidualDebtExceeded(debtUsd);
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
     // Private functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @dev Publishes a deployer's update of a collateral market to the RiskOracle; the manager is the sender
     function _publishUpdate(
-        SpokePoolRequestLib.Contracts memory contracts,
+        ISpokePoolManager.Contracts memory contracts,
         string memory updateType,
         address vToken,
         bytes memory newValue
@@ -197,7 +261,7 @@ library SpokePoolRiskLib {
      *   is checked against them; an expired one does not block the deployer
      */
     function _ensureNoPendingUpdate(
-        SpokePoolRequestLib.Contracts memory contracts,
+        ISpokePoolManager.Contracts memory contracts,
         string memory updateType,
         address vToken
     ) private view {
@@ -219,18 +283,17 @@ library SpokePoolRiskLib {
 
     /// @dev Checks a pool's bond is worth at least `minCoverageRatio` of the bond its tier requires
     function _checkBondCoverage(
-        SpokePoolRequestLib.Contracts memory contracts,
+        ISpokePoolManager.Contracts memory contracts,
         address comptroller,
-        uint256 minBondUsd,
+        uint256 tierId,
         uint256 minCoverageRatio
     ) private view {
         IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
         address bondAsset = address(bondAccount.asset());
-        (, , , uint256 factor) = contracts.bondManager.assetConfigs(bondAsset);
-        uint256 requiredBondUsd = (minBondUsd * factor) / EXP_SCALE;
+        uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
 
-        // The bond's value is the principal it still covers, net of a Hub's exit fee
-        uint256 bondUsd = (bondAccount.value() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
+        // What the bond holds, net of a loss, a Hub's exit fee and what it owes receivers
+        uint256 bondUsd = (bondAccount.seizableAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
         if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert ISpokePoolManager.CoverageTooLow((bondUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);
         }
