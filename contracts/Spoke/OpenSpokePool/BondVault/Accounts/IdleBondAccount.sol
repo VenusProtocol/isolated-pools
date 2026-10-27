@@ -9,6 +9,7 @@ import { BaseBondAccount } from "./BaseBondAccount.sol";
  * @author Venus
  * @notice A bond account that holds its asset idle, with no source. It pays a seizure, the yield and the bond holder at
  * release from its balance at once
+ * @custom:oz-upgrades-unsafe-allow constructor
  */
 contract IdleBondAccount is BaseBondAccount {
     /**

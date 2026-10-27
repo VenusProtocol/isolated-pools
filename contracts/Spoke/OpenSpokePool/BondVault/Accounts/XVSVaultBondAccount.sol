@@ -17,6 +17,7 @@ import { BaseBondAccount } from "./BaseBondAccount.sol";
  * `payReceiver` pays the bond holder the balance beyond what seizures still hold, the stake included once it unlocks.
  * What the balance owes receivers is never staked or paid to anyone else. Anyone can call `payReceiver` for any
  * receiver. It never delegates, so the bond has no voting power
+ * @custom:oz-upgrades-unsafe-allow constructor
  */
 contract XVSVaultBondAccount is BaseBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
