@@ -30,7 +30,7 @@ interface IBondAccount {
      * @param receiver The seizure's receiver
      * @param amount The amount owed
      */
-    event PaymentQueued(address indexed receiver, uint256 amount);
+    event PaymentOwed(address indexed receiver, uint256 amount);
 
     /**
      * @notice Thrown when the caller is not `BOND_MANAGER`
@@ -71,9 +71,8 @@ interface IBondAccount {
     function deposit(uint256 amount) external;
 
     /**
-     * @notice Pays the yield, everything beyond the principal and what is owed to receivers, to the bond holder: from
-     *   the balance beyond what it owes, then, for a Liquidity Hub account, the Hub; an XVSVault account pays only from
-     *   that balance
+     * @notice Pays the yield, what the bond holds beyond its principal, to the bond holder; a Liquidity Hub account
+     *   withdraws from the Hub as needed, an XVSVault account pays only from its balance beyond what it owes
      * @return amount The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
@@ -83,12 +82,12 @@ interface IBondAccount {
     function claimYield() external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from the bond, yield first, and pays `receiver` what is liquid now. An XVSVault account owes
-     *   the rest, such as XVS in its lock period, and pays it by `payReceiver`; any other account reverts
+     * @notice Takes `amount` from the bond, yield first, and pays `receiver` what is liquid now. An XVSVault account
+     *   owes the rest, such as XVS in its lock period, and pays it by `payReceiver`; any other account reverts
      * @param amount The amount to take
      * @param receiver The receiver
      * @return paidNow The amount paid now
-     * @custom:event Emits Paid for what is paid now and PaymentQueued for what is owed
+     * @custom:event Emits Paid for what is paid now and PaymentOwed for what is owed
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error InsufficientFunds is thrown when the bond holds less than `amount` beyond what it owes receivers
      * @custom:error InsufficientLiquidity is thrown when an account other than an XVSVault one cannot pay it all now
@@ -99,7 +98,8 @@ interface IBondAccount {
 
     /**
      * @notice Releases the bond and pays the bond holder everything at once; an XVSVault account instead requests its
-     *   whole stake, which `payReceiver` pays the bond holder after the lock period
+     *   whole stake, and `payReceiver` pays the bond holder the balance beyond what seizures still hold, the stake
+     *   included once it unlocks
      * @custom:event Emits Paid when the bond holder is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
      * @custom:error InsufficientLiquidity is thrown when an account other than an XVSVault one cannot pay it all now

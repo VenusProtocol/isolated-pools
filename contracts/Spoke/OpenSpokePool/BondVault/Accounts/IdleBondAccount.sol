@@ -10,7 +10,6 @@ import { BaseBondAccount } from "./BaseBondAccount.sol";
  * @author Venus
  * @notice A bond account that holds its asset idle, with no source. It pays a seizure, the yield and the bond holder at
  * release from its balance at once
- * @dev Clones share this implementation's `BOND_MANAGER`
  */
 contract IdleBondAccount is BaseBondAccount {
     /**
@@ -31,16 +30,16 @@ contract IdleBondAccount is BaseBondAccount {
 
     /// @inheritdoc IBondAccount
     function claimYield() external onlyBondManager returns (uint256 amount) {
-        uint256 balance = asset.balanceOf(address(this));
-        if (balance > principal) {
-            amount = balance - principal;
+        uint256 bondAssets = _bondAssets();
+        if (bondAssets > principal) {
+            amount = bondAssets - principal;
             _transferOut(bondHolder, amount);
         }
     }
 
     /// @inheritdoc IBondAccount
     function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
-        _recordSeizure(amount, asset.balanceOf(address(this)));
+        _recordSeizure(amount, _bondAssets());
         _transferOut(receiver, amount);
         paidNow = amount;
     }

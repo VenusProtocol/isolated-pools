@@ -12,12 +12,12 @@ import { BaseBondAccount } from "./BaseBondAccount.sol";
 /**
  * @title XVSVaultBondAccount
  * @author Venus
- * @notice A bond account that stakes its XVS in the XVSVault, with rewards claimed into it as yield. A seizure pays its
- * balance now and owes the rest to its receiver, requested from the XVSVault and paid by `payReceiver` after the lock
- * period; release requests the whole stake, which `payReceiver` pays the bond holder after it, less what unpaid
- * seizures still hold. What the balance owes receivers is never staked or paid to anyone else. Anyone can call
- * `payReceiver` for any receiver. It never delegates, so the bond has no voting power
- * @dev Clones share this implementation's `XVS_POOL_ID` and `BOND_MANAGER`
+ * @notice A bond account that stakes its XVS in the XVSVault, with rewards claimed into it as yield. A seizure pays
+ * from its balance now and owes the rest to its receiver, requesting the part of the stake that the balance and earlier
+ * requests do not cover; `payReceiver` pays it once the request unlocks. Release requests the whole stake, and
+ * `payReceiver` pays the bond holder the balance beyond what seizures still hold, the stake included once it unlocks.
+ * What the balance owes receivers is never staked or paid to anyone else. Anyone can call `payReceiver` for any
+ * receiver. It never delegates, so the bond has no voting power
  */
 contract XVSVaultBondAccount is BaseBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -25,11 +25,11 @@ contract XVSVaultBondAccount is BaseBondAccount {
     /// @notice The XVSVault pool that stakes XVS with XVS as its reward token; it differs between networks
     uint256 public immutable XVS_POOL_ID;
 
-    /// @notice Each receiver's seized XVS not paid yet, waiting for the XVSVault's lock period
-    mapping(address => uint256) public pendingSeizedAmounts;
+    /// @notice Each receiver's seized XVS not paid yet
+    mapping(address => uint256) public owedAmounts;
 
     /// @notice The total seized XVS not paid yet
-    uint256 public totalPendingSeizedAmount;
+    uint256 public totalOwedAmount;
 
     /**
      * @param bondManager The SpokeBondManager, the only caller of this implementation's clones
@@ -81,12 +81,13 @@ contract XVSVaultBondAccount is BaseBondAccount {
         uint256 free = _freeAssets(balance);
         paidNow = amount < free ? amount : free;
         _transferOut(receiver, paidNow);
-        uint256 pending = amount - paidNow;
-        if (pending != 0) {
-            _requestWithdrawal(pending);
-            pendingSeizedAmounts[receiver] += pending;
-            totalPendingSeizedAmount += pending;
-            emit PaymentQueued(receiver, pending);
+        uint256 owed = amount - paidNow;
+        if (owed != 0) {
+            owedAmounts[receiver] += owed;
+            totalOwedAmount += owed;
+            // What is owed beyond the balance left must come from the stake requested
+            _requestWithdrawal(totalOwedAmount - (balance - paidNow));
+            emit PaymentOwed(receiver, owed);
         }
     }
 
@@ -105,11 +106,11 @@ contract XVSVaultBondAccount is BaseBondAccount {
             vault.executeWithdrawal(address(asset), XVS_POOL_ID);
         }
         uint256 balance = asset.balanceOf(address(this));
-        uint256 pending = pendingSeizedAmounts[receiver];
-        uint256 paid = pending < balance ? pending : balance;
+        uint256 owed = owedAmounts[receiver];
+        uint256 paid = owed < balance ? owed : balance;
         if (paid != 0) {
-            pendingSeizedAmounts[receiver] = pending - paid;
-            totalPendingSeizedAmount -= paid;
+            owedAmounts[receiver] = owed - paid;
+            totalOwedAmount -= paid;
             balance -= paid;
             _transferOut(receiver, paid);
         }
@@ -143,7 +144,8 @@ contract XVSVaultBondAccount is BaseBondAccount {
 
     /// @dev Returns the balance plus the stake, beyond the seized XVS not paid yet
     function _bondAssets() internal view override returns (uint256) {
-        return _freeAssets(asset.balanceOf(address(this)) + _staked());
+        (uint256 staked, , ) = IXVSVault(source).getUserInfo(address(asset), XVS_POOL_ID, address(this));
+        return _freeAssets(asset.balanceOf(address(this)) + staked);
     }
 
     /// @dev Claims the XVSVault's pending rewards into the account, where they count as yield
@@ -151,25 +153,24 @@ contract XVSVaultBondAccount is BaseBondAccount {
         IXVSVault(source).claim(address(this), address(asset), XVS_POOL_ID);
     }
 
-    /// @dev Requests up to `amount` of the stake not requested yet; the XVSVault pays it after its lock period
-    function _requestWithdrawal(uint256 amount) private {
+    /**
+     * @dev Requests more of the stake until `total` of it is requested, as far as the stake allows; the XVSVault pays
+     *   it after its lock period
+     */
+    function _requestWithdrawal(uint256 total) private {
         IXVSVault vault = IXVSVault(source);
         (uint256 staked, , uint256 requested) = vault.getUserInfo(address(asset), XVS_POOL_ID, address(this));
-        uint256 free = staked - requested;
-        uint256 toRequest = amount < free ? amount : free;
+        uint256 wanted = total > requested ? total - requested : 0;
+        uint256 unrequested = staked - requested;
+        uint256 toRequest = wanted < unrequested ? wanted : unrequested;
         if (toRequest != 0) {
             vault.requestWithdrawal(address(asset), XVS_POOL_ID, toRequest);
         }
     }
 
-    /// @dev Returns the XVSVault stake, including requested withdrawals
-    function _staked() private view returns (uint256 staked) {
-        (staked, , ) = IXVSVault(source).getUserInfo(address(asset), XVS_POOL_ID, address(this));
-    }
-
     /// @dev Returns what `holdings` leaves beyond the seized XVS not paid yet, or zero when it is less
     function _freeAssets(uint256 holdings) private view returns (uint256) {
-        uint256 pending = totalPendingSeizedAmount;
-        return holdings > pending ? holdings - pending : 0;
+        uint256 owed = totalOwedAmount;
+        return holdings > owed ? holdings - owed : 0;
     }
 }

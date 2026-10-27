@@ -15,7 +15,6 @@ import { BaseBondAccount } from "./BaseBondAccount.sol";
  * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. A seizure or the release
  * reverts when the Hub cannot pay it at once. The position is valued net of the Hub's exit fee. A Hub loss lowers the
  * bond's value, and no yield is paid until the position grows back above the principal
- * @dev Clones share this implementation's `BOND_MANAGER`
  */
 contract LiquidityHubBondAccount is BaseBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;

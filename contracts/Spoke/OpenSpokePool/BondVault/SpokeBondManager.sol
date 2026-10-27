@@ -14,11 +14,11 @@ import { ISpokeBondManager } from "../../interfaces/ISpokeBondManager.sol";
 /**
  * @title SpokeBondManager
  * @author Venus
- * @notice Holds the bond of every open spoke pool until it is released, keyed by the pool's comptroller. The bond is
- * the first money that repays the pool's bad debt. Each bond sits in its own account, a clone of the implementation for
- * its asset's source type: it stakes XVS in the XVSVault, deposits a stablecoin in its Liquidity Hub, or just holds
- * the asset. A released bond's account is detached from its pool; an XVSVault one keeps paying what it owes through
- * `payReceiver`
+ * @notice Creates and runs the bond account of every open spoke pool, keyed by the pool's comptroller, until the bond
+ * is released. The bond is the first money that repays the pool's bad debt. Each account is a clone of the
+ * implementation for its asset's source type: it stakes XVS in the XVSVault, deposits a stablecoin in its Liquidity
+ * Hub, or just holds the asset. A released bond's account is detached from its pool; an XVSVault one keeps paying what
+ * it owes through `payReceiver`
  * @dev Only `SPOKE_POOL_MANAGER` creates, tops up, claims yield from, seizes and releases bonds
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
@@ -92,14 +92,15 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
             revert BondAlreadyExists(comptroller);
         }
 
-        // The manager only bonds allowed assets, whose config `setAssetConfig` checked has an implementation
+        // The manager bonds only allowed assets, and `setAssetConfig` ensures their type has an implementation
         AssetConfig memory assetConfig = assetConfigs[asset];
         account = Clones.clone(accountImplementations[assetConfig.sourceType]);
         IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetConfig.source);
         bondAccounts[comptroller] = account;
         isBondAccount[account] = true;
 
-        _fundBond(IBondAccount(account), IERC20Upgradeable(asset), amount);
+        IERC20Upgradeable(asset).safeTransferFrom(msg.sender, account, amount);
+        IBondAccount(account).deposit(amount);
 
         emit BondCreated(comptroller, account, bondHolder, asset, amount);
     }
@@ -108,7 +109,8 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     function topUp(address comptroller, uint256 amount) external onlySpokePoolManager nonReentrant {
         IBondAccount account = _ensureBondExists(comptroller);
 
-        _fundBond(account, account.asset(), amount);
+        account.asset().safeTransferFrom(msg.sender, address(account), amount);
+        account.deposit(amount);
 
         emit BondToppedUp(comptroller, amount);
     }
@@ -129,6 +131,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         address receiver
     ) external onlySpokePoolManager nonReentrant returns (uint256 paidNow) {
         ensureNonzeroAddress(receiver);
+
         paidNow = _ensureBondExists(comptroller).seize(amount, receiver);
 
         emit BondSeized(comptroller, receiver, amount, paidNow);
@@ -137,8 +140,8 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     /// @inheritdoc ISpokeBondManager
     function release(address comptroller) external onlySpokePoolManager nonReentrant {
         IBondAccount account = _ensureBondExists(comptroller);
-        delete bondAccounts[comptroller];
 
+        delete bondAccounts[comptroller];
         account.release();
 
         emit BondReleased(comptroller, address(account));
@@ -158,7 +161,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
+    // Admin functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokeBondManager
@@ -216,14 +219,8 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @dev Sends `amount` from the caller to the bond's account, which adds it to the principal and deposits it
-    function _fundBond(IBondAccount account, IERC20Upgradeable asset, uint256 amount) internal {
-        asset.safeTransferFrom(msg.sender, address(account), amount);
-        account.deposit(amount);
-    }
-
     /// @dev Returns a pool's live bond account
-    function _ensureBondExists(address comptroller) internal view returns (IBondAccount) {
+    function _ensureBondExists(address comptroller) private view returns (IBondAccount) {
         address account = bondAccounts[comptroller];
         if (account == address(0)) {
             revert BondNotFound(comptroller);

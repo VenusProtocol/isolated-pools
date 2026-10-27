@@ -11,11 +11,11 @@ import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
 /**
  * @title BaseBondAccount
  * @author Venus
- * @notice The books every bond account keeps, whatever its source: the principal, the yield, which is everything the
- * bond holds beyond it, including assets sent here directly, and seizures, which take yield first
+ * @notice Base of the bond accounts: keeps a bond's principal and takes seizures from yield first; yield is everything
+ * beyond the principal, including assets sent here directly
  * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. Each
- * account implements the functions that move the asset, `_bondAssets`, what the bond holds, `isValidSource` and
- * `sourceType`, and keeps its books with `_recordSeizure` and `_transferOut`
+ * account moves the asset in `deposit`, `claimYield`, `seize` and `release`, keeping the books with `_recordSeizure`
+ * and `_transferOut`, reports what it holds in `_bondAssets`, and defines `isValidSource` and `sourceType`
  */
 abstract contract BaseBondAccount is Initializable, IBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -52,7 +52,9 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
      */
     constructor(address bondManager) {
         ensureNonzeroAddress(bondManager);
+
         BOND_MANAGER = bondManager;
+
         _disableInitializers();
     }
 
@@ -63,10 +65,18 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
         source = source_;
     }
 
+    // ──────────────────────────────────────────────────────────────────────
+    // SpokeBondManager functions
+    // ──────────────────────────────────────────────────────────────────────
+
     /// @inheritdoc IBondAccount
     /// @dev A no-op for an account that never owes; an account whose source pays later overrides it
     // solhint-disable-next-line no-empty-blocks
     function payReceiver(address receiver) external virtual onlyBondManager {}
+
+    // ──────────────────────────────────────────────────────────────────────
+    // View functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
     function value() external view returns (uint256) {
@@ -78,6 +88,10 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     function seizableAmount() external view returns (uint256) {
         return _bondAssets();
     }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Internal functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /**
      * @dev Records a seizure of `amount` against `bondAssets`, what the bond holds now: yield first, then principal.
