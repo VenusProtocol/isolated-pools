@@ -81,6 +81,7 @@ library SpokePoolRequestLib {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
             _pullSeed(seeds, deployer, market.asset, _collateralPrice(contracts, market), market.supplyCap);
         }
+
         // Loan markets: priced by the ResilientOracle, capped by their tier
         uint256 loanCount = request.loanMarkets.length;
         for (uint256 i; i < loanCount; ++i) {
@@ -161,10 +162,12 @@ library SpokePoolRequestLib {
         if (!enabled) {
             revert ISpokePoolManager.TierDisabled(tierId);
         }
+
         (, , bool allowed, uint256 factor) = contracts.bondManager.assetConfigs(bondAsset);
         if (!allowed) {
             revert ISpokePoolManager.InvalidBondAsset(bondAsset);
         }
+
         // A bond not deposited yet has no yield, loss or exit fee, so its value is its amount
         _checkBondCoverageAndAmount(
             contracts,
@@ -189,6 +192,7 @@ library SpokePoolRequestLib {
         IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
         address bondAsset = address(bondAccount.asset());
         (, , , uint256 factor) = contracts.bondManager.assetConfigs(bondAsset);
+
         _checkBondCoverageAndAmount(
             contracts,
             bondAsset,
@@ -264,6 +268,7 @@ library SpokePoolRequestLib {
         if (marketCount == 0) {
             revert ISpokePoolManager.InvalidArrayLength();
         }
+
         // Zero, or not yet listed, for a new pool
         address comptroller = request.comptroller;
         uint256 tierId = request.tierId;
@@ -327,6 +332,7 @@ library SpokePoolRequestLib {
         for (uint256 i; i < collateralCount; ++i) {
             _releaseSeed(seeds, request.collateralMarkets[i].asset, to);
         }
+
         uint256 loanCount = request.loanMarkets.length;
         for (uint256 i; i < loanCount; ++i) {
             _releaseSeed(seeds, request.loanMarkets[i].asset, to);
@@ -365,6 +371,7 @@ library SpokePoolRequestLib {
         if (seed > supplyCap) {
             revert ISpokePoolManager.InvalidMarketParams(asset);
         }
+
         _transferIn(asset, deployer, seed);
         seeds[asset] = seed;
     }
@@ -401,6 +408,7 @@ library SpokePoolRequestLib {
                 revert ISpokePoolManager.DuplicateAsset(asset);
             }
         }
+
         // A pool not built yet has no comptroller, so no market in the registry
         if (
             comptroller != address(0) && PoolRegistry(poolRegistry).getVTokenForAsset(comptroller, asset) != address(0)
@@ -433,12 +441,14 @@ library SpokePoolRequestLib {
         if (IResilientOracle(address(contracts.resilientOracle)).getTokenConfig(asset).asset != address(0)) {
             return contracts.resilientOracle.getPrice(asset);
         }
+
         ISpokePoolManager.OracleFeed[3] memory feeds = market.feeds;
         // The main feed, the first one, is required
         if (feeds[0].feed == address(0)) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
         _checkFeedOracles(asset, feeds);
+
         // Only the main feed prices the asset here
         (, , , uint256 maxStalePeriod, , , , ) = ISpokePoolManager(address(this)).marketParams();
         IChainlinkFeed feed = IChainlinkFeed(feeds[0].feed);
@@ -446,6 +456,7 @@ library SpokePoolRequestLib {
         if (answer <= 0 || block.timestamp - updatedAt > maxStalePeriod) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
+
         // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals
         return uint256(answer) * 10 ** (36 - feed.decimals() - IERC20MetadataUpgradeable(asset).decimals());
     }
@@ -459,16 +470,19 @@ library SpokePoolRequestLib {
         if (feeds[2].feed != address(0) && feeds[1].feed == address(0)) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
+
         ISpokePoolManager manager = ISpokePoolManager(address(this));
         address[3] memory supportedOracles = [
             manager.supportedOracles(0),
             manager.supportedOracles(1),
             manager.supportedOracles(2)
         ];
+
         for (uint256 i; i < 3; ++i) {
             if (feeds[i].feed == address(0)) {
                 continue;
             }
+
             address oracle = feeds[i].oracle;
             if (
                 oracle == address(0) ||
@@ -476,6 +490,7 @@ library SpokePoolRequestLib {
             ) {
                 revert ISpokePoolManager.UnsupportedOracle(oracle);
             }
+
             // Rejects two feeds on the same oracle. An oracle keeps only one feed per asset, so the second feed would
             // overwrite the first
             for (uint256 j; j < i; ++j) {
@@ -504,6 +519,7 @@ library SpokePoolRequestLib {
         if (principalUsd < requiredBondUsd) {
             revert ISpokePoolManager.InsufficientBondValue(principalUsd, requiredBondUsd);
         }
+
         uint256 valueUsd = (value * price) / EXP_SCALE;
         if (valueUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert ISpokePoolManager.CoverageTooLow((valueUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);

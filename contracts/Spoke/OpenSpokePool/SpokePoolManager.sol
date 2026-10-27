@@ -174,6 +174,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (request.status != RequestStatus.Pending) {
             revert InvalidRequestStatus(requestId);
         }
+
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             CollateralMarketRequestParams storage market = request.collateralMarkets[i];
@@ -187,6 +188,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
                 return;
             }
         }
+
         revert InvalidMarketParams(asset);
     }
 
@@ -233,6 +235,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             emit PoolTierUpgraded(comptroller, pool.tierId, request.tierId);
             pool.tierId = request.tierId;
         }
+
         // Sends the seeds to the caller, the Normal Timelock, which lists the markets with them in the rest of the VIP.
         // A no-op for a tier request, which has no markets
         SpokePoolRequestLib.releaseSeeds(request, requestSeeds[requestId], msg.sender);
@@ -608,6 +611,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         for (uint256 i; i < collateralCount; ++i) {
             request.collateralMarkets.push(collateralMarkets[i]);
         }
+
         uint256 loanCount = loanMarkets.length;
         for (uint256 i; i < loanCount; ++i) {
             request.loanMarkets.push(loanMarkets[i]);

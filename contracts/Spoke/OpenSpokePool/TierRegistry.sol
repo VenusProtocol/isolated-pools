@@ -55,6 +55,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
         ) {
             revert InvalidTier(tierId);
         }
+
         LoanAsset[] calldata loanAssets = tier.loanAssets;
         uint256 loanAssetCount = loanAssets.length;
         for (uint256 i; i < loanAssetCount; ++i) {
@@ -65,12 +66,14 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
             if (loanAssets[i].supplyCap == 0 || modelCount == 0) {
                 revert InvalidLoanAsset(tierId, asset);
             }
+
             // Nested loops bounded by the few loan assets and models a tier offers
             for (uint256 j; j < i; ++j) {
                 if (loanAssets[j].asset == asset) {
                     revert DuplicateLoanAsset(tierId, asset);
                 }
             }
+
             for (uint256 j; j < modelCount; ++j) {
                 ensureNonzeroAddress(interestRateModels[j]);
             }
@@ -114,6 +117,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
             if (loanAssets[i].asset != asset) {
                 continue;
             }
+
             address[] storage interestRateModels = loanAssets[i].interestRateModels;
             uint256 modelCount = interestRateModels.length;
             for (uint256 j; j < modelCount; ++j) {
@@ -123,6 +127,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
             }
             return false;
         }
+
         return false;
     }
 
@@ -142,6 +147,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
         ) {
             return false;
         }
+
         LoanAsset[] storage fromLoanAssets = fromTier.loanAssets;
         uint256 loanAssetCount = fromLoanAssets.length;
         for (uint256 i; i < loanAssetCount; ++i) {
@@ -149,6 +155,7 @@ contract TierRegistry is AccessControlledV8, ITierRegistry {
                 return false;
             }
         }
+
         return true;
     }
 

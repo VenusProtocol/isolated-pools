@@ -145,6 +145,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         ensureNonzeroAddress(vTokenBeacon);
         ensureNonzeroAddress(protocolShareReserve);
         ensureNonzeroAddress(shortfall);
+
         uint256 maxMarketCount = (governorBravo.proposalMaxOperations() - POOL_CREATION_ACTIONS) /
             MAX_ACTIONS_PER_MARKET;
         if (maxPoolMarkets > maxMarketCount) {
@@ -175,6 +176,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         if (msg.sender != address(SPOKE_POOL_MANAGER)) {
             revert NotSpokePoolManager(msg.sender);
         }
+
         ISpokePoolManager.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         comptroller = request.comptroller;
         if (request.requestType == ISpokePoolManager.RequestType.Tier) {
@@ -184,6 +186,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 _encodeProposal(_buildTierProposal(requestId, comptroller, request.tierId), description)
             );
         }
+
         address executor = GOVERNOR_BRAVO.proposalTimelocks(PROPOSAL_TYPE_NORMAL);
         string memory poolName;
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
@@ -192,6 +195,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         } else {
             poolName = PoolRegistry(POOL_REGISTRY).getPoolByComptroller(comptroller).name;
         }
+
         vTokens = _deployMarkets(comptroller, poolName, request, executor);
         proposal = _encodeProposal(
             _buildMarketsProposal(requestId, request, comptroller, vTokens, executor),
@@ -214,6 +218,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         if (liquidationThresholds.length != marketCount) {
             revert InvalidArrayLength();
         }
+
         Proposal memory proposal = _newProposal(marketCount + EXIT_ACTIONS);
 
         // The comptroller's cap setters reject empty market arrays
@@ -232,6 +237,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             _addAction(proposal, comptroller, "setMarketSupplyCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
             _addAction(proposal, comptroller, "setMarketBorrowCaps(address[],uint256[])", abi.encode(listed, zeroCaps));
         }
+
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = listed[i];
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
@@ -243,6 +249,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 );
             }
         }
+
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "startWindDown(address)", abi.encode(comptroller));
         return _encodeProposal(proposal, description);
     }
@@ -255,6 +262,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         VToken[] memory listed = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
         Proposal memory proposal = _newProposal(marketCount);
+
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = listed[i];
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
@@ -268,6 +276,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 _addAction(proposal, comptroller, "setForcedLiquidation(address,bool)", abi.encode(vToken, true));
             }
         }
+
         return _encodeProposal(proposal, description);
     }
 
@@ -298,6 +307,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 loanCount = request.loanMarkets.length;
         vTokens = new address[](collateralCount + loanCount);
         (address collateralInterestRateModel, , , , , , , ) = SPOKE_POOL_MANAGER.marketParams();
+
         for (uint256 i; i < collateralCount; ++i) {
             vTokens[i] = _deployMarket(
                 comptroller,
@@ -361,6 +371,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address executor
     ) private view returns (Proposal memory proposal) {
         proposal = _newProposal(POOL_CREATION_ACTIONS + MAX_ACTIONS_PER_MARKET * vTokens.length);
+
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
             (uint256 closeFactor, uint256 liquidationIncentive, uint256 minLiquidatableCollateral) = SPOKE_POOL_MANAGER
                 .poolParams();
@@ -378,8 +389,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 )
             );
         }
+
         // Settled before the listings: it sends the seeds to the Normal Timelock, which lists the markets with them
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
+
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
@@ -398,6 +411,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 })
             );
         }
+
         ITierRegistry tierRegistry = SPOKE_POOL_MANAGER.TIER_REGISTRY();
         for (uint256 i; i < request.loanMarkets.length; ++i) {
             address asset = request.loanMarkets[i].asset;
@@ -442,6 +456,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             uint256 resetThreshold,
             uint256 boundDeviation
         ) = SPOKE_POOL_MANAGER.marketParams();
+
         IResilientOracle resilientOracle = IResilientOracle(address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE()));
         if (resilientOracle.getTokenConfig(asset).asset == address(0)) {
             // The manager checked each set feed's oracle is one it supports and differs from the others
@@ -452,6 +467,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 if (feed.feed == address(0)) {
                     continue;
                 }
+
                 oracles[i] = feed.oracle;
                 enabled[i] = true;
                 _addAction(
@@ -461,6 +477,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                     abi.encode(asset, feed.feed, maxStalePeriod)
                 );
             }
+
             // Only a pivot makes the ResilientOracle validate prices against it; the manager allows a fallback only
             // with a pivot
             if (enabled[1]) {
@@ -471,6 +488,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                     abi.encode(asset, MANTISSA_ONE + boundDeviation, MANTISSA_ONE - boundDeviation)
                 );
             }
+
             _addAction(
                 proposal,
                 address(resilientOracle),
@@ -485,6 +503,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 )
             );
         }
+
         (, , , , , , address initializedAsset, , , ) = DEVIATION_BOUNDED_ORACLE.assetProtectionConfig(asset);
         if (initializedAsset == address(0)) {
             _addAction(
@@ -518,10 +537,12 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             "addMarket((address,uint256,uint256,uint256,address,uint256,uint256))",
             abi.encode(input)
         );
+
         // A new market mints at its initial exchange rate, so this is every vToken `addMarket` mints
         address vToken = address(input.vToken);
         uint256 seedVTokens = (input.initialSupply * EXP_SCALE) / VToken(vToken).exchangeRateStored();
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(address(0), seedVTokens));
+
         (, , uint256 reduceReservesBlockDelta, , , , , ) = SPOKE_POOL_MANAGER.marketParams();
         _addAction(proposal, vToken, "setReduceReservesBlockDelta(uint256)", abi.encode(reduceReservesBlockDelta));
     }
@@ -557,17 +578,21 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         VToken[] memory listed = _listedMarkets(comptroller);
         uint256 marketCount = listed.length;
         proposal = _newProposal(1 + TIER_ACTIONS_PER_MARKET * marketCount);
+
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
+
         for (uint256 i; i < marketCount; ++i) {
             address vToken = address(listed[i]);
             if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(vToken)) {
                 continue;
             }
+
             address asset = VToken(vToken).underlying();
             uint256 supplyCap = tierRegistry.getLoanSupplyCap(tierId, asset);
             if (supplyCap == 0) {
                 revert LoanAssetNotAllowed(asset);
             }
+
             address[] memory markets = new address[](1);
             markets[0] = vToken;
             uint256[] memory caps = new uint256[](1);
@@ -598,6 +623,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 ++listedCount;
             }
         }
+
         // solhint-disable-next-line no-inline-assembly
         assembly {
             mstore(listed, listedCount)
@@ -634,12 +660,14 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         string[] memory signatures = proposal.signatures;
         bytes[] memory calldatas = proposal.calldatas;
         uint256 length = proposal.length;
+
         // solhint-disable-next-line no-inline-assembly
         assembly {
             mstore(targets, length)
             mstore(signatures, length)
             mstore(calldatas, length)
         }
+
         return
             abi.encodeCall(
                 IGovernorBravo.propose,
@@ -664,10 +692,12 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 ++length;
             }
         }
+
         // solhint-disable-next-line no-inline-assembly
         assembly {
             mstore(result, length)
         }
+
         return string(result);
     }
 }

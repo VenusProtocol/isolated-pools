@@ -57,12 +57,14 @@ library SpokePoolRiskLib {
         ).markets(vToken);
         _ensureCollateralMarket(comptroller, vToken, isListed);
         _ensureNoPendingUpdate(contracts, COLLATERAL_FACTORS_UPDATE, vToken);
+
         if (collateralFactor > liquidationThreshold || liquidationThreshold < marketLiquidationThreshold) {
             revert ISpokePoolManager.InvalidCollateralFactors(vToken);
         }
         if (collateralFactor == marketCollateralFactor && liquidationThreshold == marketLiquidationThreshold) {
             revert ISpokePoolManager.RedundantUpdate(vToken);
         }
+
         (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = contracts.tierRegistry.getTierTerms(tierId);
         if (collateralFactor > limits.maxCollateralFactor || liquidationThreshold > limits.maxLiquidationThreshold) {
             revert ISpokePoolManager.ExceedsTierLimit(vToken);
@@ -96,9 +98,11 @@ library SpokePoolRiskLib {
     ) external {
         _ensureCollateralMarket(comptroller, vToken, SpokeComptroller(comptroller).isMarketListed(VToken(vToken)));
         _ensureNoPendingUpdate(contracts, SUPPLY_CAP_UPDATE, vToken);
+
         if (supplyCap == SpokeComptroller(comptroller).supplyCaps(vToken)) {
             revert ISpokePoolManager.RedundantUpdate(vToken);
         }
+
         (, uint256 minBondUsd, ITierRegistry.PoolLimits memory limits) = contracts.tierRegistry.getTierTerms(tierId);
         uint256 supplyCapUsd = (supplyCap * contracts.resilientOracle.getUnderlyingPrice(vToken)) / EXP_SCALE;
         if (supplyCapUsd > limits.maxCollateralSupplyCapUsd) {
@@ -154,6 +158,7 @@ library SpokePoolRiskLib {
                 debtUsd += (debt * resilientOracle.getUnderlyingPrice(address(vToken))) / EXP_SCALE;
             }
         }
+
         if (debtUsd > maxDebtUsd) {
             revert ISpokePoolManager.ResidualDebtExceeded(debtUsd);
         }
@@ -200,6 +205,7 @@ library SpokePoolRiskLib {
         if (updateId == 0) {
             return;
         }
+
         IRiskStewardReceiver.UpdateStatus status = contracts.riskStewardReceiver.updates(updateId).status;
         if (
             (status == IRiskStewardReceiver.UpdateStatus.None || status == IRiskStewardReceiver.UpdateStatus.Pending) &&
@@ -222,6 +228,7 @@ library SpokePoolRiskLib {
         address bondAsset = address(bondAccount.asset());
         (, , , uint256 factor) = contracts.bondManager.assetConfigs(bondAsset);
         uint256 requiredBondUsd = (minBondUsd * factor) / EXP_SCALE;
+
         // The bond's value is the principal it still covers, net of a Hub's exit fee
         uint256 bondUsd = (bondAccount.value() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
         if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {

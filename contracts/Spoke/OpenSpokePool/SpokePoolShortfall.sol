@@ -104,12 +104,14 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     function _repayBadDebt(VToken vToken, uint256 amount) private returns (uint256 repaid) {
         uint256 badDebt = vToken.badDebt();
         repaid = amount < badDebt ? amount : badDebt;
+
         IERC20Upgradeable underlying = IERC20Upgradeable(vToken.underlying());
         uint256 balanceBefore = underlying.balanceOf(address(vToken));
         underlying.safeTransferFrom(msg.sender, address(vToken), repaid);
         if (underlying.balanceOf(address(vToken)) - balanceBefore != repaid) {
             revert TransferAmountMismatch(address(underlying));
         }
+
         vToken.badDebtRecovered(repaid);
     }
 
