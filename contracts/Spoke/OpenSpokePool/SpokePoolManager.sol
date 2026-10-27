@@ -120,9 +120,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _storeMarkets(request, collateralMarkets, loanMarkets);
         request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
-        uint256[] memory requiredSeeds = SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
-
-        SpokePoolRequestLib.fundSeeds(request, escrowedAmounts, msg.sender, requiredSeeds);
+        SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
+        SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
         SpokePoolRequestLib.escrowBond(escrowedAmounts, pool.bondAsset, msg.sender, pool.bondAmount);
 
         emit RequestSubmitted(requestId, RequestType.Pool, msg.sender, address(0));
@@ -145,8 +144,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _storeMarkets(request, collateralMarkets, loanMarkets);
         request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
-        uint256[] memory requiredSeeds = SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
-        SpokePoolRequestLib.fundSeeds(request, escrowedAmounts, msg.sender, requiredSeeds);
+        SpokePoolRequestLib.validateNewRequest(contracts, isLoanMarket, request);
+        SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
 
         emit RequestSubmitted(requestId, RequestType.Markets, msg.sender, comptroller);
     }
@@ -217,8 +216,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
         }
         if (requestType != RequestType.Tier) {
-            uint256[] memory requiredSeeds = SpokePoolRequestLib.validateBuild(_contracts(), isLoanMarket, request);
-            SpokePoolRequestLib.fundSeeds(request, escrowedAmounts, request.deployer, requiredSeeds);
+            SpokePoolRequestLib.Contracts memory contracts = _contracts();
+            SpokePoolRequestLib.validateBuild(contracts, isLoanMarket, request);
+            SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
         }
 
         SpokePoolProposalLib.buildRequestProposal(

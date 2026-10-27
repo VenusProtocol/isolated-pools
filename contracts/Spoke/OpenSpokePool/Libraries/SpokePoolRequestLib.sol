@@ -69,28 +69,42 @@ library SpokePoolRequestLib {
     }
 
     /**
-     * @notice Pulls from `from` into escrow what each market's seed lacks of `seeds`, its seed at current prices, so a
-     *   seed is never below $10 when the request is opened or built
-     * @param request The request
+     * @notice Tops each new market's seed up to $10 at current prices, pulling what its escrow lacks from the request's
+     *   deployer. An escrowed seed is never reduced, so a price rise after the request costs nothing
+     * @param contracts The manager's contracts
      * @param escrowedAmounts The manager's escrowed amounts by token
-     * @param from The deployer
-     * @param seeds Each market's seed: the collateral markets', then the loan markets'
+     * @param request The pool or markets request, with its markets stored
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
+     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
+     * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a transfer delivers a different amount
      */
-    function fundSeeds(
-        ISpokePoolManager.Request storage request,
+    function pullSeeds(
+        Contracts memory contracts,
         mapping(address => uint256) storage escrowedAmounts,
-        address from,
-        uint256[] memory seeds
+        ISpokePoolManager.Request storage request
     ) external {
-        uint256 seedCount = seeds.length;
+        uint256 seedCount = request.seeds.length;
         for (uint256 i; i < seedCount; ++i) {
-            uint256 topUp = seeds[i] - request.seeds[i];
-            if (topUp != 0) {
-                address asset = _seedAsset(request, i);
-                _transferIn(asset, from, topUp);
-                escrowedAmounts[asset] += topUp;
-                request.seeds[i] = seeds[i];
+            (address asset, uint256 price, uint256 supplyCap) = _seedMarket(contracts, request, i);
+            uint256 escrowed = request.seeds[i];
+
+            // $10 of the asset, rounded up so the seed is never worth less
+            uint256 seed = (MIN_SEED_USD * EXP_SCALE + price - 1) / price;
+            // Keep a larger seed escrowed earlier, as the price may have risen since
+            if (seed < escrowed) {
+                seed = escrowed;
+            }
+            // The seed is supplied at listing, so it must fit in the market's supply cap
+            if (seed > supplyCap) {
+                revert ISpokePoolManager.InvalidMarketParams(asset);
+            }
+            // Pull only what the escrow lacks
+            if (seed > escrowed) {
+                _transferIn(asset, request.deployer, seed - escrowed);
+                escrowedAmounts[asset] += seed - escrowed;
+                request.seeds[i] = seed;
             }
         }
     }
@@ -211,46 +225,41 @@ library SpokePoolRequestLib {
 
     /**
      * @notice Checks a new request's stored markets against its pool and tier, with each collateral supply cap worth
-     *   at most the tier's maximum, and returns each market's seed worth $10. The supply caps are priced here
-     *   and on a feed change, not at build
+     *   at most the tier's maximum. The supply caps are priced here and on a feed change, not at build
      * @param contracts The manager's contracts
      * @param isLoanMarket The manager's loan market flags by vToken
      * @param request The request, with its markets stored
-     * @return seeds Each market's seed: the collateral markets', then the loan markets'
      * @custom:error The `_validateMarkets` errors
-     * @custom:error The `_requiredSeeds` errors
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
+     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when a collateral supply cap is worth more than the tier allows
      */
     function validateNewRequest(
         Contracts memory contracts,
         mapping(address => bool) storage isLoanMarket,
         ISpokePoolManager.Request storage request
-    ) external view returns (uint256[] memory seeds) {
+    ) external view {
         ITierRegistry.PoolLimits memory limits = _validateMarkets(contracts, isLoanMarket, request);
         uint256 collateralMarketCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralMarketCount; ++i) {
             _checkSupplyCapUsd(contracts, request.collateralMarkets[i], limits.maxCollateralSupplyCapUsd);
         }
-        seeds = _requiredSeeds(contracts, request);
     }
 
     /**
-     * @notice Checks a request's markets again at build, without prices, and returns each market's seed topped up to
-     *   $10 at current prices
+     * @notice Checks a request's markets again at build, against its pool and its tier's current limits, without prices
      * @param contracts The manager's contracts
      * @param isLoanMarket The manager's loan market flags by vToken
      * @param request The pool or markets request
-     * @return seeds Each market's seed: the collateral markets', then the loan markets'
      * @custom:error The `_validateMarkets` errors
-     * @custom:error The `_requiredSeeds` errors
      */
     function validateBuild(
         Contracts memory contracts,
         mapping(address => bool) storage isLoanMarket,
         ISpokePoolManager.Request storage request
-    ) external view returns (uint256[] memory seeds) {
+    ) external view {
         _validateMarkets(contracts, isLoanMarket, request);
-        seeds = _requiredSeeds(contracts, request);
     }
 
     /**
@@ -412,35 +421,23 @@ library SpokePoolRequestLib {
     }
 
     /**
-     * @dev Returns each market's seed after funding: the larger of its escrowed seed and $10 at current prices,
-     *   rounded up; a seed must fit in its market's supply cap. Reverts with InvalidOracleFeed,
-     *   UnsupportedOracle or InvalidMarketParams
+     * @dev Returns what the seed at `index` is priced and capped with: a collateral market is priced by the
+     *   ResilientOracle or its main feed and capped by the deployer, a loan market priced by the ResilientOracle and
+     *   capped by its tier
      */
-    function _requiredSeeds(
+    function _seedMarket(
         Contracts memory contracts,
-        ISpokePoolManager.Request storage request
-    ) private view returns (uint256[] memory seeds) {
+        ISpokePoolManager.Request storage request,
+        uint256 index
+    ) private view returns (address asset, uint256 price, uint256 supplyCap) {
         uint256 collateralCount = request.collateralMarkets.length;
-        uint256 loanCount = request.loanMarkets.length;
-        seeds = new uint256[](collateralCount + loanCount);
-        for (uint256 i; i < collateralCount; ++i) {
-            ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
-            seeds[i] = _requiredSeed(
-                market.asset,
-                _collateralPrice(contracts, market),
-                market.supplyCap,
-                request.seeds[i]
-            );
+        if (index < collateralCount) {
+            ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[index];
+            return (market.asset, _collateralPrice(contracts, market), market.supplyCap);
         }
-        for (uint256 i; i < loanCount; ++i) {
-            address asset = request.loanMarkets[i].asset;
-            seeds[collateralCount + i] = _requiredSeed(
-                asset,
-                contracts.resilientOracle.getPrice(asset),
-                contracts.tierRegistry.getLoanSupplyCap(request.tierId, asset),
-                request.seeds[collateralCount + i]
-            );
-        }
+        asset = request.loanMarkets[index - collateralCount].asset;
+        price = contracts.resilientOracle.getPrice(asset);
+        supplyCap = contracts.tierRegistry.getLoanSupplyCap(request.tierId, asset);
     }
 
     /// @dev Checks a collateral market's supply cap is worth at most `maxSupplyCapUsd`
@@ -543,23 +540,6 @@ library SpokePoolRequestLib {
         uint256 valueUsd = (value * price) / EXP_SCALE;
         if (valueUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert ISpokePoolManager.CoverageTooLow((valueUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);
-        }
-    }
-
-    /// @dev Returns the larger of `escrowed` and $10 of `asset` at `price`, rounded up; it must fit in `supplyCap`
-    function _requiredSeed(
-        address asset,
-        uint256 price,
-        uint256 supplyCap,
-        uint256 escrowed
-    ) private pure returns (uint256 seed) {
-        // Rounded up, so the seed is worth at least $10; a larger escrowed seed is kept
-        seed = (MIN_SEED_USD * EXP_SCALE + price - 1) / price;
-        if (seed < escrowed) {
-            seed = escrowed;
-        }
-        if (seed > supplyCap) {
-            revert ISpokePoolManager.InvalidMarketParams(asset);
         }
     }
 }
