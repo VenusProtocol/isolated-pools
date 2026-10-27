@@ -389,7 +389,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                     vToken: VToken(vTokens[i]),
                     collateralFactor: market.collateralFactor,
                     liquidationThreshold: market.liquidationThreshold,
-                    initialSupply: request.seeds[i],
+                    initialSupply: SPOKE_POOL_MANAGER.requestSeeds(requestId, market.asset),
                     vTokenReceiver: executor,
                     supplyCap: market.supplyCap,
                     borrowCap: 0
@@ -401,6 +401,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             address asset = request.loanMarkets[i].asset;
             address vToken = vTokens[collateralCount + i];
             uint256 supplyCap = tierRegistry.getLoanSupplyCap(request.tierId, asset);
+            uint256 seed = SPOKE_POOL_MANAGER.requestSeeds(requestId, asset);
             _addMarketListing(
                 proposal,
                 asset,
@@ -408,7 +409,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                     vToken: VToken(vToken),
                     collateralFactor: 0,
                     liquidationThreshold: 0,
-                    initialSupply: request.seeds[collateralCount + i],
+                    initialSupply: seed,
                     vTokenReceiver: executor,
                     supplyCap: supplyCap,
                     borrowCap: supplyCap

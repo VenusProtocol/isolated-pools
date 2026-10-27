@@ -49,7 +49,7 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     mapping(address => address) public activePools;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(address => uint256) public escrowedAmounts;
+    mapping(uint256 => mapping(address => uint256)) public requestSeeds;
 
     /// @inheritdoc ISpokePoolManager
     mapping(uint256 => bytes) public requestProposals;

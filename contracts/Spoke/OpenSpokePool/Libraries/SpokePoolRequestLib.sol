@@ -27,8 +27,7 @@ import { IRiskStewardReceiver } from "../../interfaces/external/IRiskStewardRece
  * prices, computes each market's $10 seed, and moves the escrowed bonds and seeds in and out. Linked to keep the
  * manager under the EIP-170 size limit
  * @dev The manager calls it through DELEGATECALL, so `address(this)`, `msg.sender` and the storage are the manager's.
- * It writes only escrow data, a request's `seeds` and the manager's escrowed amounts by token, and emits no events;
- * it changes no status. The errors are `ISpokePoolManager`'s
+ * It writes only the requests' seeds, and emits no events; it changes no status. The errors are `ISpokePoolManager`'s
  */
 library SpokePoolRequestLib {
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -52,25 +51,18 @@ library SpokePoolRequestLib {
 
     /**
      * @notice Pulls a new pool request's bond from its deployer into escrow
-     * @param escrowedAmounts The manager's escrowed amounts by token
      * @param request The pool request, with its bond stored
      * @custom:error TransferAmountMismatch is thrown when the transfer delivers a different amount
      */
-    function escrowBond(
-        mapping(address => uint256) storage escrowedAmounts,
-        ISpokePoolManager.Request storage request
-    ) external {
-        address bondAsset = request.bondAsset;
-        uint256 bondAmount = request.bondAmount;
-        _transferIn(bondAsset, request.deployer, bondAmount);
-        escrowedAmounts[bondAsset] += bondAmount;
+    function escrowBond(ISpokePoolManager.Request storage request) external {
+        _transferIn(request.bondAsset, request.deployer, request.bondAmount);
     }
 
     /**
      * @notice Pulls each new market's seed, worth $10 at current prices, from the request's deployer at its build
      * @param contracts The manager's contracts
-     * @param escrowedAmounts The manager's escrowed amounts by token
      * @param request The pool or markets request, with its markets stored
+     * @param seeds The request's seeds by asset, from the manager's `requestSeeds`
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
      *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
@@ -79,23 +71,23 @@ library SpokePoolRequestLib {
      */
     function pullSeeds(
         Contracts memory contracts,
-        mapping(address => uint256) storage escrowedAmounts,
-        ISpokePoolManager.Request storage request
+        ISpokePoolManager.Request storage request,
+        mapping(address => uint256) storage seeds
     ) external {
+        address deployer = request.deployer;
         uint256 collateralCount = request.collateralMarkets.length;
         // Collateral markets: priced by the ResilientOracle or their main feed, capped by the deployer
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
-            _pullSeed(request, escrowedAmounts, i, market.asset, _collateralPrice(contracts, market), market.supplyCap);
+            _pullSeed(seeds, deployer, market.asset, _collateralPrice(contracts, market), market.supplyCap);
         }
         // Loan markets: priced by the ResilientOracle, capped by their tier
         uint256 loanCount = request.loanMarkets.length;
         for (uint256 i; i < loanCount; ++i) {
             address asset = request.loanMarkets[i].asset;
             _pullSeed(
-                request,
-                escrowedAmounts,
-                collateralCount + i,
+                seeds,
+                deployer,
                 asset,
                 contracts.resilientOracle.getPrice(asset),
                 contracts.tierRegistry.getLoanSupplyCap(request.tierId, asset)
@@ -106,49 +98,39 @@ library SpokePoolRequestLib {
     /**
      * @notice Sends a request's escrowed seeds to `to`: the VIP's executor at settle, which lists the markets with them
      * @param request The request
-     * @param escrowedAmounts The manager's escrowed amounts by token
+     * @param seeds The request's seeds by asset, from the manager's `requestSeeds`
      * @param to The receiver
      */
     function releaseSeeds(
         ISpokePoolManager.Request storage request,
-        mapping(address => uint256) storage escrowedAmounts,
+        mapping(address => uint256) storage seeds,
         address to
     ) external {
-        _releaseSeeds(request, escrowedAmounts, to);
+        _releaseSeeds(request, seeds, to);
     }
 
     /**
      * @notice Refunds a closing request's escrowed bond, for a pool request, and seeds to its deployer
      * @param request The request
-     * @param escrowedAmounts The manager's escrowed amounts by token
+     * @param seeds The request's seeds by asset, from the manager's `requestSeeds`
      */
-    function refund(
-        ISpokePoolManager.Request storage request,
-        mapping(address => uint256) storage escrowedAmounts
-    ) external {
+    function refund(ISpokePoolManager.Request storage request, mapping(address => uint256) storage seeds) external {
         address deployer = request.deployer;
         if (request.requestType == ISpokePoolManager.RequestType.Pool) {
-            escrowedAmounts[request.bondAsset] -= request.bondAmount;
             IERC20Upgradeable(request.bondAsset).safeTransfer(deployer, request.bondAmount);
         }
-        _releaseSeeds(request, escrowedAmounts, deployer);
+        _releaseSeeds(request, seeds, deployer);
     }
 
     /**
      * @notice Moves a settled pool request's escrowed bond to the bond manager, in its deployer's name
      * @param request The pool request, with its comptroller set at build
-     * @param escrowedAmounts The manager's escrowed amounts by token
      * @param bondManager The bond manager
      * @custom:error The bond manager's `createBond` errors
      */
-    function createBond(
-        ISpokePoolManager.Request storage request,
-        mapping(address => uint256) storage escrowedAmounts,
-        ISpokeBondManager bondManager
-    ) external {
+    function createBond(ISpokePoolManager.Request storage request, ISpokeBondManager bondManager) external {
         address bondAsset = request.bondAsset;
         uint256 bondAmount = request.bondAmount;
-        escrowedAmounts[bondAsset] -= bondAmount;
         IERC20Upgradeable(bondAsset).forceApprove(address(bondManager), bondAmount);
         bondManager.createBond(request.comptroller, request.deployer, bondAsset, bondAmount);
     }
@@ -339,22 +321,23 @@ library SpokePoolRequestLib {
     /// @dev Sends a request's escrowed seeds to `to`
     function _releaseSeeds(
         ISpokePoolManager.Request storage request,
-        mapping(address => uint256) storage escrowedAmounts,
+        mapping(address => uint256) storage seeds,
         address to
     ) private {
         uint256 collateralCount = request.collateralMarkets.length;
-        uint256 seedCount = request.seeds.length;
-        for (uint256 i; i < seedCount; ++i) {
-            uint256 seed = request.seeds[i];
-            // A request not built yet has no seed
-            if (seed == 0) {
-                continue;
-            }
-            // The collateral markets' seeds come first, then the loan markets'
-            address asset = i < collateralCount
-                ? request.collateralMarkets[i].asset
-                : request.loanMarkets[i - collateralCount].asset;
-            escrowedAmounts[asset] -= seed;
+        for (uint256 i; i < collateralCount; ++i) {
+            _releaseSeed(seeds, request.collateralMarkets[i].asset, to);
+        }
+        uint256 loanCount = request.loanMarkets.length;
+        for (uint256 i; i < loanCount; ++i) {
+            _releaseSeed(seeds, request.loanMarkets[i].asset, to);
+        }
+    }
+
+    /// @dev Sends the seed escrowed in `asset` to `to`; a request not built yet has none
+    function _releaseSeed(mapping(address => uint256) storage seeds, address asset, address to) private {
+        uint256 seed = seeds[asset];
+        if (seed != 0) {
             IERC20Upgradeable(asset).safeTransfer(to, seed);
         }
     }
@@ -369,11 +352,10 @@ library SpokePoolRequestLib {
         }
     }
 
-    /// @dev Pulls the seed at `index` from the request's deployer, $10 of `asset` at `price`
+    /// @dev Pulls the seed in `asset` from `deployer`, $10 of it at `price`
     function _pullSeed(
-        ISpokePoolManager.Request storage request,
-        mapping(address => uint256) storage escrowedAmounts,
-        uint256 index,
+        mapping(address => uint256) storage seeds,
+        address deployer,
         address asset,
         uint256 price,
         uint256 supplyCap
@@ -384,9 +366,8 @@ library SpokePoolRequestLib {
         if (seed > supplyCap) {
             revert ISpokePoolManager.InvalidMarketParams(asset);
         }
-        _transferIn(asset, request.deployer, seed);
-        escrowedAmounts[asset] += seed;
-        request.seeds[index] = seed;
+        _transferIn(asset, deployer, seed);
+        seeds[asset] = seed;
     }
 
     /**
@@ -476,8 +457,6 @@ library SpokePoolRequestLib {
      *   only uses a fallback price it can check against the pivot. Reverts with UnsupportedOracle or InvalidOracleFeed
      */
     function _checkFeedOracles(address asset, ISpokePoolManager.OracleFeed[3] memory feeds) private view {
-        // A fallback without a pivot is never used: the ResilientOracle takes a fallback price only after checking it
-        // against the pivot, so with no pivot a failed main feed has no backup
         if (feeds[2].feed != address(0) && feeds[1].feed == address(0)) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }

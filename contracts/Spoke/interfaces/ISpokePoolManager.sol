@@ -112,9 +112,6 @@ interface ISpokePoolManager {
         // Pool and markets requests
         CollateralMarketRequestParams[] collateralMarkets;
         LoanMarketRequestParams[] loanMarkets;
-        // Each new market's escrowed seed, in its asset, pulled at the build: the collateral markets', then the loan
-        // markets'; zero before it
-        uint256[] seeds;
     }
 
     /// @notice A pool created through the manager
@@ -493,13 +490,6 @@ interface ISpokePoolManager {
      *   reserve factor above 1e18, or a bound deviation of 1e18 or above
      */
     error InvalidProtocolMarketParams();
-
-    /**
-     * @notice Thrown when the manager holds less than the amount beyond its escrowed bonds and seeds
-     * @param token The token
-     * @param amount The amount
-     */
-    error InsufficientAmount(address token, uint256 amount);
 
     /**
      * @notice Requests a new pool of a tier, pulling the bond; each market's seed worth $10 is pulled at the build.
@@ -929,13 +919,13 @@ interface ISpokePoolManager {
     function setMaxResidualPoolDebtUsd(uint256 newMaxResidualPoolDebtUsd) external;
 
     /**
-     * @notice Sends tokens the manager holds beyond the escrowed bonds and seeds
+     * @notice Sends tokens the manager holds. It does not track the open requests' escrowed bonds and seeds, so the
+     *   caller works them out off-chain and leaves them
      * @param token The token
      * @param to The receiver
      * @param amount The amount
      * @custom:event Emits SweepToken
      * @custom:error ZeroAddressNotAllowed is thrown when the receiver is zero
-     * @custom:error InsufficientAmount is thrown when the amount would take escrowed tokens
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function sweepToken(address token, address to, uint256 amount) external;
@@ -1078,11 +1068,12 @@ interface ISpokePoolManager {
     function activePools(address deployer) external view returns (address);
 
     /**
-     * @notice Returns the bonds and seeds of open requests the manager holds in a token
-     * @param token The token
-     * @return The amount
+     * @notice Returns a request's escrowed seed for a new market, pulled at the build
+     * @param requestId The request
+     * @param asset The market's asset
+     * @return The seed, in the asset; zero before the build
      */
-    function escrowedAmounts(address token) external view returns (uint256);
+    function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
 
     /**
      * @notice Returns a request's VIP payload, an ABI-encoded GovernorBravo `propose` call

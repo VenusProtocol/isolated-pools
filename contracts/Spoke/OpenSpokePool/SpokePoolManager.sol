@@ -111,10 +111,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         request.bondAsset = pool.bondAsset;
         request.bondAmount = pool.bondAmount;
         _storeMarkets(request, collateralMarkets, loanMarkets);
-        request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
 
         SpokePoolRequestLib.validateNewRequest(contracts, request);
-        SpokePoolRequestLib.escrowBond(escrowedAmounts, request);
+        SpokePoolRequestLib.escrowBond(request);
 
         emit RequestSubmitted(requestId, RequestType.Pool, msg.sender, address(0));
     }
@@ -134,8 +133,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         Request storage request = _newRequest(requestId, RequestType.Markets, comptroller, tierId);
 
         _storeMarkets(request, collateralMarkets, loanMarkets);
-        request.seeds = new uint256[](collateralMarkets.length + loanMarkets.length);
-
         SpokePoolRequestLib.validateNewRequest(contracts, request);
 
         emit RequestSubmitted(requestId, RequestType.Markets, msg.sender, comptroller);
@@ -165,7 +162,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
 
         request.status = RequestStatus.Canceled;
-        SpokePoolRequestLib.refund(request, escrowedAmounts);
+        SpokePoolRequestLib.refund(request, requestSeeds[requestId]);
 
         emit RequestCanceled(requestId);
     }
@@ -208,7 +205,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (requestType != RequestType.Tier) {
             SpokePoolRequestLib.Contracts memory contracts = _contracts();
             SpokePoolRequestLib.validateMarkets(contracts, request);
-            SpokePoolRequestLib.pullSeeds(contracts, escrowedAmounts, request);
+            SpokePoolRequestLib.pullSeeds(contracts, request, requestSeeds[requestId]);
         }
 
         SpokePoolProposalLib.buildRequestProposal(proposalBuilder, request, requestProposals, requestId, description);
@@ -238,7 +235,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
         // Sends the seeds to the caller, the Normal Timelock, which lists the markets with them in the rest of the VIP.
         // A no-op for a tier request, which has no markets
-        SpokePoolRequestLib.releaseSeeds(request, escrowedAmounts, msg.sender);
+        SpokePoolRequestLib.releaseSeeds(request, requestSeeds[requestId], msg.sender);
 
         emit RequestSettled(requestId, comptroller);
     }
@@ -252,7 +249,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
 
         request.status = RequestStatus.Rejected;
-        SpokePoolRequestLib.refund(request, escrowedAmounts);
+        SpokePoolRequestLib.refund(request, requestSeeds[requestId]);
 
         emit RequestRejected(requestId);
     }
@@ -553,10 +550,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     function sweepToken(address token, address to, uint256 amount) external {
         _checkAccessAllowed("sweepToken(address,address,uint256)");
         ensureNonzeroAddress(to);
-        if (amount > IERC20Upgradeable(token).balanceOf(address(this)) - escrowedAmounts[token]) {
-            revert InsufficientAmount(token, amount);
-        }
-
         IERC20Upgradeable(token).safeTransfer(to, amount);
 
         emit SweepToken(token, to, amount);
@@ -627,7 +620,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         pool.tierId = request.tierId;
         activePools[deployer] = comptroller;
 
-        SpokePoolRequestLib.createBond(request, escrowedAmounts, bondManager);
+        SpokePoolRequestLib.createBond(request, bondManager);
 
         emit PoolActivated(requestId, comptroller, deployer);
     }
