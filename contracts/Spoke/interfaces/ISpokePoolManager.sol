@@ -49,33 +49,29 @@ interface ISpokePoolManager {
         address feed;
     }
 
+    /// @notice A pool request's parameters set by the deployer, besides its markets
+    struct PoolRequestParams {
+        uint256 tierId;
+        address bondAsset;
+        uint256 bondAmount;
+    }
+
     /// @notice A new collateral market's parameters set by the deployer
     struct CollateralMarketRequestParams {
         address asset;
         uint256 collateralFactor;
         uint256 liquidationThreshold;
-        // In the asset's units
         uint256 supplyCap;
         // The asset's feeds in the ResilientOracle's order: main, pivot, fallback, each on its own supported oracle. The VIP
         // sets them unless the ResilientOracle prices the asset already; the main feed is required then, the pivot and
-        // fallback are optional, a zero feed leaving that slot unused
+        // fallback are optional
         OracleFeed[3] feeds;
     }
 
     /// @notice A new loan market's parameters set by the deployer; its caps come from its tier
     struct LoanMarketRequestParams {
         address asset;
-        // One its tier allows for the asset
         address interestRateModel;
-    }
-
-    /// @notice A pool request's parameters set by the deployer, besides its markets
-    struct PoolRequestParams {
-        uint256 tierId;
-        string poolName;
-        // One the bond manager allows
-        address bondAsset;
-        uint256 bondAmount;
     }
 
     /// @notice A new market's parameters set by Venus

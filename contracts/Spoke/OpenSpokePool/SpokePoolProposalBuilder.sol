@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { BeaconProxy } from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
+import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { IERC20MetadataUpgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol";
 import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlledV8.sol";
 import { IDeviationBoundedOracle } from "@venusprotocol/oracle/contracts/interfaces/IDeviationBoundedOracle.sol";
@@ -184,8 +185,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         if (comptroller == address(0)) {
             comptroller = _deployComptroller(executor);
         }
+        // A new pool is named after its request; a live pool's markets take its registered name
         string memory poolName = request.requestType == ISpokePoolManager.RequestType.Pool
-            ? request.poolName
+            ? _poolName(requestId)
             : PoolRegistry(POOL_REGISTRY).getPoolByComptroller(comptroller).name;
         vTokens = _deployMarkets(comptroller, poolName, request, executor);
         proposal = _encodeProposal(
@@ -322,7 +324,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
     /**
      * @dev Deploys a market owned by the Normal Timelock, named like Venus's isolated pool markets:
-     *   `Venus <symbol> (<pool name>)` and `v<symbol>_<pool name>`
+     *   `Venus <symbol> (<pool name>)` and `v<symbol>_<pool name without spaces>`
      */
     function _deployMarket(
         address comptroller,
@@ -340,7 +342,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             InterestRateModel(interestRateModel),
             uint256(10) ** (18 + IERC20MetadataUpgradeable(asset).decimals() - VTOKEN_DECIMALS),
             string.concat("Venus ", assetSymbol, " (", poolName, ")"),
-            string.concat("v", assetSymbol, "_", poolName),
+            string.concat("v", assetSymbol, "_", _withoutSpaces(poolName)),
             VTOKEN_DECIMALS,
             executor,
             address(AccessControlledV8(address(SPOKE_POOL_MANAGER)).accessControlManager()),
@@ -371,7 +373,13 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 proposal,
                 POOL_REGISTRY,
                 "addPool(string,address,uint256,uint256,uint256)",
-                abi.encode(request.poolName, comptroller, closeFactor, liquidationIncentive, minLiquidatableCollateral)
+                abi.encode(
+                    _poolName(requestId),
+                    comptroller,
+                    closeFactor,
+                    liquidationIncentive,
+                    minLiquidatableCollateral
+                )
             );
         }
         // Settled before the listings: it sends the seeds to the Normal Timelock, which lists the markets with them
@@ -650,5 +658,28 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 IGovernorBravo.propose,
                 (targets, new uint256[](length), signatures, calldatas, description, PROPOSAL_TYPE_NORMAL)
             );
+    }
+
+    /// @dev Returns a new pool's name, set from its request: `Spoke Pool <request id>`
+    function _poolName(uint256 requestId) internal pure returns (string memory) {
+        return string.concat("Spoke Pool ", Strings.toString(requestId));
+    }
+
+    /// @dev Returns `name` with its spaces removed, for a market's symbol
+    function _withoutSpaces(string memory name) internal pure returns (string memory) {
+        bytes memory source = bytes(name);
+        bytes memory result = new bytes(source.length);
+        uint256 length;
+        for (uint256 i; i < source.length; ++i) {
+            if (source[i] != " ") {
+                result[length] = source[i];
+                ++length;
+            }
+        }
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            mstore(result, length)
+        }
+        return string(result);
     }
 }

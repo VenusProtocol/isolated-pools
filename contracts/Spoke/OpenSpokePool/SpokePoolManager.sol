@@ -108,7 +108,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
         requestId = ++requestCount;
         Request storage request = _newRequest(requestId, RequestType.Pool, address(0), pool.tierId);
-        request.poolName = pool.poolName;
         request.bondAsset = pool.bondAsset;
         request.bondAmount = pool.bondAmount;
         _storeMarkets(request, collateralMarkets, loanMarkets);
