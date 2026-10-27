@@ -33,7 +33,7 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
  * `SpokePoolRequestLib` checks requests and moves the escrowed bonds and seeds, `SpokePoolRiskLib` checks and publishes
  * the deployer's risk updates and checks a closing pool's debt, and `SpokePoolProposalLib` builds and records the VIPs.
  * This contract keeps the access checks, the request counter and every other state change
- * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable external-library-linking
+ * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, SpokePoolManagerStorage {
     using SafeERC20Upgradeable for IERC20Upgradeable;
