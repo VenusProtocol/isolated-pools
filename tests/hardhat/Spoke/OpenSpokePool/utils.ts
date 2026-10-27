@@ -1,4 +1,8 @@
+import { Contract } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
+import { ethers } from "hardhat";
+
+import { OptimizedTransparentUpgradeableProxy__factory } from "../../../../typechain";
 
 export const e18 = (value: string) => parseUnits(value, 18);
 
@@ -17,4 +21,16 @@ export const PoolStatus = {
   WindingDown: 4,
   Closed: 5,
   HandedOver: 6,
+};
+
+/// Puts `implementation` behind a transparent proxy initialized with `initialize(accessControlManager)` by the
+/// implementation's signer, which becomes the owner. The proxy admin is the last signer, which no test calls from
+export const deployProxy = async <T extends Contract>(implementation: T, accessControlManager: string): Promise<T> => {
+  const signers = await ethers.getSigners();
+  const proxy = await new OptimizedTransparentUpgradeableProxy__factory(implementation.signer).deploy(
+    implementation.address,
+    signers[signers.length - 1].address,
+    implementation.interface.encodeFunctionData("initialize", [accessControlManager]),
+  );
+  return implementation.attach(proxy.address) as T;
 };

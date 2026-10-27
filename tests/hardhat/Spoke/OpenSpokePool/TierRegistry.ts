@@ -1,11 +1,11 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
-import { constants } from "ethers";
-import { ethers, upgrades } from "hardhat";
+import { BigNumberish, constants } from "ethers";
+import { ethers } from "hardhat";
 
 import { AccessControlManager, TierRegistry, TierRegistry__factory } from "../../../../typechain";
-import { e18 } from "./utils";
+import { deployProxy, e18 } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -20,8 +20,8 @@ const LIMITS = {
 };
 const ZERO_TIER = [false, 0, [0, 0, 0, 0, 0], []];
 
-type LoanAsset = { asset: string; supplyCap: unknown; interestRateModels: string[] };
-type Tier = { enabled: boolean; minBondUsd: unknown; limits: typeof LIMITS; loanAssets: LoanAsset[] };
+type LoanAsset = { asset: string; supplyCap: BigNumberish; interestRateModels: string[] };
+type Tier = { enabled: boolean; minBondUsd: BigNumberish; limits: typeof LIMITS; loanAssets: LoanAsset[] };
 
 const tierTuple = (tier: Tier) => [
   tier.enabled,
@@ -47,9 +47,7 @@ describe("TierRegistry", () => {
     [owner, usdt, usdc, irm, otherIrm, other] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     acm.isAllowedToCall.returns(true);
-    registry = (await upgrades.deployProxy(await ethers.getContractFactory("TierRegistry"), [
-      acm.address,
-    ])) as TierRegistry;
+    registry = await deployProxy(await new TierRegistry__factory(owner).deploy(), acm.address);
 
     usdtAsset = { asset: usdt.address, supplyCap: e18("500000"), interestRateModels: [irm.address] };
     usdcAsset = {

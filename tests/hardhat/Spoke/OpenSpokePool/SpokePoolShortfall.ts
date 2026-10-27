@@ -2,7 +2,7 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { constants } from "ethers";
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 
 import {
   AccessControlManager,
@@ -19,7 +19,7 @@ import {
   SpokePoolShortfall__factory,
   VToken,
 } from "../../../../typechain";
-import { NO_ESTIMATE, e18 } from "./utils";
+import { NO_ESTIMATE, deployProxy, e18 } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -67,9 +67,7 @@ describe("SpokePoolShortfall", () => {
     vToken.underlying.returns(underlying.address);
     vToken.badDebt.returns(BAD_DEBT);
 
-    shortfall = (await upgrades.deployProxy(await ethers.getContractFactory("SpokePoolShortfall"), [acm.address], {
-      constructorArgs: [manager.address],
-    })) as SpokePoolShortfall;
+    shortfall = await deployProxy(await new SpokePoolShortfall__factory(owner).deploy(manager.address), acm.address);
     await underlying.connect(recoverer).faucet(BAD_DEBT.mul(2));
     await underlying.connect(recoverer).approve(shortfall.address, constants.MaxUint256);
   });
@@ -219,11 +217,11 @@ describe("SpokePoolShortfall", () => {
       );
     });
 
-    it("reverts on a market its comptroller does not list", async () => {
+    it("repays a market its comptroller does not list", async () => {
       comptroller.isMarketListed.whenCalledWith(vToken.address).returns(false);
       await expect(shortfall.connect(recoverer).repayBadDebt(vToken.address, BAD_DEBT))
-        .to.be.revertedWithCustomError(shortfall, "MarketNotListed")
-        .withArgs(vToken.address);
+        .to.emit(shortfall, "BadDebtRepaid")
+        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT);
     });
 
     it("repays the bad debt with the caller's funds, leaving the bond untouched", async () => {

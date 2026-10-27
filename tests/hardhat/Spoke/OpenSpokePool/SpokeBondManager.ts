@@ -4,12 +4,12 @@ import { mine, time } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { constants } from "ethers";
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
 
 import {
   AccessControlManager,
-  BondAccount,
-  BondAccount__factory,
+  IdleBondAccount,
+  IdleBondAccount__factory,
   LiquidityHubBondAccount,
   LiquidityHubBondAccount__factory,
   MockLiquidityHub,
@@ -24,7 +24,7 @@ import {
   XVSVaultScenario,
   XVSVaultScenario__factory,
 } from "../../../../typechain";
-import { e18 } from "./utils";
+import { deployProxy, e18 } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -51,16 +51,17 @@ describe("SpokeBondManager", () => {
   let idleToken: MockToken;
   let hub: MockLiquidityHub;
   let xvsVault: XVSVaultScenario;
-  let idleImplementation: BondAccount;
+  let idleImplementation: IdleBondAccount;
   let xvsImplementation: XVSVaultBondAccount;
   let hubImplementation: LiquidityHubBondAccount;
   let bondManager: SpokeBondManager;
 
   /// Deploys a bond manager with no account implementations and approves it to pull the SpokePoolManager's tokens.
   const deployBondManager = async () => {
-    const manager = (await upgrades.deployProxy(await ethers.getContractFactory("SpokeBondManager"), [acm.address], {
-      constructorArgs: [spokePoolManager.address],
-    })) as SpokeBondManager;
+    const manager = await deployProxy(
+      await new SpokeBondManager__factory(owner).deploy(spokePoolManager.address),
+      acm.address,
+    );
     for (const token of [xvs, usdt, idleToken]) {
       await token.connect(spokePoolManager).approve(manager.address, constants.MaxUint256);
     }
@@ -91,7 +92,7 @@ describe("SpokeBondManager", () => {
       await token.connect(spokePoolManager).faucet(BOND.mul(10));
     }
     bondManager = await deployBondManager();
-    idleImplementation = await new BondAccount__factory(owner).deploy(bondManager.address);
+    idleImplementation = await new IdleBondAccount__factory(owner).deploy(bondManager.address);
     xvsImplementation = await new XVSVaultBondAccount__factory(owner).deploy(bondManager.address, XVS_POOL_ID);
     hubImplementation = await new LiquidityHubBondAccount__factory(owner).deploy(bondManager.address);
     await bondManager.setAccountImplementation(SourceType.Idle, idleImplementation.address);
@@ -106,7 +107,7 @@ describe("SpokeBondManager", () => {
     await bondManager
       .connect(spokePoolManager)
       .createBond(comptroller.address, bondHolder.address, token.address, amount);
-    return BondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
+    return IdleBondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
   };
 
   /// Lets the XVSVault pay `blocks` XVS of rewards since the last deposit to its only staker, then stops its rewards.
@@ -151,7 +152,7 @@ describe("SpokeBondManager", () => {
     });
 
     it("rejects an account implementation with a zero bond manager", async () => {
-      const idleFactory = new BondAccount__factory(owner);
+      const idleFactory = new IdleBondAccount__factory(owner);
       await expect(idleFactory.deploy(constants.AddressZero)).to.be.revertedWithCustomError(
         idleFactory,
         "ZeroAddressNotAllowed",
@@ -201,18 +202,10 @@ describe("SpokeBondManager", () => {
       expect(await bondManager.accountImplementations(SourceType.LiquidityHub)).to.equal(newImplementation.address);
     });
 
-    it("rejects a zero implementation, one for another source type or one for another bond manager", async () => {
+    it("rejects a zero implementation", async () => {
       await expect(
         bondManager.setAccountImplementation(SourceType.LiquidityHub, constants.AddressZero),
       ).to.be.revertedWithCustomError(bondManager, "ZeroAddressNotAllowed");
-      await expect(bondManager.setAccountImplementation(SourceType.LiquidityHub, xvsImplementation.address))
-        .to.be.revertedWithCustomError(bondManager, "InvalidAccountImplementation")
-        .withArgs(SourceType.LiquidityHub, xvsImplementation.address);
-
-      const foreignImplementation = await new LiquidityHubBondAccount__factory(owner).deploy(other.address);
-      await expect(bondManager.setAccountImplementation(SourceType.LiquidityHub, foreignImplementation.address))
-        .to.be.revertedWithCustomError(bondManager, "InvalidAccountImplementation")
-        .withArgs(SourceType.LiquidityHub, foreignImplementation.address);
     });
 
     it("clones new bonds from the new implementation and leaves existing accounts as they are", async () => {
@@ -235,7 +228,7 @@ describe("SpokeBondManager", () => {
       );
     });
 
-    it("records a config whose source fits its type and asset", async () => {
+    it("records a config", async () => {
       const newConfig = {
         sourceType: SourceType.Idle,
         source: constants.AddressZero,
@@ -270,31 +263,6 @@ describe("SpokeBondManager", () => {
       }
     });
 
-    it("rejects a source that does not fit its type or asset", async () => {
-      const cases: [MockToken, number, string][] = [
-        [usdt, SourceType.XVSVault, xvsVault.address],
-        [xvs, SourceType.LiquidityHub, hub.address],
-        [idleToken, SourceType.Idle, hub.address],
-        [xvs, SourceType.XVSVault, constants.AddressZero],
-        [usdt, SourceType.LiquidityHub, constants.AddressZero],
-      ];
-      for (const [asset, sourceType, source] of cases) {
-        await expect(bondManager.setAssetConfig(asset.address, assetConfig(sourceType, source)))
-          .to.be.revertedWithCustomError(bondManager, "InvalidAssetConfig")
-          .withArgs(asset.address);
-      }
-    });
-
-    it("rejects an XVSVault whose pool at the implementation's XVS pool id does not stake XVS", async () => {
-      await xvsVault.add(xvs.address, 100, idleToken.address, 0, LOCK_PERIOD);
-      const otherImplementation = await new XVSVaultBondAccount__factory(owner).deploy(bondManager.address, 1);
-      await bondManager.setAccountImplementation(SourceType.XVSVault, otherImplementation.address);
-
-      await expect(bondManager.setAssetConfig(xvs.address, assetConfig(SourceType.XVSVault, xvsVault.address)))
-        .to.be.revertedWithCustomError(bondManager, "InvalidAssetConfig")
-        .withArgs(xvs.address);
-    });
-
     it("rejects a source type with no account implementation", async () => {
       const manager = await deployBondManager();
       await expect(manager.setAssetConfig(usdt.address, assetConfig(SourceType.LiquidityHub, hub.address)))
@@ -316,10 +284,9 @@ describe("SpokeBondManager", () => {
       )
         .to.emit(bondManager, "BondCreated")
         .withArgs(comptroller.address, anyValue, bondHolder.address, xvs.address, BOND);
-      const account = BondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
+      const account = IdleBondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
 
       expect(await bondManager.isBondAccount(account.address)).to.equal(true);
-      expect(await account.sourceType()).to.equal(SourceType.XVSVault);
       expect(await xvs.balanceOf(bondManager.address)).to.equal(0);
       expect(await xvs.allowance(bondManager.address, account.address)).to.equal(0);
       expect((await xvsVault.getUserInfo(xvs.address, XVS_POOL_ID, account.address)).amount).to.equal(BOND);
@@ -336,7 +303,6 @@ describe("SpokeBondManager", () => {
 
     it("holds an asset with no source as it is", async () => {
       const account = await createBond(idleToken);
-      expect(await account.sourceType()).to.equal(SourceType.Idle);
       expect(await idleToken.balanceOf(account.address)).to.equal(BOND);
       expect(await account.value()).to.equal(BOND);
     });
@@ -346,7 +312,7 @@ describe("SpokeBondManager", () => {
       const tx = await bondManager
         .connect(spokePoolManager)
         .createBond(comptroller.address, bondHolder.address, xvs.address, BOND);
-      const account = BondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
+      const account = IdleBondAccount__factory.connect(await bondManager.bondAccounts(comptroller.address), owner);
       await expect(tx).to.emit(account, "SourceDepositRefused").withArgs(BOND);
       expect(await xvs.balanceOf(account.address)).to.equal(BOND);
       expect(await xvs.allowance(account.address, xvsVault.address)).to.equal(0);
@@ -502,6 +468,13 @@ describe("SpokeBondManager", () => {
   });
 
   describe("seize", () => {
+    it("reverts on a zero receiver", async () => {
+      await createBond(idleToken);
+      await expect(
+        bondManager.connect(spokePoolManager).seize(comptroller.address, 1, constants.AddressZero),
+      ).to.be.revertedWithCustomError(bondManager, "ZeroAddressNotAllowed");
+    });
+
     it("reverts unless the caller is the SpokePoolManager", async () => {
       await createBond(xvs);
       await expect(bondManager.connect(other).seize(comptroller.address, BOND, recoverer.address))
@@ -516,12 +489,12 @@ describe("SpokeBondManager", () => {
       await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, e18("110"), recoverer.address))
         .to.emit(bondManager, "BondSeized")
         .withArgs(comptroller.address, recoverer.address, e18("110"), e18("10"))
-        .and.to.emit(account, "PaymentQueued")
+        .and.to.emit(account, "PaymentOwed")
         .withArgs(recoverer.address, e18("100"));
       expect(await xvs.balanceOf(recoverer.address)).to.equal(e18("10"));
       expect(await account.principal()).to.equal(e18("900"));
-      expect(await account.pendingSeizedAmounts(recoverer.address)).to.equal(e18("100"));
-      expect(await account.totalPendingSeizedAmount()).to.equal(e18("100"));
+      expect(await account.owedAmounts(recoverer.address)).to.equal(e18("100"));
+      expect(await account.totalOwedAmount()).to.equal(e18("100"));
       expect(await account.value()).to.equal(e18("900"));
 
       await bondManager.connect(recoverer).payReceiver(account.address, recoverer.address);
@@ -532,8 +505,8 @@ describe("SpokeBondManager", () => {
         .to.emit(account, "Paid")
         .withArgs(recoverer.address, e18("100"));
       expect(await xvs.balanceOf(recoverer.address)).to.equal(e18("110"));
-      expect(await account.pendingSeizedAmounts(recoverer.address)).to.equal(0);
-      expect(await account.totalPendingSeizedAmount()).to.equal(0);
+      expect(await account.owedAmounts(recoverer.address)).to.equal(0);
+      expect(await account.totalOwedAmount()).to.equal(0);
       expect(await account.value()).to.equal(e18("900"));
     });
 
@@ -744,7 +717,7 @@ describe("SpokeBondManager", () => {
     it("payReceiver pays a receiver only what it is owed, whoever calls, with no role", async () => {
       const account = XVSVaultBondAccount__factory.connect((await createBond(xvs)).address, owner);
       await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address);
-      const owed = await account.pendingSeizedAmounts(recoverer.address);
+      const owed = await account.owedAmounts(recoverer.address);
       await time.increase(LOCK_PERIOD);
       acm.isAllowedToCall.returns(false);
 
@@ -752,7 +725,7 @@ describe("SpokeBondManager", () => {
       await expect(bondManager.connect(other).payReceiver(account.address, recoverer.address))
         .to.emit(account, "Paid")
         .withArgs(recoverer.address, owed);
-      expect(await account.totalPendingSeizedAmount()).to.equal(0);
+      expect(await account.totalOwedAmount()).to.equal(0);
     });
 
     it("revert on an account not created here", async () => {
@@ -762,6 +735,195 @@ describe("SpokeBondManager", () => {
       ]) {
         await expect(call()).to.be.revertedWithCustomError(bondManager, "NotBondAccount").withArgs(other.address);
       }
+    });
+  });
+
+  describe("access", () => {
+    it("lets only the SpokePoolManager move bonds", async () => {
+      await createBond(idleToken);
+      const calls: (() => Promise<unknown>)[] = [
+        () => bondManager.connect(other).topUp(comptroller.address, 1),
+        () => bondManager.connect(other).claimYield(comptroller.address),
+        () => bondManager.connect(other).seize(comptroller.address, 1, recoverer.address),
+        () => bondManager.connect(other).release(comptroller.address),
+      ];
+      for (const call of calls) {
+        await expect(call()).to.be.revertedWithCustomError(bondManager, "NotSpokePoolManager").withArgs(other.address);
+      }
+    });
+
+    it("reverts on a pool with no bond", async () => {
+      const calls: (() => Promise<unknown>)[] = [
+        () => bondManager.connect(spokePoolManager).claimYield(comptroller.address),
+        () => bondManager.connect(spokePoolManager).seize(comptroller.address, 1, recoverer.address),
+        () => bondManager.connect(spokePoolManager).release(comptroller.address),
+      ];
+      for (const call of calls) {
+        await expect(call()).to.be.revertedWithCustomError(bondManager, "BondNotFound").withArgs(comptroller.address);
+      }
+    });
+
+    it("lets only the bond manager call any account's functions", async () => {
+      for (const token of [idleToken, xvs, usdt]) {
+        await bondManager.connect(spokePoolManager).createBond(token.address, bondHolder.address, token.address, BOND);
+        const account = IdleBondAccount__factory.connect(await bondManager.bondAccounts(token.address), other);
+        const calls: (() => Promise<unknown>)[] = [
+          () => account.deposit(1),
+          () => account.claimYield(),
+          () => account.seize(1, other.address),
+          () => account.release(),
+          () => account.payReceiver(other.address),
+        ];
+        for (const call of calls) {
+          await expect(call()).to.be.revertedWithCustomError(account, "NotBondManager").withArgs(other.address);
+        }
+      }
+    });
+  });
+
+  describe("idle bond account", () => {
+    it("seizes yield first, then principal, from its balance at once", async () => {
+      const account = await createBond(idleToken);
+      await sendTo(idleToken, account.address, "30");
+
+      await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address))
+        .to.emit(bondManager, "BondSeized")
+        .withArgs(comptroller.address, recoverer.address, e18("100"), e18("100"))
+        .and.to.emit(account, "Paid")
+        .withArgs(recoverer.address, e18("100"));
+      expect(await idleToken.balanceOf(recoverer.address)).to.equal(e18("100"));
+      expect(await account.principal()).to.equal(e18("930"));
+      expect(await account.value()).to.equal(e18("930"));
+      expect(await account.seizableAmount()).to.equal(e18("930"));
+    });
+
+    it("seizes within the yield without touching the principal", async () => {
+      const account = await createBond(idleToken);
+      await sendTo(idleToken, account.address, "30");
+      await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("20"), recoverer.address);
+      expect(await account.principal()).to.equal(BOND);
+    });
+
+    it("seizes nothing and pays no one for a zero seizure", async () => {
+      const account = await createBond(idleToken);
+      await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, 0, recoverer.address))
+        .to.emit(bondManager, "BondSeized")
+        .withArgs(comptroller.address, recoverer.address, 0, 0)
+        .and.to.not.emit(account, "Paid");
+    });
+
+    it("emits no YieldClaimed when there is no yield", async () => {
+      await createBond(idleToken);
+      await expect(bondManager.connect(spokePoolManager).claimYield(comptroller.address)).to.not.emit(
+        bondManager,
+        "YieldClaimed",
+      );
+      expect(await idleToken.balanceOf(bondHolder.address)).to.equal(0);
+    });
+
+    it("pays the bond holder the whole balance at release", async () => {
+      const account = await createBond(idleToken);
+      await sendTo(idleToken, account.address, "5");
+      await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
+        .to.emit(account, "Paid")
+        .withArgs(bondHolder.address, BOND.add(e18("5")));
+      expect(await account.released()).to.equal(true);
+      expect(await account.principal()).to.equal(0);
+      expect(await account.value()).to.equal(0);
+    });
+
+    it("shares its implementation's bond manager", async () => {
+      const account = await createBond(idleToken);
+      expect(await account.BOND_MANAGER()).to.equal(bondManager.address);
+      expect(await account.source()).to.equal(constants.AddressZero);
+      expect(await account.asset()).to.equal(idleToken.address);
+    });
+
+    it("pays no one on payReceiver", async () => {
+      const account = await createBond(idleToken);
+      await expect(bondManager.payReceiver(account.address, bondHolder.address)).to.not.emit(account, "Paid");
+    });
+  });
+
+  describe("Liquidity Hub bond account", () => {
+    it("reverts a release the Hub cannot pay at once", async () => {
+      const account = await createBond(usdt);
+      await hub.setLiquidity(e18("400"));
+      await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
+        .to.be.revertedWithCustomError(account, "InsufficientLiquidity")
+        .withArgs(e18("600"));
+    });
+
+    it("reverts a release while the Hub is paused", async () => {
+      const account = await createBond(usdt);
+      await hub.setPaused(true);
+      await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
+        .to.be.revertedWithCustomError(account, "InsufficientLiquidity")
+        .withArgs(BOND);
+    });
+
+    it("pays the bond holder what the account holds plus the Hub position at release", async () => {
+      const account = await createBond(usdt);
+      await sendTo(usdt, account.address, "5");
+      await expect(bondManager.connect(spokePoolManager).release(comptroller.address))
+        .to.emit(account, "Paid")
+        .withArgs(bondHolder.address, BOND.add(e18("5")));
+      expect(await account.released()).to.equal(true);
+      expect(await usdt.balanceOf(account.address)).to.equal(0);
+    });
+
+    it("seizes from the account's balance before the Hub", async () => {
+      const account = await createBond(usdt);
+      const shares = await hub.balanceOf(account.address);
+      await sendTo(usdt, account.address, "50");
+      await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("40"), recoverer.address);
+      expect(await usdt.balanceOf(recoverer.address)).to.equal(e18("40"));
+      expect(await hub.balanceOf(account.address)).to.equal(shares);
+      expect(await account.principal()).to.equal(BOND);
+    });
+
+    it("no longer deposits once released", async () => {
+      const account = await createBond(usdt);
+      await bondManager.connect(spokePoolManager).release(comptroller.address);
+      await sendTo(usdt, account.address, "5");
+      await expect(bondManager.deposit(account.address)).to.not.emit(account, "SourceDepositRefused");
+      expect(await usdt.balanceOf(account.address)).to.equal(e18("5"));
+      expect(await hub.balanceOf(account.address)).to.equal(0);
+    });
+
+    it("deposits nothing when it holds nothing", async () => {
+      const account = await createBond(usdt);
+      const shares = await hub.balanceOf(account.address);
+      await expect(bondManager.deposit(account.address)).to.not.emit(account, "SourceDepositRefused");
+      expect(await hub.balanceOf(account.address)).to.equal(shares);
+    });
+
+    it("pays no one on payReceiver", async () => {
+      const account = await createBond(usdt);
+      await expect(bondManager.payReceiver(account.address, bondHolder.address)).to.not.emit(account, "Paid");
+    });
+  });
+
+  describe("XVSVault bond account", () => {
+    it("pays the bond holder only what it is owed before the release", async () => {
+      const account = XVSVaultBondAccount__factory.connect((await createBond(xvs)).address, owner);
+      await sendTo(xvs, account.address, "5");
+      await expect(bondManager.payReceiver(account.address, bondHolder.address)).to.not.emit(account, "Paid");
+      expect(await xvs.balanceOf(bondHolder.address)).to.equal(0);
+    });
+
+    it("no longer stakes once released", async () => {
+      const account = await createBond(xvs);
+      await bondManager.connect(spokePoolManager).release(comptroller.address);
+      await sendTo(xvs, account.address, "5");
+      await expect(bondManager.deposit(account.address)).to.not.emit(account, "SourceDepositRefused");
+      expect((await xvsVault.getUserInfo(xvs.address, XVS_POOL_ID, account.address)).amount).to.equal(BOND);
+    });
+
+    it("stakes in its implementation's XVS pool", async () => {
+      const account = XVSVaultBondAccount__factory.connect((await createBond(xvs)).address, owner);
+      expect(await account.XVS_POOL_ID()).to.equal(XVS_POOL_ID);
+      expect(await account.source()).to.equal(xvsVault.address);
     });
   });
 });
