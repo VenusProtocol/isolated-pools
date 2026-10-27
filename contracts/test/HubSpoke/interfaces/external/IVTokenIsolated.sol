@@ -15,10 +15,8 @@ pragma solidity 0.8.25;
  *         `(totalCash + totalBorrows + badDebt - totalReserves) / totalSupply`. `healAccount` moves
  *         an unrecoverable shortfall out of `totalBorrows` and into `badDebt`, leaving that
  *         numerator unchanged — so the rate does NOT fall when a loss is recorded and no supplier is
- *         marked down. Valuing a position at `balance x exchangeRateStored` therefore reports value
- *         that can never be redeemed. `AdapterSpokeV1` values the position off the components
- *         instead, excluding `badDebt`; that is why `totalBorrows`, `totalReserves` and `badDebt`
- *         are declared here at all.
+ *         marked down. The written-off amount is missing cash instead, until it is recovered
+ *         through `badDebtRecovered`.
  *      2. **Redeem is bounded by cash NET of reserves.** `_redeemFresh` reverts
  *         `RedeemTransferOutNotPossible` when `getCash() - totalReserves < redeemAmount`, not when
  *         `getCash() < redeemAmount`. Reserves are not payable liquidity.
@@ -102,9 +100,8 @@ interface IVTokenIsolated {
 
     /**
      * @notice Last-settled underlying-per-vToken exchange rate, scaled by `1e18`.
-     * @dev INCLUDES `badDebt` in its numerator, so it is the rate the market redeems and prices caps
-     *      at, but NOT a sound basis for valuing a position. Use it for supply-cap math and for
-     *      sizing a redeem; use the components for NAV.
+     * @dev INCLUDES `badDebt` in its numerator. It is the rate the market mints, redeems and prices
+     *      caps at, and the rate `AdapterSpokeV1` values a position at.
      * @return rate Exchange rate scaled by `1e18`.
      */
     function exchangeRateStored() external view returns (uint256 rate);
@@ -124,23 +121,9 @@ interface IVTokenIsolated {
      */
     function getCash() external view returns (uint256 cash);
 
-    /// @notice Outstanding borrows, in underlying units. Excludes anything already written off to
-    ///         `badDebt`.
-    /// @return borrows Underlying units currently borrowed.
-    function totalBorrows() external view returns (uint256 borrows);
-
     /// @notice Accrued protocol reserves, in underlying units. Not payable to suppliers.
     /// @return reserves Underlying units reserved for the protocol.
     function totalReserves() external view returns (uint256 reserves);
-
-    /**
-     * @notice Debt written off as unrecoverable by `healAccount`, in underlying units.
-     * @dev Recovered by the Shortfall auction, which transfers the winning bid into this market and
-     *      then calls `badDebtRecovered` — raising `getCash()` and lowering this figure by the same
-     *      amount, so a recovery lifts a `badDebt`-excluding valuation back up on its own.
-     * @return debt Underlying units of unrecoverable debt.
-     */
-    function badDebt() external view returns (uint256 debt);
 
     /// @notice The ERC-20 underlying this market is backed by.
     /// @return token Address of the underlying ERC-20.

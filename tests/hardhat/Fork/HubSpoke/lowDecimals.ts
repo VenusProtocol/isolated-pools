@@ -109,20 +109,22 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       await expect(withdrawAsHub(liquid, f.supplier.address, { gasLimit: 5_000_000 })).to.not.be.reverted;
     });
 
-    it("drains the position to zero, so the resource can be removed", async () => {
-      // KNOWN FAILURE - reports a real limit of `AdapterSpokeV1` below a 1e18 rate, not a test
-      // artifact.
-      //
-      // `maxWithdraw` rounds the position's value down to whole base units of the underlying. Below
-      // 1e18 a vToken is worth less than one base unit, so withdrawing the certified amount can leave
-      // up to `ceil(1e18 / rate) - 1` vTokens behind, together worth less than one base unit.
-      // `maxWithdraw` reports zero for them, and `removeResource` gates on a zero receipt balance, so
-      // the resource cannot be removed. The adapter's NatSpec says its flooring keeps the last vToken
-      // withdrawable, which holds only at a rate of 1e18 or above, such as the 1e28 of an 18-decimal
-      // market.
+    it("burns the sub-unit dust on the last withdrawal, so the resource can be removed", async () => {
+      // Below a 1e18 rate a vToken is worth less than one base unit, so burning only what `maxWithdraw`
+      // certifies would leave up to `ceil(1e18 / rate) - 1` vTokens worth nothing, and `removeResource`
+      // gates on the raw receipt balance. `withdraw` burns that remainder with the last certified
+      // amount when the market's payable cash covers it. An 18-decimal market lists at 1e28 and never
+      // reaches this.
       await deposit(trxAmt("100000"));
 
+      // The precondition, asserted rather than assumed: a count-based burn would strand worthless vTokens.
       const liquid: BigNumber = await f.adapter.maxWithdraw(vTRX.address, trxSource.address);
+      const rate: BigNumber = await vTRX.exchangeRateStored();
+      const vBal: BigNumber = await f.adapter.receiptBalance(vTRX.address, trxSource.address);
+      const countBurn = liquid.mul(EXP_SCALE).add(rate).sub(1).div(rate);
+      expect(vBal.sub(countBurn)).to.be.gt(0);
+      expect(vBal.sub(countBurn).mul(rate).div(EXP_SCALE)).to.equal(0);
+
       await withdrawAsHub(liquid, f.supplier.address, { gasLimit: 5_000_000 });
 
       expect(await f.adapter.receiptBalance(vTRX.address, trxSource.address)).to.equal(0);

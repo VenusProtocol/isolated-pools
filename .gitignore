@@ -9,6 +9,8 @@ cache
 cache-zk
 artifacts
 artifacts-zk
+/cache-foundry
+/out
 
 #Compound
 allFiredEvents

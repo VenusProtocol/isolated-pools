@@ -102,7 +102,7 @@ interface SpokeComptrollerInterface is ComptrollerInterface {
     /// @notice Thrown when collateral factor exceeds the upper bound
     error InvalidCollateralFactor();
 
-    /// @notice Thrown when liquidation threshold exceeds the collateral factor
+    /// @notice Thrown when the liquidation threshold is lower than the collateral factor or greater than 1
     error InvalidLiquidationThreshold();
 
     /// @notice Thrown when a liquidation incentive is low enough that a liquidator would seize less value than it

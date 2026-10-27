@@ -27,6 +27,7 @@ import { AddressOne } from "../helpers/utils";
 // belongs to the listing VIP, in the order `024-deploy-spoke-pool-registry.ts` spells out: accept ownership, grant the
 // roles, set both oracles, `addPool`, then `addMarket` per market. Until that runs these markets exist but no
 // comptroller knows them, which is the same state `009-deploy-vtokens.ts` leaves the isolated markets in.
+// eslint-disable-next-line complexity, sonarjs/cognitive-complexity -- predates the complexity gates, tracked for refactor
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -155,9 +156,9 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
       reserveFactor,
     ];
 
-    // `VToken_<symbol>` as the isolated markets use, where the symbol carries the pool id as its suffix. That suffix is
-    // what tells `VToken_vUSDT_HubSpoke` from `VToken_vUSDT_Stablecoins`, the same way `Comptroller_HubSpoke` is told
-    // from `Comptroller_Stablecoins`. The `Spoke` prefix is reserved for the pool-wide singletons.
+    // `VToken_<symbol>` as the isolated markets use, where the symbol carries a pool suffix. That suffix is what tells
+    // `VToken_vUSDT_bStockIndex` from `VToken_vUSDT_Stablecoins`. The `Spoke` prefix is reserved for the pool-wide
+    // singletons.
     const args = [
       spokeVTokenBeacon.address,
       (await ethers.getContractFactory("VToken")).interface.encodeFunctionData("initialize", initArgs),

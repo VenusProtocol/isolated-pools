@@ -85,6 +85,8 @@ abstract contract SpokeFuzzBase is Test {
     InterestRateModel internal rateModel;
     UpgradeableBeacon internal vTokenBeacon;
     VToken[MARKET_COUNT] internal markets;
+    /// @notice Deployed on the same beacon but never listed, so every pool action on it has to be rejected
+    VToken internal unlistedMarket;
 
     function setUp() public virtual {
         // Interest and the bounded oracle's cooldown both run on timestamps.
@@ -123,6 +125,8 @@ abstract contract SpokeFuzzBase is Test {
 
         comptroller.setSupplyAllowlistEnabled(address(markets[LIQUIDITY]), true);
         comptroller.setAllowedSupplier(address(markets[LIQUIDITY]), hub, true);
+
+        unlistedMarket = _deployMarket("UNL", 18, INITIAL_EXCHANGE_RATE);
     }
 
     function _listMarket(

@@ -25,10 +25,9 @@ const FORKED_NETWORK = process.env.FORKED_NETWORK || "bscmainnet";
  * Every other file in this directory funds a real market through the real Hub, and between them they
  * exercise each of the adapter's eleven members. What none of them can reach is the adapter's
  * defensive half. No spoke pool lists a fee-on-transfer underlying, so `VTokenUnderfilled` never
- * fires. No live market carries a holder balance against a zero total supply, holds reserves above
- * its entire backing, or reports a zero exchange rate. Those branches exist precisely because the
- * adapter does not own the contracts it reads, and a fork suite is structurally unable to put a
- * contract it does not own into a state it refuses to enter.
+ * fires. No live market holds reserves at or above its cash, or reports a zero exchange rate. Those
+ * branches exist precisely because the adapter does not own the contracts it reads, and a fork suite
+ * is structurally unable to put a contract it does not own into a state it refuses to enter.
  *
  * So the MARKET is faked here and nothing else is. The `YieldGroup` is the real one, minted from the
  * implementation deployed on this chain, reached through its own `depositResource` /
@@ -97,9 +96,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       market.totalSupply.returns(parseUnits("1", 18));
       market.balanceOf.returns(parseUnits("1", 18));
       market.getCash.returns(parseUnits("1000000", 18));
-      market.totalBorrows.returns(0);
       market.totalReserves.returns(0);
-      market.badDebt.returns(0);
       market.mint.returns(0);
       market.redeem.returns(0);
       market.accrueInterest.returns(0);
@@ -187,38 +184,15 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
     });
 
     describe("totalAssets", () => {
-      it("reports zero rather than dividing by a zero supply", async () => {
-        // Unreachable while the holder's balance is non-zero, since those vTokens are part of the
-        // supply. Kept as a division guard rather than an assumption about a contract this one reads.
+      it("values the position at the market's own rate, written-off debt included", async () => {
+        // The market's rate keeps `badDebt` in its numerator, and the adapter values at that rate
+        // and reads nothing else. Cash 100, borrows 60, badDebt 1,000,000 and reserves 10 over a
+        // supply of 2 give (100 + 60 + 1,000,000 - 10) / 2 per vToken; `badDebt` is set absurdly
+        // high so that a path dropping it would be obvious.
         market.balanceOf.returns(parseUnits("1", 18));
-        market.totalSupply.returns(0);
-        expect(await adapter.totalAssets(market.address, yieldGroup.address)).to.equal(0);
-      });
-
-      it("reports zero when reserves have swallowed the whole backing", async () => {
-        market.getCash.returns(parseUnits("10", 18));
-        market.totalBorrows.returns(0);
-        market.totalReserves.returns(parseUnits("10", 18));
-        expect(await adapter.totalAssets(market.address, yieldGroup.address)).to.equal(0);
-      });
-
-      it("values the position off the components, with written-off debt excluded", async () => {
-        // The market's own rate keeps `badDebt` in its numerator. Dropping it is what marks every Hub
-        // depositor down at the same instant instead of by exit order. `badDebt` is set absurdly high
-        // here, and the market's rate with it, so that a path counting it would be obvious. The
-        // adapter reads that rate only as a ceiling, and a rate that carries `badDebt` puts the
-        // ceiling above the figure it reports.
-        market.balanceOf.returns(parseUnits("1", 18));
-        market.totalSupply.returns(parseUnits("2", 18));
-        market.getCash.returns(parseUnits("100", 18));
-        market.totalBorrows.returns(parseUnits("60", 18));
-        market.totalReserves.returns(parseUnits("10", 18));
-        market.badDebt.returns(parseUnits("1000000", 18));
-        // (100 + 60 + 1,000,000 - 10) / 2 per vToken, the rate the market itself reports.
         market.exchangeRateStored.returns(parseUnits("500075", 18));
 
-        // (100 + 60 - 10) / 2 = 75, with `badDebt` playing no part.
-        expect(await adapter.totalAssets(market.address, yieldGroup.address)).to.equal(parseUnits("75", 18));
+        expect(await adapter.totalAssets(market.address, yieldGroup.address)).to.equal(parseUnits("500075", 18));
       });
     });
 
@@ -252,7 +226,6 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
         const held = parseUnits("1", 18);
         market.getCash.returns(cash);
         market.totalReserves.returns(reserves);
-        market.totalBorrows.returns(0);
         market.balanceOf.returns(held);
 
         for (const rate of [EXP, parseUnits("3", 18), RATE_SEEDED, parseUnits("1", 16)]) {

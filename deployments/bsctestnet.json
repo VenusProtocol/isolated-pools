@@ -69765,7 +69765,7 @@
       ]
     },
     "SpokeComptrollerImpl": {
-      "address": "0xf4b98889F07909c9326100b74AfBcE49813473C6",
+      "address": "0x9D46801Ad4a0877dF1DB17431f131799B9a8348e",
       "abi": [
         {
           "inputs": [
@@ -70163,6 +70163,22 @@
             }
           ],
           "name": "UnexpectedSender",
+          "type": "error"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "uint256",
+              "name": "liquidationThresholdMantissa",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "liquidationIncentiveMantissa",
+              "type": "uint256"
+            }
+          ],
+          "name": "UnsafeLiquidationParams",
           "type": "error"
         },
         {
@@ -72284,7 +72300,7 @@
       ]
     },
     "SpokePoolLens": {
-      "address": "0x372978251378CCE54cf9Ca3D3f4cFA58e84e5da8",
+      "address": "0x128EF4460b8649a42Bc86d014f4e5f23E78CE9B2",
       "abi": [
         {
           "inputs": [
@@ -72296,6 +72312,11 @@
             {
               "internalType": "uint256",
               "name": "blocksPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxBorrowRateMantissa_",
               "type": "uint256"
             }
           ],
@@ -72311,6 +72332,19 @@
           "inputs": [],
           "name": "InvalidTimeBasedConfiguration",
           "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "MAX_BORROW_RATE_MANTISSA",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
         },
         {
           "inputs": [],
@@ -73526,6 +73560,88 @@
                 }
               ],
               "internalType": "struct SpokePoolLens.SpokeVTokenMetadata[]",
+              "name": "",
+              "type": "tuple[]"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract VToken",
+              "name": "vToken",
+              "type": "address"
+            }
+          ],
+          "name": "spokeVTokenPrices",
+          "outputs": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "vToken",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "spotPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "boundedCollateralPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "boundedDebtPrice",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct SpokePoolLens.SpokeVTokenPrices",
+              "name": "prices",
+              "type": "tuple"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
+        },
+        {
+          "inputs": [
+            {
+              "internalType": "contract VToken[]",
+              "name": "vTokens",
+              "type": "address[]"
+            }
+          ],
+          "name": "spokeVTokenPricesAll",
+          "outputs": [
+            {
+              "components": [
+                {
+                  "internalType": "address",
+                  "name": "vToken",
+                  "type": "address"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "spotPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "boundedCollateralPrice",
+                  "type": "uint256"
+                },
+                {
+                  "internalType": "uint256",
+                  "name": "boundedDebtPrice",
+                  "type": "uint256"
+                }
+              ],
+              "internalType": "struct SpokePoolLens.SpokeVTokenPrices[]",
               "name": "",
               "type": "tuple[]"
             }

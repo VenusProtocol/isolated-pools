@@ -2123,6 +2123,34 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x77734e70b6E88b4d82fE632a168EDf6e700912b6",
       },
+      {
+        isMock: false,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 18,
+        tokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+      },
+      {
+        isMock: false,
+        name: "United Stables",
+        symbol: "U",
+        decimals: 18,
+        tokenAddress: "0xcE24439F2D9C6a2289F741120FE202248B666666",
+      },
+      {
+        isMock: false,
+        name: "Invesqo QQQ",
+        symbol: "QQQB",
+        decimals: 18,
+        tokenAddress: "0x205812CdBed920aFf76C6580abD681a46D11efc7",
+      },
+      {
+        isMock: false,
+        name: "SPY",
+        symbol: "SPYB",
+        decimals: 18,
+        tokenAddress: "0x7138b48df7D98D7e3cc221BfE7192D0a178182D8",
+      },
     ],
     poolConfig: [
       {
@@ -7933,47 +7961,16 @@ export const globalConfig: NetworkConfig = {
   },
 };
 
+// Every supported network maps to the globalConfig entry of the same name; the only
+// exception is "development", which reuses the bsctestnet config.
+const CONFIG_ALIASES = new Map<string, keyof NetworkConfig>([["development", "bsctestnet"]]);
+
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
-  switch (networkName) {
-    case "hardhat":
-      return globalConfig.hardhat;
-    case "bsctestnet":
-      return globalConfig.bsctestnet;
-    case "bscmainnet":
-      return globalConfig.bscmainnet;
-    case "sepolia":
-      return globalConfig.sepolia;
-    case "ethereum":
-      return globalConfig.ethereum;
-    case "opbnbtestnet":
-      return globalConfig.opbnbtestnet;
-    case "opbnbmainnet":
-      return globalConfig.opbnbmainnet;
-    case "arbitrumsepolia":
-      return globalConfig.arbitrumsepolia;
-    case "arbitrumone":
-      return globalConfig.arbitrumone;
-    case "zksyncsepolia":
-      return globalConfig.zksyncsepolia;
-    case "zksyncmainnet":
-      return globalConfig.zksyncmainnet;
-    case "opsepolia":
-      return globalConfig.opsepolia;
-    case "opmainnet":
-      return globalConfig.opmainnet;
-    case "basesepolia":
-      return globalConfig.basesepolia;
-    case "basemainnet":
-      return globalConfig.basemainnet;
-    case "unichainsepolia":
-      return globalConfig.unichainsepolia;
-    case "unichainmainnet":
-      return globalConfig.unichainmainnet;
-    case "development":
-      return globalConfig.bsctestnet;
-    default:
-      throw new Error(`config for network ${networkName} is not available.`);
+  const key = CONFIG_ALIASES.get(networkName) ?? networkName;
+  if (!Object.prototype.hasOwnProperty.call(globalConfig, key)) {
+    throw new Error(`config for network ${networkName} is not available.`);
   }
+  return globalConfig[key as keyof NetworkConfig];
 }
 
 export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): TokenConfig {

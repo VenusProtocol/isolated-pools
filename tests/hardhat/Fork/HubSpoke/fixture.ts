@@ -23,7 +23,7 @@ import { bscmainnet } from "./constants";
 /// assertions lean on are the same on every run.
 export const BLOCK_NUMBER = 116_847_000;
 
-const MAX_LOOPS_LIMIT = 100;
+const MAX_LOOPS_LIMIT = 50;
 
 /// Longer than any run. See `relaxPriceStaleness`.
 const STALE_PERIOD = 10 * 365 * 24 * 60 * 60;
@@ -150,6 +150,7 @@ export const YIELD_GROUP_ABI = [
   "function lowerResourceCap(address resource, uint256 newCap)",
   "function pauseResource(address resource)",
   "function resourceCap(address resource) view returns (uint256)",
+  "error ResourceHasBalance(address resource, uint256 balance)",
 ];
 
 /// The slice of `ProtocolShareReserve` this suite touches. It holds one pool registry, which is what

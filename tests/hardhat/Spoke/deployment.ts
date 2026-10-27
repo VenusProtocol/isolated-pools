@@ -133,7 +133,7 @@ describe("SpokeComptroller: deployment", function () {
 
     expect(await comptroller.poolRegistry()).to.equal((await deployments.get("SpokePoolRegistry")).address);
     expect(await comptroller.accessControlManager()).to.equal((await deployments.get("AccessControlManager")).address);
-    expect(await comptroller.maxLoopsLimit()).to.equal(100);
+    expect(await comptroller.maxLoopsLimit()).to.equal(50);
     expect(await comptroller.owner()).to.equal(deployer);
 
     // Spoke-only surface, which proves the proxy runs the fork rather than the shared implementation.

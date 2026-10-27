@@ -2,6 +2,7 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { impersonateAccount, loadFixture, mine, setBalance } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers, upgrades } from "hardhat";
 
@@ -10,6 +11,7 @@ import {
   AccessControlManager,
   Comptroller,
   IDeviationBoundedOracle,
+  InterestRateModel,
   MockPriceOracle,
   MockPriceOracle__factory,
   MockToken,
@@ -49,6 +51,9 @@ const HEALED_BORROW = parseUnits("40", 18);
 const LIVE_BORROW = parseUnits("20", 18);
 
 const REWARD_SPEED = parseUnits("0.5", 18);
+
+/// Borrow rate cap of every fixture market, and the one the lens is given.
+const MAX_BORROW_RATE = parseUnits("0.0005", 16);
 
 /**
  * `SpokePoolLens` reports the pool and market state a spoke pool has and `PoolLens` has no field for.
@@ -140,6 +145,7 @@ describe("SpokePoolLens", function () {
         interestRateModel: rateModel,
         isTimeBased: false,
         blocksPerYear: DEFAULT_BLOCKS_PER_YEAR,
+        maxBorrowRateMantissa: MAX_BORROW_RATE,
       });
 
       await underlying.faucet(initialSupply);
@@ -220,10 +226,11 @@ describe("SpokePoolLens", function () {
       interestRateModel: rateModel,
       isTimeBased: false,
       blocksPerYear: DEFAULT_BLOCKS_PER_YEAR,
+      maxBorrowRateMantissa: MAX_BORROW_RATE,
     })) as VToken;
 
     const SpokePoolLensFactory = await ethers.getContractFactory<SpokePoolLens__factory>("SpokePoolLens");
-    const spokeLens = await SpokePoolLensFactory.deploy(false, DEFAULT_BLOCKS_PER_YEAR);
+    const spokeLens = await SpokePoolLensFactory.deploy(false, DEFAULT_BLOCKS_PER_YEAR, MAX_BORROW_RATE);
 
     const PoolLensFactory = await ethers.getContractFactory<PoolLens__factory>("PoolLens");
     const poolLens = await PoolLensFactory.deploy(false, DEFAULT_BLOCKS_PER_YEAR);
@@ -359,6 +366,41 @@ describe("SpokePoolLens", function () {
         (await market.totalReserves()).add(interest.mul(await market.reserveFactorMantissa()).div(parseUnits("1", 18))),
       );
     });
+
+    describe("against the market's borrow rate cap", () => {
+      // The second market holds the live borrow, so accrued interest shows in its borrows.
+      const setBorrowRate = async (borrowRate: BigNumber): Promise<VToken> => {
+        const market = f.spokeMarkets[1];
+        const rateModel = await smock.fake<InterestRateModel>("InterestRateModel");
+        rateModel.isInterestRateModel.returns(true);
+        rateModel.getBorrowRate.returns(borrowRate);
+        await market.setInterestRateModel(rateModel.address);
+        await mine(1);
+        return market;
+      };
+
+      it("reports the stored figures above the cap, where accrual reverts and never adds the interest", async () => {
+        const market = await setBorrowRate(MAX_BORROW_RATE.add(1));
+        await expect(market.callStatic.exchangeRateCurrent()).to.be.revertedWith("borrow rate is absurdly high");
+
+        const metadata = await f.spokeLens.spokeVTokenMetadata(market.address);
+
+        expect(metadata.exchangeRateCurrent).to.equal(await market.exchangeRateStored());
+        expect(metadata.totalBorrows).to.equal(await market.totalBorrows());
+        expect(metadata.totalReserves).to.equal(await market.totalReserves());
+      });
+
+      it("still accrues at the cap itself, as the market does", async () => {
+        const market = await setBorrowRate(MAX_BORROW_RATE);
+
+        const metadata = await f.spokeLens.spokeVTokenMetadata(market.address);
+
+        // Without interest the stored and accrued figures agree and the comparison below proves nothing.
+        expect(metadata.totalBorrows).to.be.gt(await market.totalBorrows());
+        expect(metadata.exchangeRateCurrent).to.equal(await market.callStatic.exchangeRateCurrent());
+        expect(metadata.totalBorrows).to.equal(await market.callStatic.totalBorrowsCurrent());
+      });
+    });
   });
 
   describe("spot and bounded prices", () => {
@@ -394,6 +436,20 @@ describe("SpokePoolLens", function () {
       expect(prices.vToken).to.equal(f.marketWithoutOracle.address);
       expect(prices.boundedCollateralPrice).to.equal(0);
       expect(prices.boundedDebtPrice).to.equal(0);
+    });
+
+    it("keeps spot and the other markets when the bounded oracle cannot price one", async () => {
+      // E.g. a price past the oracle's uint128 window. Collateral-factor checks revert there too.
+      const [first, second] = f.spokeMarkets;
+      f.boundedOracle.getBoundedPricesView.whenCalledWith(first.address).reverts("PriceExceedsUint128");
+
+      const prices = await f.spokeLens.spokeVTokenPricesAll([first.address, second.address]);
+
+      expect(prices[0].spotPrice).to.equal(PRICE);
+      expect(prices[0].boundedCollateralPrice).to.equal(0);
+      expect(prices[0].boundedDebtPrice).to.equal(0);
+      expect(prices[1].boundedCollateralPrice).to.equal(PRICE);
+      expect(prices[1].boundedDebtPrice).to.equal(PRICE);
     });
   });
 
