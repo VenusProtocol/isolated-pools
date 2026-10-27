@@ -38,8 +38,21 @@ interface ISpokePoolShortfall {
     event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
 
     /**
+     * @notice Thrown when a market is not listed in the pool
+     * @param vToken The market
+     */
+    error MarketNotListed(address vToken);
+
+    /**
+     * @notice Thrown when a transfer delivers a different amount than requested
+     * @param token The token
+     */
+    error TransferAmountMismatch(address token);
+
+    /**
      * @notice Repays a market's bad debt with the caller's funds, then pays the caller its worth in the pool's bond
-     *   asset at ResilientOracle prices; what the bond cannot pay out now is owed to the caller
+     *   asset at ResilientOracle prices. An XVSVault bond owes what it cannot pay now and pays it later, any other bond
+     *   reverts
      * @param vToken The market
      * @param amount The bad debt to repay, in the market's asset, which the caller must have approved; capped at the
      *   market's bad debt
@@ -47,7 +60,8 @@ interface ISpokePoolShortfall {
      * @custom:event Emits BadDebtRecovered; the market emits BadDebtRecovered and the bond manager BondSeized
      * @custom:error MarketNotListed is thrown when the market is not listed in its pool
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
-     * @custom:error The manager's `seizeBond` errors, such as when the bond holds less than the payout
+     * @custom:error The manager's `seizeBond` errors, such as the bond account's InsufficientFunds when the repaid
+     *   bad debt is worth more than the bond holds
      * @custom:error Reverts without data when the pool has no live bond
      * @custom:access Controlled by AccessControlManager, granted to the whitelisted recoverers
      */

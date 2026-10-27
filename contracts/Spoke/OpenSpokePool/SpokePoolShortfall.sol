@@ -65,56 +65,60 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     /// @inheritdoc ISpokePoolShortfall
     function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 paidNow) {
         _checkAccessAllowed("recoverBadDebt(address,uint256)");
-        address comptroller;
-        (comptroller, amount) = _repayBadDebt(vToken, amount);
+        address comptroller = _ensureMarketListed(vToken);
+
         IBondAccount bondAccount = IBondAccount(SPOKE_POOL_MANAGER.bondManager().bondAccounts(comptroller));
         ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
-        uint256 seizedAmount = (amount * resilientOracle.getUnderlyingPrice(address(vToken))) /
-            resilientOracle.getPrice(address(bondAccount.asset()));
+        uint256 debtPrice = resilientOracle.getUnderlyingPrice(address(vToken));
+        uint256 bondPrice = resilientOracle.getPrice(address(bondAccount.asset()));
+
+        uint256 repaid = _repayBadDebt(vToken, amount);
+        uint256 seizedAmount = (repaid * debtPrice) / bondPrice;
 
         if (seizedAmount != 0) {
             paidNow = SPOKE_POOL_MANAGER.seizeBond(comptroller, seizedAmount, msg.sender);
         }
 
-        emit BadDebtRecovered(comptroller, address(vToken), msg.sender, amount, seizedAmount, paidNow);
+        emit BadDebtRecovered(comptroller, address(vToken), msg.sender, repaid, seizedAmount, paidNow);
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // Governance functions
+    // Admin functions
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolShortfall
     function repayBadDebt(VToken vToken, uint256 amount) external nonReentrant {
         _checkAccessAllowed("repayBadDebt(address,uint256)");
-        address comptroller;
-        (comptroller, amount) = _repayBadDebt(vToken, amount);
+        address comptroller = _ensureMarketListed(vToken);
 
-        emit BadDebtRepaid(comptroller, address(vToken), msg.sender, amount);
+        uint256 repaid = _repayBadDebt(vToken, amount);
+
+        emit BadDebtRepaid(comptroller, address(vToken), msg.sender, repaid);
     }
 
     // ──────────────────────────────────────────────────────────────────────
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @dev Repays up to `amount` of a listed market's bad debt with the caller's funds
-     * @return comptroller The market's comptroller
-     * @return repaid The amount repaid, capped at the market's bad debt
-     */
-    function _repayBadDebt(VToken vToken, uint256 amount) internal returns (address comptroller, uint256 repaid) {
-        comptroller = address(vToken.comptroller());
-        // Only a pool's own markets reach its bond
-        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
-            revert ISpokePoolManager.MarketNotListed(address(vToken));
-        }
+    /// @dev Repays up to `amount` of a market's bad debt with the caller's funds and returns the amount repaid
+    function _repayBadDebt(VToken vToken, uint256 amount) private returns (uint256 repaid) {
         uint256 badDebt = vToken.badDebt();
         repaid = amount < badDebt ? amount : badDebt;
         IERC20Upgradeable underlying = IERC20Upgradeable(vToken.underlying());
         uint256 balanceBefore = underlying.balanceOf(address(vToken));
         underlying.safeTransferFrom(msg.sender, address(vToken), repaid);
         if (underlying.balanceOf(address(vToken)) - balanceBefore != repaid) {
-            revert ISpokePoolManager.TransferAmountMismatch(address(underlying));
+            revert TransferAmountMismatch(address(underlying));
         }
         vToken.badDebtRecovered(repaid);
+    }
+
+    /// @dev Returns a market's comptroller, reverting unless the market is listed in it
+    function _ensureMarketListed(VToken vToken) private view returns (address comptroller) {
+        comptroller = address(vToken.comptroller());
+        // Only a pool's own markets reach its bond
+        if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
+            revert MarketNotListed(address(vToken));
+        }
     }
 }
