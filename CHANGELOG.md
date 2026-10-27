@@ -1,3 +1,11 @@
+## 4.4.0-dev.13 (2026-10-27)
+
+* Merge pull request #574 from VenusProtocol/fix/spoke-lens ([fbcce55](https://github.com/VenusProtocol/isolated-pools/commit/fbcce55)), closes [#574](https://github.com/VenusProtocol/isolated-pools/issues/574)
+* feat: updating deployment files ([ebdb260](https://github.com/VenusProtocol/isolated-pools/commit/ebdb260))
+* chore(spoke): redeploy SpokePoolLens on bscmainnet ([6d7db12](https://github.com/VenusProtocol/isolated-pools/commit/6d7db12))
+* chore(spoke): redeploy SpokePoolLens on bsctestnet ([91fc54f](https://github.com/VenusProtocol/isolated-pools/commit/91fc54f))
+* fix(spoke): bailsec 44, 45 ([340fffc](https://github.com/VenusProtocol/isolated-pools/commit/340fffc))
+
 ## 4.4.0-dev.12 (2026-10-26)
 
 * Merge pull request #572 from kalen1446-byte/fix/seize-precision-isolated-pools ([c3bbf96](https://github.com/VenusProtocol/isolated-pools/commit/c3bbf96)), closes [#572](https://github.com/VenusProtocol/isolated-pools/issues/572)
