@@ -227,7 +227,6 @@ library SpokePoolRequestLib {
      * @notice Checks a new request's stored markets against its pool and tier, with each collateral supply cap worth
      *   at most the tier's maximum. The supply caps are priced here and on a feed change, not at build
      * @param contracts The manager's contracts
-     * @param isLoanMarket The manager's loan market flags by vToken
      * @param request The request, with its markets stored
      * @custom:error The `_validateMarkets` errors
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
@@ -326,7 +325,6 @@ library SpokePoolRequestLib {
      */
     function _validateMarkets(
         Contracts memory contracts,
-        mapping(address => bool) storage isLoanMarket,
         ISpokePoolManager.Request storage request
     ) private view returns (ITierRegistry.PoolLimits memory limits) {
         ISpokePoolManager.CollateralMarketRequestParams[] memory collateralMarkets = request.collateralMarkets;
@@ -340,7 +338,7 @@ library SpokePoolRequestLib {
         address comptroller = request.comptroller;
         uint256 tierId = request.tierId;
         (, , limits) = contracts.tierRegistry.getTierTerms(tierId);
-        (uint256 poolMarketCount, uint256 poolCollateralCount) = _countPoolMarkets(isLoanMarket, comptroller);
+        (uint256 poolMarketCount, uint256 poolCollateralCount) = _countPoolMarkets(comptroller);
         poolMarketCount += marketCount;
         uint256 maxPoolMarkets = contracts.proposalBuilder.MAX_POOL_MARKETS();
         if (poolMarketCount > maxPoolMarkets) {
@@ -384,14 +382,13 @@ library SpokePoolRequestLib {
 
     /// @dev Returns how many markets a pool has and how many of them are collateral; zero for a new pool
     function _countPoolMarkets(
-        mapping(address => bool) storage isLoanMarket,
         address comptroller
     ) private view returns (uint256 marketCount, uint256 collateralMarketCount) {
         if (comptroller != address(0)) {
             VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
             marketCount = vTokens.length;
             for (uint256 i; i < marketCount; ++i) {
-                if (!isLoanMarket[address(vTokens[i])]) {
+                if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vTokens[i]))) {
                     ++collateralMarketCount;
                 }
             }

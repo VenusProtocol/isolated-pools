@@ -42,9 +42,6 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     /// @dev Pools by comptroller; read them with `getPool`
     mapping(address => Pool) internal pools;
 
-    /// @inheritdoc ISpokePoolManager
-    mapping(address => bool) public isLoanMarket;
-
     /// @dev Requests by id; read them with `getRequest`
     mapping(uint256 => Request) internal requests;
 

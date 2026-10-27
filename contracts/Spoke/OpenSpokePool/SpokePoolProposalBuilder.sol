@@ -232,7 +232,8 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         }
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = listed[i];
-            if (!SPOKE_POOL_MANAGER.isLoanMarket(address(vToken))) {
+            // A loan market is one whose supply allowlist is on, as its listing VIP enables it for the Hub
+            if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
                 _addAction(
                     proposal,
                     comptroller,
@@ -260,7 +261,8 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         Proposal memory proposal = _newProposal(marketCount);
         for (uint256 i; i < marketCount; ++i) {
             VToken vToken = listed[i];
-            if (!SPOKE_POOL_MANAGER.isLoanMarket(address(vToken))) {
+            // A loan market is one whose supply allowlist is on, as its listing VIP enables it for the Hub
+            if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
                 _addAction(
                     proposal,
                     comptroller,
@@ -573,7 +575,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         );
         for (uint256 i; i < marketCount; ++i) {
             address vToken = address(listed[i]);
-            if (!SPOKE_POOL_MANAGER.isLoanMarket(vToken)) {
+            if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(vToken)) {
                 continue;
             }
             address asset = VToken(vToken).underlying();

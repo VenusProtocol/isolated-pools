@@ -1087,13 +1087,6 @@ interface ISpokePoolManager {
     function supportedOracles(uint256 index) external view returns (address);
 
     /**
-     * @notice Returns whether a market was built as a loan market
-     * @param vToken The market
-     * @return Whether it is a loan market
-     */
-    function isLoanMarket(address vToken) external view returns (bool);
-
-    /**
      * @notice Returns a deployer's latest request
      * @param deployer The deployer
      * @return The request; zero when there is none

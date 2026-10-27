@@ -15,11 +15,10 @@ import { ISpokePoolManager } from "../../interfaces/ISpokePoolManager.sol";
  */
 library SpokePoolProposalLib {
     /**
-     * @notice Builds a request's VIP and records the build: the pool's comptroller, the request as built, its VIP
-     *   payload and which of the new markets are loan markets
+     * @notice Builds a request's VIP and records the build: the pool's comptroller, the request as built and its VIP
+     *   payload
      * @param proposalBuilder The proposal builder
      * @param request The request, checked and funded by the manager
-     * @param isLoanMarket The manager's loan market flags by vToken
      * @param requestProposals The manager's VIP payloads by request id
      * @param requestId The request's id
      * @param buildId The new build's id
@@ -30,7 +29,6 @@ library SpokePoolProposalLib {
     function buildRequestProposal(
         ISpokePoolProposalBuilder proposalBuilder,
         ISpokePoolManager.Request storage request,
-        mapping(address => bool) storage isLoanMarket,
         mapping(uint256 => bytes) storage requestProposals,
         uint256 requestId,
         uint256 buildId,
@@ -45,11 +43,6 @@ library SpokePoolProposalLib {
         request.status = ISpokePoolManager.RequestStatus.Built;
         request.buildId = buildId;
         requestProposals[requestId] = proposal;
-        // Recorded at build; a superseded build's markets are never listed, so their records are never read
-        uint256 collateralCount = request.collateralMarkets.length;
-        for (uint256 i; i < request.loanMarkets.length; ++i) {
-            isLoanMarket[vTokens[collateralCount + i]] = true;
-        }
 
         emit ISpokePoolManager.RequestBuilt(requestId, buildId, vTokens);
     }

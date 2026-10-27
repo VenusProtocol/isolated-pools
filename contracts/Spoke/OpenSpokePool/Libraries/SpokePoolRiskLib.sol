@@ -36,7 +36,6 @@ library SpokePoolRiskLib {
      * @notice Checks a deployer's new collateral factor and liquidation threshold for a collateral market against the
      * market, the pool's tier and its bond's coverage, then publishes them to the RiskOracle
      * @param contracts The manager's contracts
-     * @param isLoanMarket The manager's loan market flags by vToken
      * @param tierId The pool's tier
      * @param comptroller The pool's comptroller
      * @param vToken The collateral market
@@ -46,7 +45,6 @@ library SpokePoolRiskLib {
      */
     function publishCollateralFactorUpdate(
         SpokePoolRequestLib.Contracts memory contracts,
-        mapping(address => bool) storage isLoanMarket,
         uint256 tierId,
         address comptroller,
         address vToken,
@@ -56,7 +54,7 @@ library SpokePoolRiskLib {
         (bool isListed, uint256 marketCollateralFactor, uint256 marketLiquidationThreshold) = SpokeComptroller(
             comptroller
         ).markets(vToken);
-        _ensureCollateralMarket(isLoanMarket, vToken, isListed);
+        _ensureCollateralMarket(comptroller, vToken, isListed);
         _ensureNoPendingUpdate(contracts, COLLATERAL_FACTORS_UPDATE, vToken);
         if (collateralFactor > liquidationThreshold || liquidationThreshold < marketLiquidationThreshold) {
             revert ISpokePoolManager.InvalidCollateralFactors(vToken);
@@ -82,7 +80,6 @@ library SpokePoolRiskLib {
      * @notice Checks a deployer's new supply cap for a collateral market against the market, the pool's tier and its
      * bond's coverage, then publishes it to the RiskOracle
      * @param contracts The manager's contracts
-     * @param isLoanMarket The manager's loan market flags by vToken
      * @param tierId The pool's tier
      * @param comptroller The pool's comptroller
      * @param vToken The collateral market
@@ -91,13 +88,12 @@ library SpokePoolRiskLib {
      */
     function publishSupplyCapUpdate(
         SpokePoolRequestLib.Contracts memory contracts,
-        mapping(address => bool) storage isLoanMarket,
         uint256 tierId,
         address comptroller,
         address vToken,
         uint256 supplyCap
     ) external {
-        _ensureCollateralMarket(isLoanMarket, vToken, SpokeComptroller(comptroller).isMarketListed(VToken(vToken)));
+        _ensureCollateralMarket(comptroller, vToken, SpokeComptroller(comptroller).isMarketListed(VToken(vToken)));
         _ensureNoPendingUpdate(contracts, SUPPLY_CAP_UPDATE, vToken);
         if (supplyCap == SpokeComptroller(comptroller).supplyCaps(vToken)) {
             revert ISpokePoolManager.RedundantUpdate(vToken);
@@ -116,18 +112,16 @@ library SpokePoolRiskLib {
      * @notice Publishes a supply pause of a collateral market to the RiskOracle: MINT paused and the collateral factor
      *   set to 0
      * @param contracts The manager's contracts
-     * @param isLoanMarket The manager's loan market flags by vToken
      * @param comptroller The pool's comptroller
      * @param vToken The collateral market
      * @custom:error See `ISpokePoolManager.pauseCollateralSupply`
      */
     function publishSupplyPause(
         SpokePoolRequestLib.Contracts memory contracts,
-        mapping(address => bool) storage isLoanMarket,
         address comptroller,
         address vToken
     ) external {
-        _ensureCollateralMarket(isLoanMarket, vToken, SpokeComptroller(comptroller).isMarketListed(VToken(vToken)));
+        _ensureCollateralMarket(comptroller, vToken, SpokeComptroller(comptroller).isMarketListed(VToken(vToken)));
 
         _publishUpdate(contracts, SUPPLY_PAUSE_UPDATE, vToken, "");
     }
@@ -178,16 +172,15 @@ library SpokePoolRiskLib {
         contracts.riskOracle.publishRiskParameterUpdate("", newValue, updateType, vToken, 0, 0, "");
     }
 
-    /// @dev Checks a market is listed in the pool, as `isListed` says, and is not a loan market
-    function _ensureCollateralMarket(
-        mapping(address => bool) storage isLoanMarket,
-        address vToken,
-        bool isListed
-    ) private view {
+    /**
+     * @dev Checks a market is listed in the pool, as `isListed` says, and is not a loan market: one whose supply
+     *   allowlist is on, as its listing VIP enables it for the Hub
+     */
+    function _ensureCollateralMarket(address comptroller, address vToken, bool isListed) private view {
         if (!isListed) {
             revert ISpokePoolManager.MarketNotListed(vToken);
         }
-        if (isLoanMarket[vToken]) {
+        if (SpokeComptroller(comptroller).isSupplyAllowlistEnabled(vToken)) {
             revert ISpokePoolManager.InvalidMarketType(vToken);
         }
     }

@@ -282,7 +282,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
         SpokePoolRiskLib.publishCollateralFactorUpdate(
             _contracts(),
-            isLoanMarket,
             tierId,
             comptroller,
             vToken,
@@ -294,13 +293,13 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function setCollateralSupplyCap(address comptroller, address vToken, uint256 supplyCap) external {
         uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
-        SpokePoolRiskLib.publishSupplyCapUpdate(_contracts(), isLoanMarket, tierId, comptroller, vToken, supplyCap);
+        SpokePoolRiskLib.publishSupplyCapUpdate(_contracts(), tierId, comptroller, vToken, supplyCap);
     }
 
     /// @inheritdoc ISpokePoolManager
     function pauseCollateralSupply(address comptroller, address vToken) external {
         _ensureActiveDeployer(comptroller);
-        SpokePoolRiskLib.publishSupplyPause(_contracts(), isLoanMarket, comptroller, vToken);
+        SpokePoolRiskLib.publishSupplyPause(_contracts(), comptroller, vToken);
     }
 
     // ──────────────────────────────────────────────────────────────────────
