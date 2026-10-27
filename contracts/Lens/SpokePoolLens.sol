@@ -62,7 +62,7 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
     /**
      * @dev Mirrors `PoolLens.VTokenMetadata` with spoke-pool-specific fields. Unlike `PoolLens`, which reports the
      *  stored figures, the exchange rate, total borrows and total reserves include interest accrued up to the
-     *  current block or second.
+     *  current block or second, or stay stored while the borrow rate is over the market's cap.
      */
     struct SpokeVTokenMetadata {
         address vToken;
@@ -122,11 +122,11 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         /// @notice The oracle's spot price, the same figure `vTokenUnderlyingPrice` reports
         uint256 spotPrice;
         /// @notice The price collateral is valued at under the collateral factor. It can sit below spot only while
-        ///  the bounded oracle's protection is active for the asset. Zero while the pool has no bounded oracle, where
-        ///  every collateral-factor check reverts
+        ///  the bounded oracle's protection is active for the asset. Zero while the pool has no bounded oracle or the
+        ///  oracle cannot price the market, where every collateral-factor check reverts
         uint256 boundedCollateralPrice;
         /// @notice The price debt is valued at under the collateral factor. It can sit above spot only while the
-        ///  bounded oracle's protection is active for the asset. Zero while the pool has no bounded oracle
+        ///  bounded oracle's protection is active for the asset. Zero in the same cases as `boundedCollateralPrice`
         uint256 boundedDebtPrice;
     }
 
@@ -197,12 +197,24 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         BadDebt[] badDebts;
     }
 
+    /// @notice Borrow rate cap of the network's spoke markets, per block or second of their own clock. `VToken` does
+    ///  not expose its cap, so this one must equal the cap `SpokeVTokenImpl` is deployed with, and a beacon upgrade
+    ///  that changes it needs a new lens
+    uint256 public immutable MAX_BORROW_RATE_MANTISSA;
+
     /**
      * @param timeBased_ A boolean indicating whether the contract is based on time or block
      * @param blocksPerYear_ The number of blocks per year
+     * @param maxBorrowRateMantissa_ The borrow rate cap of the network's spoke markets
      * @custom:oz-upgrades-unsafe-allow constructor
      */
-    constructor(bool timeBased_, uint256 blocksPerYear_) TimeManagerV8(timeBased_, blocksPerYear_) {}
+    constructor(
+        bool timeBased_,
+        uint256 blocksPerYear_,
+        uint256 maxBorrowRateMantissa_
+    ) TimeManagerV8(timeBased_, blocksPerYear_) {
+        MAX_BORROW_RATE_MANTISSA = maxBorrowRateMantissa_;
+    }
 
     /**
      * @notice Queries the user's supply/borrow balances in vTokens
@@ -578,10 +590,15 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         // Zero until the listing VIP sets it, and reading through it then would revert on a call into the zero
         // address. The bounded prices stay zero, as no collateral-factor check can price the market either.
         IDeviationBoundedOracle boundedOracle = SpokeComptrollerViewInterface(comptroller).deviationBoundedOracle();
-        if (address(boundedOracle) != address(0)) {
-            (prices.boundedCollateralPrice, prices.boundedDebtPrice) = boundedOracle.getBoundedPricesView(
-                address(vToken)
-            );
+        if (address(boundedOracle) == address(0)) {
+            return prices;
+        }
+
+        // Likewise when the oracle cannot price the market, without losing spot or the rest of a batch.
+        try boundedOracle.getBoundedPricesView(address(vToken)) returns (uint256 collateralPrice, uint256 debtPrice) {
+            (prices.boundedCollateralPrice, prices.boundedDebtPrice) = (collateralPrice, debtPrice);
+        } catch {
+            return prices;
         }
     }
 
@@ -807,9 +824,9 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
      *  anything, by repeating the arithmetic of `VToken.accrueInterest`. The move of reserves to the protocol share
      *  reserve that accrual may also make is left out: it lowers cash and reserves equally, so the rate is unchanged.
      * @param vToken The market to read
-     * @return exchangeRate The rate `exchangeRateCurrent` would return
-     * @return totalBorrows Total borrows after accrual
-     * @return totalReserves Total reserves after accrual
+     * @return exchangeRate The rate `exchangeRateCurrent` would return, or the stored rate while that call reverts
+     * @return totalBorrows Total borrows after accrual, or the stored total while accrual reverts
+     * @return totalReserves Total reserves after accrual, or the stored total while accrual reverts
      */
     function _accrued(
         VToken vToken
@@ -823,13 +840,16 @@ contract SpokePoolLens is ExponentialNoError, TimeManagerV8 {
         uint256 slotDelta = vToken.getBlockNumberOrTimestamp() - vToken.accrualBlockNumber();
         if (slotDelta != 0) {
             uint256 borrowRate = vToken.interestRateModel().getBorrowRate(cash, totalBorrows, totalReserves, badDebt);
-            uint256 interest = mul_ScalarTruncate(mul_(Exp({ mantissa: borrowRate }), slotDelta), totalBorrows);
-            totalReserves = mul_ScalarTruncateAddUInt(
-                Exp({ mantissa: vToken.reserveFactorMantissa() }),
-                interest,
-                totalReserves
-            );
-            totalBorrows += interest;
+            // `accrueInterest` reverts above the cap, so no interest is ever added.
+            if (borrowRate <= MAX_BORROW_RATE_MANTISSA) {
+                uint256 interest = mul_ScalarTruncate(mul_(Exp({ mantissa: borrowRate }), slotDelta), totalBorrows);
+                totalReserves = mul_ScalarTruncateAddUInt(
+                    Exp({ mantissa: vToken.reserveFactorMantissa() }),
+                    interest,
+                    totalReserves
+                );
+                totalBorrows += interest;
+            }
         }
 
         uint256 totalSupply = vToken.totalSupply();

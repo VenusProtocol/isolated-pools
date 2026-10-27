@@ -57969,7 +57969,7 @@
       ]
     },
     "SpokePoolLens": {
-      "address": "0xEA83D98DaD34377A4752c4fB31f81ab9805fb301",
+      "address": "0x475f6A963BDE18fD579F50598c514aE082405A9b",
       "abi": [
         {
           "inputs": [
@@ -57981,6 +57981,11 @@
             {
               "internalType": "uint256",
               "name": "blocksPerYear_",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxBorrowRateMantissa_",
               "type": "uint256"
             }
           ],
@@ -57996,6 +58001,19 @@
           "inputs": [],
           "name": "InvalidTimeBasedConfiguration",
           "type": "error"
+        },
+        {
+          "inputs": [],
+          "name": "MAX_BORROW_RATE_MANTISSA",
+          "outputs": [
+            {
+              "internalType": "uint256",
+              "name": "",
+              "type": "uint256"
+            }
+          ],
+          "stateMutability": "view",
+          "type": "function"
         },
         {
           "inputs": [],
