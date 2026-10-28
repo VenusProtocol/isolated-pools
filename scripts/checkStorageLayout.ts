@@ -308,12 +308,30 @@ const hasMemberlessEnum = (layout: Layout): boolean =>
     ([name, type]) => name.startsWith("t_enum") && type.members === undefined,
   );
 
+/**
+ * Artifacts don't record `@custom:oz-renamed-from`, and OZ reports a rename whenever the current
+ * annotation differs from the deployed one, even if the label is unchanged. So once a rename ships, its
+ * annotation would fail every later run. Copying the annotation onto the deployed variable with the same
+ * slot, offset and label restores what OZ's own manifest would hold. A real rename has a different label,
+ * so it is still caught. The slot is matched too because labels like `__gap` repeat across inherited
+ * contracts.
+ */
+function restoreDeployedRenames(deployed: Layout, updated: Layout): void {
+  for (const old of deployed.storage) {
+    const same = updated.storage.find(
+      item => item.slot === old.slot && item.offset === old.offset && item.label === old.label,
+    );
+    if (same) old.renamedFrom = same.renamedFrom;
+  }
+}
+
 /** Undefined when the layouts are compatible. A contract missing from build-info is a failure
  *  rather than a skip, so a renamed or deleted source cannot drop out of the check unnoticed. */
 function check(target: Target, current: Map<string, Layout>): string | undefined {
   const updated = target.fqName ? current.get(target.fqName) : undefined;
   if (!updated) return `${target.fqName} was not found in artifacts/build-info`;
   const deployed = target.deployed as Layout;
+  restoreDeployedRenames(deployed, updated);
   const report = getStorageUpgradeReport(deployed, updated, hasMemberlessEnum(deployed) ? LENIENT : STRICT);
   return report.ok ? undefined : report.explain(false);
 }
