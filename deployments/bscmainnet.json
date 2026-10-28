@@ -4656,80 +4656,6 @@
         }
       ]
     },
-    "Comptroller_Bluechips": {
-      "address": "0xE14175059adc1B3C533184710425805A3063455B",
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            }
-          ],
-          "stateMutability": "payable",
-          "type": "constructor"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "previousAdmin",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "newAdmin",
-              "type": "address"
-            }
-          ],
-          "name": "AdminChanged",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            }
-          ],
-          "name": "BeaconUpgraded",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "receive"
-        }
-      ]
-    },
     "Comptroller_DeFi": {
       "address": "0x3344417c9360b963ca93A4e8305361AEde340Ab9",
       "abi": [
@@ -5250,6 +5176,80 @@
     },
     "Comptroller_Tron": {
       "address": "0x23b4404E4E5eC5FF5a6FFb70B7d14E3FabF237B0",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "Comptroller_bStockMainstream": {
+      "address": "0xE14175059adc1B3C533184710425805A3063455B",
       "abi": [
         {
           "inputs": [
@@ -79187,8 +79187,8 @@
         }
       ]
     },
-    "VToken_vAAPLB_Bluechips": {
-      "address": "0x566467c09c43fdb403D1E30FA1b695d229e158aE",
+    "VToken_vAAPLB_bStockMainstream": {
+      "address": "0xD77456aa785E4B0FF998dc626781C60e3E281dBB",
       "abi": [
         {
           "inputs": [
@@ -79335,82 +79335,8 @@
         }
       ]
     },
-    "VToken_vAMATB_Bluechips": {
-      "address": "0xAD69259df05EaC19FDAE4AC234987d7307D6264b",
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            }
-          ],
-          "stateMutability": "payable",
-          "type": "constructor"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "previousAdmin",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "newAdmin",
-              "type": "address"
-            }
-          ],
-          "name": "AdminChanged",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            }
-          ],
-          "name": "BeaconUpgraded",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "receive"
-        }
-      ]
-    },
-    "VToken_vAMDB_Bluechips": {
-      "address": "0x628b58ed685D94cef0E3A1b052ef93477529D589",
+    "VToken_vAMDB_bStockMainstream": {
+      "address": "0x23d96082D85562bC757194c045263778f8C1EFf7",
       "abi": [
         {
           "inputs": [
@@ -79557,8 +79483,8 @@
         }
       ]
     },
-    "VToken_vBEB_Bluechips": {
-      "address": "0xa99EC2269B67788f59380ec9D642AFD46d41e83B",
+    "VToken_vBEB_bStockMainstream": {
+      "address": "0x8DEA78aC2A09b11Bf8732c5041a0F1CC28daeD31",
       "abi": [
         {
           "inputs": [
@@ -80001,8 +79927,8 @@
         }
       ]
     },
-    "VToken_vCOINB_Bluechips": {
-      "address": "0x9E77a943CC84c304AE0b60ea42e78a75e06dcad0",
+    "VToken_vCOINB_bStockMainstream": {
+      "address": "0x04B9F583e59673c11Fa8603ea019C5B24644acc6",
       "abi": [
         {
           "inputs": [
@@ -80075,8 +80001,8 @@
         }
       ]
     },
-    "VToken_vCRCLB_Bluechips": {
-      "address": "0xAa1c37495E0eE032e3B2F795559A700396C3eBFF",
+    "VToken_vCRCLB_bStockMainstream": {
+      "address": "0x47F80e9D3727F2297268fe6b2a861DCe3e6a4488",
       "abi": [
         {
           "inputs": [
@@ -80149,8 +80075,8 @@
         }
       ]
     },
-    "VToken_vDRAMB_Bluechips": {
-      "address": "0x74dD3941432688aC4937e56a5368e47bCcFD58d7",
+    "VToken_vDRAMB_bStockMainstream": {
+      "address": "0x7C790b26128112516f4beA9FCE763b2623023E0E",
       "abi": [
         {
           "inputs": [
@@ -82509,8 +82435,8 @@
         }
       ]
     },
-    "VToken_vGOOGLB_Bluechips": {
-      "address": "0x813A5bCa146A625D2c679Cd934BA68ae0A02E5d9",
+    "VToken_vGOOGLB_bStockMainstream": {
+      "address": "0x56009e54E2Aa6C36f3777f07DC7ec945b0b11BA6",
       "abi": [
         {
           "inputs": [
@@ -82583,8 +82509,8 @@
         }
       ]
     },
-    "VToken_vINTCB_Bluechips": {
-      "address": "0x3D6239e4c0100ac08226e20d89C016de1a3020eb",
+    "VToken_vINTCB_bStockMainstream": {
+      "address": "0x188B98fc54fB5343AbB38fa657826EbC1eD42953",
       "abi": [
         {
           "inputs": [
@@ -82657,8 +82583,8 @@
         }
       ]
     },
-    "VToken_vMETAB_Bluechips": {
-      "address": "0xCFe2505Fc927FDeE6e92631841AD672D1ED07290",
+    "VToken_vMETAB_bStockMainstream": {
+      "address": "0x44E91730193Ee0Ab539904bC24FC65A47c04d3d5",
       "abi": [
         {
           "inputs": [
@@ -82731,8 +82657,8 @@
         }
       ]
     },
-    "VToken_vMRNAB_Bluechips": {
-      "address": "0xE63e40d6e2578d1Cf0f8666fCB0aaAE77d8EF6b4",
+    "VToken_vMRNAB_bStockMainstream": {
+      "address": "0xb074a42fc36998B47F126F49d1c134B8e891894c",
       "abi": [
         {
           "inputs": [
@@ -82805,8 +82731,8 @@
         }
       ]
     },
-    "VToken_vMSFTB_Bluechips": {
-      "address": "0x0C2F70A6e4F81DF2F38338ACD83955C95fFCD86b",
+    "VToken_vMSFTB_bStockMainstream": {
+      "address": "0xb4CCfb60A9F20E37205AB60A0D2335BaCdd42Be6",
       "abi": [
         {
           "inputs": [
@@ -82879,8 +82805,8 @@
         }
       ]
     },
-    "VToken_vMSTRB_Bluechips": {
-      "address": "0x85afab98CE7745776B7CC3FAA7f4cc7052FEE21E",
+    "VToken_vMSTRB_bStockMainstream": {
+      "address": "0x7b809DE9D18dBdab00f04506c7F82F253fc8d904",
       "abi": [
         {
           "inputs": [
@@ -82953,8 +82879,8 @@
         }
       ]
     },
-    "VToken_vMUB_Bluechips": {
-      "address": "0x0a3743D383DaDF01DDf0Aa04aD9A2a4D414FA91C",
+    "VToken_vMUB_bStockMainstream": {
+      "address": "0x7318C484C6F51315F963279ef056F22740346e2A",
       "abi": [
         {
           "inputs": [
@@ -83027,8 +82953,8 @@
         }
       ]
     },
-    "VToken_vNBISB_Bluechips": {
-      "address": "0x2Bf449b200EdB61dAB6c90C19562C20C92c501d9",
+    "VToken_vNBISB_bStockMainstream": {
+      "address": "0x8D36c5645185989edDaA37952C23e7360B544153",
       "abi": [
         {
           "inputs": [
@@ -83175,8 +83101,8 @@
         }
       ]
     },
-    "VToken_vNVDAB_Bluechips": {
-      "address": "0x63a5d9C2f30a1f122D630edF20D522126bC78766",
+    "VToken_vNVDAB_bStockMainstream": {
+      "address": "0x7f47B2B501Faf33cbE38435C4aEf3Da023340586",
       "abi": [
         {
           "inputs": [
@@ -83619,8 +83545,8 @@
         }
       ]
     },
-    "VToken_vSKHYB_Bluechips": {
-      "address": "0xc100c81100ce8f83663b74d18B894EE16A862913",
+    "VToken_vSKHYB_bStockMainstream": {
+      "address": "0x31884079bCbE980d38DD48a32F62B46Abd177632",
       "abi": [
         {
           "inputs": [
@@ -83693,8 +83619,8 @@
         }
       ]
     },
-    "VToken_vSNDKB_Bluechips": {
-      "address": "0x808fdAE079D3D04DB7CD7885941995730ceBB042",
+    "VToken_vSNDKB_bStockMainstream": {
+      "address": "0x410b649F5B29F8344Bf84a999778aeA2C9bab13c",
       "abi": [
         {
           "inputs": [
@@ -83767,8 +83693,8 @@
         }
       ]
     },
-    "VToken_vSPCXB_Bluechips": {
-      "address": "0x82499db27652Ada8890E0684bD235dC5144b5179",
+    "VToken_vSPCXB_bStockMainstream": {
+      "address": "0x4fbF32E1ED761A98747b8f4870E8ccAC6052eEF0",
       "abi": [
         {
           "inputs": [
@@ -83989,8 +83915,8 @@
         }
       ]
     },
-    "VToken_vTSLAB_Bluechips": {
-      "address": "0x0e6349BC4a202c0Ace54D8519DdC0ce2eCd3315e",
+    "VToken_vTSLAB_bStockMainstream": {
+      "address": "0xeC2476Fcc45AC88b0D2E2B977Fee19768e130a06",
       "abi": [
         {
           "inputs": [
@@ -84063,8 +83989,8 @@
         }
       ]
     },
-    "VToken_vTSMB_Bluechips": {
-      "address": "0xaD7997FbDE9fe81A9Eb9c719209a663d0dC94E3c",
+    "VToken_vTSMB_bStockMainstream": {
+      "address": "0x28e19e1edD491F01BcFD13f96D99b5c04E176428",
       "abi": [
         {
           "inputs": [
@@ -84211,8 +84137,8 @@
         }
       ]
     },
-    "VToken_vUSDC_Bluechips": {
-      "address": "0xF2147D0CF323eb0dFCB5ded960d7f87f98EA9Ad8",
+    "VToken_vUSDC_bStockIndex": {
+      "address": "0x6adb5e462ac6eA880246F24E3C47D23f70FCCbF6",
       "abi": [
         {
           "inputs": [
@@ -84285,8 +84211,8 @@
         }
       ]
     },
-    "VToken_vUSDC_bStockIndex": {
-      "address": "0x6adb5e462ac6eA880246F24E3C47D23f70FCCbF6",
+    "VToken_vUSDC_bStockMainstream": {
+      "address": "0xD7608E9dFe6CB4b527d41abF40d0f46D917c9EeA",
       "abi": [
         {
           "inputs": [
@@ -84657,80 +84583,6 @@
     },
     "VToken_vUSDD_Tron": {
       "address": "0xf1da185CCe5BeD1BeBbb3007Ef738Ea4224025F7",
-      "abi": [
-        {
-          "inputs": [
-            {
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            },
-            {
-              "internalType": "bytes",
-              "name": "data",
-              "type": "bytes"
-            }
-          ],
-          "stateMutability": "payable",
-          "type": "constructor"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "previousAdmin",
-              "type": "address"
-            },
-            {
-              "indexed": false,
-              "internalType": "address",
-              "name": "newAdmin",
-              "type": "address"
-            }
-          ],
-          "name": "AdminChanged",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "beacon",
-              "type": "address"
-            }
-          ],
-          "name": "BeaconUpgraded",
-          "type": "event"
-        },
-        {
-          "anonymous": false,
-          "inputs": [
-            {
-              "indexed": true,
-              "internalType": "address",
-              "name": "implementation",
-              "type": "address"
-            }
-          ],
-          "name": "Upgraded",
-          "type": "event"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "fallback"
-        },
-        {
-          "stateMutability": "payable",
-          "type": "receive"
-        }
-      ]
-    },
-    "VToken_vUSDT_Bluechips": {
-      "address": "0x6bdEB94bcFb8E7B256d05994B156900268BDc469",
       "abi": [
         {
           "inputs": [
@@ -85321,8 +85173,8 @@
         }
       ]
     },
-    "VToken_vU_Bluechips": {
-      "address": "0xfBf57056e01D69afc037218f94Dbd00FD1740691",
+    "VToken_vUSDT_bStockMainstream": {
+      "address": "0x2b12bC29044CE8f018Ae0aF5929450a8A6259Ed8",
       "abi": [
         {
           "inputs": [
@@ -85397,6 +85249,80 @@
     },
     "VToken_vU_bStockIndex": {
       "address": "0x713bBaA44Dc99e691F1F9fE8086FC328E94B6f27",
+      "abi": [
+        {
+          "inputs": [
+            {
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            },
+            {
+              "internalType": "bytes",
+              "name": "data",
+              "type": "bytes"
+            }
+          ],
+          "stateMutability": "payable",
+          "type": "constructor"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "previousAdmin",
+              "type": "address"
+            },
+            {
+              "indexed": false,
+              "internalType": "address",
+              "name": "newAdmin",
+              "type": "address"
+            }
+          ],
+          "name": "AdminChanged",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "beacon",
+              "type": "address"
+            }
+          ],
+          "name": "BeaconUpgraded",
+          "type": "event"
+        },
+        {
+          "anonymous": false,
+          "inputs": [
+            {
+              "indexed": true,
+              "internalType": "address",
+              "name": "implementation",
+              "type": "address"
+            }
+          ],
+          "name": "Upgraded",
+          "type": "event"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "fallback"
+        },
+        {
+          "stateMutability": "payable",
+          "type": "receive"
+        }
+      ]
+    },
+    "VToken_vU_bStockMainstream": {
+      "address": "0x24Ee5A3F631f9c2FAf8a730d43F059D3eA9566AD",
       "abi": [
         {
           "inputs": [
