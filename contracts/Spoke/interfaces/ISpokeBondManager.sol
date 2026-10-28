@@ -153,9 +153,10 @@ interface ISpokeBondManager {
      * @param comptroller The pool's comptroller
      * @param floor The bond the pool's tier requires, in the asset; the bond keeps at least this much
      * @return amount The amount paid
-     * @custom:event Emits ExcessWithdrawn, and the account emits Paid, when something is paid
+     * @custom:event Emits ExcessWithdrawn; the account emits Paid
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondNotFound is thrown when the pool has no live bond
+     * @custom:error NoExcessBond is thrown by the account when the bond holds no more than `floor`
      * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */

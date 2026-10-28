@@ -586,7 +586,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     function _pullSeeds(
         Contracts memory contracts,
         Request storage request,
-        mapping(address => uint256) storage seeds
+        mapping(address asset => uint256 seed) storage seeds
     ) private {
         (address[] memory assets, uint256[] memory amounts) = SpokePoolValidationLib.computeSeeds(contracts, request);
         address deployer = request.deployer;
@@ -598,7 +598,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @dev Refunds a canceled or rejected request's escrowed bond, for a pool request, and seeds to its deployer
-    function _refund(Request storage request, mapping(address => uint256) storage seeds) private {
+    function _refund(Request storage request, mapping(address asset => uint256 seed) storage seeds) private {
         address deployer = request.deployer;
         if (request.requestType == RequestType.Pool) {
             IERC20Upgradeable(request.bondAsset).safeTransfer(deployer, request.bondAmount);
@@ -607,7 +607,11 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @dev Sends a request's escrowed seeds to `to`
-    function _releaseSeeds(Request storage request, mapping(address => uint256) storage seeds, address to) private {
+    function _releaseSeeds(
+        Request storage request,
+        mapping(address asset => uint256 seed) storage seeds,
+        address to
+    ) private {
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             _releaseSeed(seeds, request.collateralMarkets[i].asset, to);
@@ -620,7 +624,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @dev Sends the seed escrowed in `asset` to `to`; a request not built yet has none
-    function _releaseSeed(mapping(address => uint256) storage seeds, address asset, address to) private {
+    function _releaseSeed(mapping(address asset => uint256 seed) storage seeds, address asset, address to) private {
         uint256 seed = seeds[asset];
         if (seed != 0) {
             IERC20Upgradeable(asset).safeTransfer(to, seed);

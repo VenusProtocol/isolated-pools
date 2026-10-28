@@ -636,7 +636,7 @@ interface ISpokePoolManager {
      * @notice Pays the pool's deployer what its bond holds beyond the bond its tier requires at current prices, yield
      *   and extra top-ups alike, in any pool status while its bond is live, even while paused
      * @param comptroller The pool's comptroller
-     * @custom:event The bond manager emits ExcessWithdrawn when something is paid
+     * @custom:event The bond manager emits ExcessWithdrawn
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `withdrawExcess` errors

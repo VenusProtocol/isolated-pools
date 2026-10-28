@@ -28,28 +28,28 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     uint256 public requestCount;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(address => address) public hubYieldGroups;
+    mapping(address asset => address yieldGroup) public hubYieldGroups;
 
     /// @dev Pools by comptroller; read them with `getPool`
-    mapping(address => Pool) internal pools;
+    mapping(address comptroller => Pool pool) internal pools;
 
     /// @dev Requests by id; read them with `getRequest`
-    mapping(uint256 => Request) internal requests;
+    mapping(uint256 requestId => Request request) internal requests;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(address => uint256) public latestRequestIds;
+    mapping(address deployer => uint256 requestId) public latestRequestIds;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(address => address) public activePools;
+    mapping(address deployer => address comptroller) public activePools;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(uint256 => mapping(address => uint256)) public requestSeeds;
+    mapping(uint256 requestId => mapping(address asset => uint256 seed)) public requestSeeds;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(uint256 => bytes) public requestProposals;
+    mapping(uint256 requestId => bytes payload) public requestProposals;
 
     /// @inheritdoc ISpokePoolManager
-    mapping(address => bytes) public exitProposals;
+    mapping(address comptroller => bytes payload) public exitProposals;
 
     /// @inheritdoc ISpokePoolManager
     address[3] public supportedOracles;

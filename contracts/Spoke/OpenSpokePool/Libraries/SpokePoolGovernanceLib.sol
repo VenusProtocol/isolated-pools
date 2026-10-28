@@ -44,7 +44,7 @@ library SpokePoolGovernanceLib {
     function buildRequestProposal(
         ISpokePoolProposalBuilder proposalBuilder,
         ISpokePoolManager.Request storage request,
-        mapping(uint256 => bytes) storage requestProposals,
+        mapping(uint256 requestId => bytes payload) storage requestProposals,
         uint256 requestId,
         string calldata description
     ) external {
@@ -74,7 +74,7 @@ library SpokePoolGovernanceLib {
     function buildExitProposal(
         ISpokePoolProposalBuilder proposalBuilder,
         ISpokePoolManager.Pool storage pool,
-        mapping(address => bytes) storage exitProposals,
+        mapping(address comptroller => bytes payload) storage exitProposals,
         address comptroller,
         uint256[] calldata liquidationThresholds,
         string calldata description
@@ -109,7 +109,7 @@ library SpokePoolGovernanceLib {
     function buildForceCloseProposal(
         ISpokePoolProposalBuilder proposalBuilder,
         ISpokePoolManager.Pool storage pool,
-        mapping(address => bytes) storage exitProposals,
+        mapping(address comptroller => bytes payload) storage exitProposals,
         address comptroller,
         uint256 windDownPeriod,
         string calldata description

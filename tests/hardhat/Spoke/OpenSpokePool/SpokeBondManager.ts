@@ -362,10 +362,9 @@ describe("SpokeBondManager", () => {
       const account = await createBond(usdt);
       await sendTo(usdt, account.address, "100");
 
-      await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, e18("1200"))).to.not.emit(
-        bondManager,
-        "ExcessWithdrawn",
-      );
+      await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, e18("1200")))
+        .to.be.revertedWithCustomError(account, "NoExcessBond")
+        .withArgs(e18("1100"), e18("1200"));
       await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, e18("1050")))
         .to.emit(bondManager, "ExcessWithdrawn")
         .withArgs(comptroller.address, e18("50"));
@@ -382,25 +381,22 @@ describe("SpokeBondManager", () => {
       expect(await usdt.balanceOf(bondHolder.address)).to.equal(e18("200"));
     });
 
-    it("pays nothing, and emits nothing, while a seizure leaves the bond below the floor", async () => {
-      await createBond(usdt);
+    it("reverts while a seizure leaves the bond below the floor", async () => {
+      const account = await createBond(usdt);
       await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("100"), recoverer.address);
 
-      await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, BOND)).to.not.emit(
-        bondManager,
-        "ExcessWithdrawn",
-      );
-      expect(await usdt.balanceOf(bondHolder.address)).to.equal(0);
+      await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, BOND))
+        .to.be.revertedWithCustomError(account, "NoExcessBond")
+        .withArgs(e18("900"), BOND);
     });
 
-    it("pays nothing after a Hub loss and values the bond at what it holds", async () => {
+    it("reverts after a Hub loss and values the bond at what it holds", async () => {
       const account = await createBond(usdt);
       await hub.lose(e18("100"));
 
-      await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, BOND)).to.not.emit(
-        bondManager,
-        "ExcessWithdrawn",
-      );
+      await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, BOND))
+        .to.be.revertedWithCustomError(account, "NoExcessBond")
+        .withArgs(await account.seizableAmount(), BOND);
       expect(await account.seizableAmount()).to.equal(await hub.previewRedeem(await hub.balanceOf(account.address)));
       expect(await account.seizableAmount()).to.be.lt(BOND);
     });

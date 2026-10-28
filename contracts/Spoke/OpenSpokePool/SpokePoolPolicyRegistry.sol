@@ -23,7 +23,7 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     uint256 internal constant MIN_LIQUIDATION_INCENTIVE_MANTISSA = 1.05e18;
 
     /// @inheritdoc ISpokePoolPolicyRegistry
-    mapping(address => uint256) public bondAssetFactors;
+    mapping(address asset => uint256 factor) public bondAssetFactors;
 
     /// @inheritdoc ISpokePoolPolicyRegistry
     PoolParams public poolParams;
@@ -32,7 +32,7 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     ProtocolMarketParams public marketParams;
 
     /// @dev The tiers, by id
-    mapping(uint256 => Tier) internal tiers;
+    mapping(uint256 tierId => Tier tier) internal tiers;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new

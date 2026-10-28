@@ -75,10 +75,11 @@ contract BondAccount is Initializable, IBondAccount {
     function withdrawExcess(uint256 floor) external onlyBondManager returns (uint256 amount) {
         _accrueSource();
         uint256 bondAssets = _bondAssets();
-        if (bondAssets > floor) {
-            amount = bondAssets - floor;
-            _pay(bondHolder, amount);
+        if (bondAssets <= floor) {
+            revert NoExcessBond(bondAssets, floor);
         }
+        amount = bondAssets - floor;
+        _pay(bondHolder, amount);
     }
 
     /// @inheritdoc IBondAccount

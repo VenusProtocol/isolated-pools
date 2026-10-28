@@ -36,6 +36,13 @@ interface IBondAccount {
      */
     error InsufficientFunds(uint256 amount, uint256 available);
 
+    /**
+     * @notice Thrown when a withdrawal finds the bond holding no more than the floor it keeps
+     * @param bondAssets What the bond holds
+     * @param floor The floor
+     */
+    error NoExcessBond(uint256 bondAssets, uint256 floor);
+
     /// @notice Thrown when depositing in an account whose bond is released
     error BondAlreadyReleased();
 
@@ -62,8 +69,9 @@ interface IBondAccount {
      * @notice Pays the bond holder at once what the bond holds beyond `floor`, its yield and extra top-ups alike
      * @param floor The bond the pool's tier requires, in the asset; the bond keeps at least this much
      * @return amount The amount paid
-     * @custom:event Emits Paid when something is paid
+     * @custom:event Emits Paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
+     * @custom:error NoExcessBond is thrown when the bond holds no more than `floor`
      * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `BOND_MANAGER`
      */

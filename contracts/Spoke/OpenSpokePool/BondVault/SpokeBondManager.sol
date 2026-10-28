@@ -29,16 +29,16 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     address public immutable SPOKE_POOL_MANAGER;
 
     /// @inheritdoc ISpokeBondManager
-    mapping(SourceType => address) public accountImplementations;
+    mapping(SourceType sourceType => address implementation) public accountImplementations;
 
     /// @inheritdoc ISpokeBondManager
-    mapping(address => AssetConfig) public assetConfigs;
+    mapping(address asset => AssetConfig config) public assetConfigs;
 
     /// @inheritdoc ISpokeBondManager
-    mapping(address => address) public bondAccounts;
+    mapping(address comptroller => address account) public bondAccounts;
 
     /// @inheritdoc ISpokeBondManager
-    mapping(address => bool) public isBondAccount;
+    mapping(address account => bool isAccount) public isBondAccount;
 
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
@@ -92,15 +92,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
             revert BondAlreadyExists(comptroller);
         }
 
-        // The manager bonds any asset the policy registry accepts, so one never configured here is held Idle. A clone
-        // of a missing implementation accepts the bond with no code to move it out, so it reverts instead
-        AssetConfig memory assetConfig = assetConfigs[asset];
-        address implementation = accountImplementations[assetConfig.sourceType];
-        if (implementation == address(0)) {
-            revert InvalidAssetConfig(asset);
-        }
-        account = Clones.clone(implementation);
-        IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetConfig.source);
+        account = _cloneAccount(asset, bondHolder);
         bondAccounts[comptroller] = account;
         isBondAccount[account] = true;
 
@@ -126,10 +118,7 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         uint256 floor
     ) external onlySpokePoolManager nonReentrant returns (uint256 amount) {
         amount = _ensureBondExists(comptroller).withdrawExcess(floor);
-
-        if (amount != 0) {
-            emit ExcessWithdrawn(comptroller, amount);
-        }
+        emit ExcessWithdrawn(comptroller, amount);
     }
 
     /// @inheritdoc ISpokeBondManager
@@ -202,6 +191,18 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // ──────────────────────────────────────────────────────────────────────
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
+
+    /// @dev Clones the account for `asset`'s source type. An asset never configured here defaults to Idle; if the Idle
+    /// implementation is unset, the clone would take the bond with no code to pay it out, so revert
+    function _cloneAccount(address asset, address bondHolder) private returns (address account) {
+        AssetConfig memory assetConfig = assetConfigs[asset];
+        address implementation = accountImplementations[assetConfig.sourceType];
+        if (implementation == address(0)) {
+            revert InvalidAssetConfig(asset);
+        }
+        account = Clones.clone(implementation);
+        IBondAccount(account).initialize(bondHolder, IERC20Upgradeable(asset), assetConfig.source);
+    }
 
     /// @dev Returns a pool's live bond account
     function _ensureBondExists(address comptroller) private view returns (IBondAccount) {
