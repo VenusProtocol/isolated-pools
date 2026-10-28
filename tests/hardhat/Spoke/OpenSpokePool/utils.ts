@@ -11,7 +11,7 @@ export const e18 = (value: string) => parseUnits(value, 18);
 export const NO_ESTIMATE = { gasLimit: 10_000_000 };
 
 /// Mirror the enums of `ISpokePoolManager`, in declaration order.
-export const RequestType = { Pool: 0, Markets: 1, Tier: 2 };
+export const RequestType = { Pool: 0, NewMarkets: 1, TierUpgrade: 2 };
 export const RequestStatus = { None: 0, Pending: 1, Built: 2, Rejected: 3, Settled: 4, Canceled: 5 };
 export const PoolStatus = {
   None: 0,

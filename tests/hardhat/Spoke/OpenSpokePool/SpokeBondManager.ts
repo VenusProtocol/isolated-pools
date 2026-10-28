@@ -243,13 +243,13 @@ describe("SpokeBondManager", () => {
       expect(await usdt.allowance(bondManager.address, account.address)).to.equal(0);
       expect(await hub.balanceOf(account.address)).to.equal(BOND);
       expect(await account.bondHolder()).to.equal(bondHolder.address);
-      expect(await account.seizableAmount()).to.equal(BOND);
+      expect(await account.currentBondAmount()).to.equal(BOND);
     });
 
     it("holds an asset with no source as it is", async () => {
       const account = await createBond(idleToken);
       expect(await idleToken.balanceOf(account.address)).to.equal(BOND);
-      expect(await account.seizableAmount()).to.equal(BOND);
+      expect(await account.currentBondAmount()).to.equal(BOND);
     });
 
     /// `idleToken` was never configured, so it is held Idle, and this manager has no Idle implementation. Cloning
@@ -273,7 +273,7 @@ describe("SpokeBondManager", () => {
       expect(await usdt.balanceOf(account.address)).to.equal(BOND);
       expect(await hub.balanceOf(account.address)).to.equal(0);
       expect(await usdt.allowance(account.address, hub.address)).to.equal(0);
-      expect(await account.seizableAmount()).to.equal(BOND);
+      expect(await account.currentBondAmount()).to.equal(BOND);
 
       await expect(bondManager.depositInSource(account.address))
         .to.emit(account, "SourceDepositRefused")
@@ -330,7 +330,7 @@ describe("SpokeBondManager", () => {
       await bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, BOND);
       // The Hub's share rounding values the yield a wei under
       expect(await usdt.balanceOf(bondHolder.address)).to.be.closeTo(e18("100"), 1);
-      expect(await account.seizableAmount()).to.be.closeTo(BOND, 1);
+      expect(await account.currentBondAmount()).to.be.closeTo(BOND, 1);
     });
 
     it("pays from the account's balance before the Hub, even while the Hub is paused", async () => {
@@ -344,7 +344,7 @@ describe("SpokeBondManager", () => {
         .withArgs(comptroller.address, e18("5"));
       expect(await usdt.balanceOf(bondHolder.address)).to.equal(e18("5"));
       expect(await hub.balanceOf(account.address)).to.equal(shares);
-      expect(await account.seizableAmount()).to.equal(BOND);
+      expect(await account.currentBondAmount()).to.equal(BOND);
     });
 
     it("pays the excess around a refused deposit, which stays in the account", async () => {
@@ -368,7 +368,7 @@ describe("SpokeBondManager", () => {
       await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, e18("1050")))
         .to.emit(bondManager, "ExcessWithdrawn")
         .withArgs(comptroller.address, e18("50"));
-      expect(await account.seizableAmount()).to.equal(e18("1050"));
+      expect(await account.currentBondAmount()).to.equal(e18("1050"));
     });
 
     it("pays extra top-ups beyond the floor, not only yield", async () => {
@@ -396,9 +396,9 @@ describe("SpokeBondManager", () => {
 
       await expect(bondManager.connect(spokePoolManager).withdrawExcess(comptroller.address, BOND))
         .to.be.revertedWithCustomError(account, "NoExcessBond")
-        .withArgs(await account.seizableAmount(), BOND);
-      expect(await account.seizableAmount()).to.equal(await hub.previewRedeem(await hub.balanceOf(account.address)));
-      expect(await account.seizableAmount()).to.be.lt(BOND);
+        .withArgs(await account.currentBondAmount(), BOND);
+      expect(await account.currentBondAmount()).to.equal(await hub.previewRedeem(await hub.balanceOf(account.address)));
+      expect(await account.currentBondAmount()).to.be.lt(BOND);
     });
   });
 
@@ -445,7 +445,7 @@ describe("SpokeBondManager", () => {
         .to.emit(bondManager, "BondSeized")
         .withArgs(comptroller.address, recoverer.address, e18("100"));
       expect(await usdt.balanceOf(recoverer.address)).to.equal(e18("100"));
-      expect(await account.seizableAmount()).to.equal(e18("900"));
+      expect(await account.currentBondAmount()).to.equal(e18("900"));
     });
 
     it("reverts a Hub seizure while the Hub is paused", async () => {
@@ -470,20 +470,20 @@ describe("SpokeBondManager", () => {
       await hub.setFeeSharesPerBlock(e18("10"));
       await hub.accrueFees();
       await hub.setFeeSharesPerBlock(0);
-      const seizable = await bondManager.getSeizableAmount(comptroller.address);
+      const seizable = await bondManager.getCurrentBondAmount(comptroller.address);
       expect(seizable).to.be.lt(BOND);
 
       await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, seizable, recoverer.address))
         .to.emit(bondManager, "BondSeized")
         .withArgs(comptroller.address, recoverer.address, seizable);
       expect(await usdt.balanceOf(recoverer.address)).to.equal(seizable);
-      expect(await account.seizableAmount()).to.be.lte(1);
+      expect(await account.currentBondAmount()).to.be.lte(1);
     });
 
     it("seizes a whole Hub bond net of the exit fee, although maxWithdraw rounds the fee up", async () => {
       await hub.setRedeemFeeBps(30);
       const account = await createBond(usdt, BOND.add(1));
-      const seizable = await bondManager.getSeizableAmount(comptroller.address);
+      const seizable = await bondManager.getCurrentBondAmount(comptroller.address);
       expect(await hub.maxWithdraw(account.address)).to.equal(seizable.sub(1));
 
       await expect(bondManager.connect(spokePoolManager).seize(comptroller.address, seizable, recoverer.address))
@@ -501,20 +501,20 @@ describe("SpokeBondManager", () => {
     });
   });
 
-  describe("getSeizableAmount", () => {
+  describe("getCurrentBondAmount", () => {
     it("returns what the bond holds", async () => {
       const account = await createBond(idleToken);
-      expect(await bondManager.getSeizableAmount(comptroller.address)).to.equal(BOND);
+      expect(await bondManager.getCurrentBondAmount(comptroller.address)).to.equal(BOND);
 
       await sendTo(idleToken, account.address, "10");
-      expect(await bondManager.getSeizableAmount(comptroller.address)).to.equal(BOND.add(e18("10")));
+      expect(await bondManager.getCurrentBondAmount(comptroller.address)).to.equal(BOND.add(e18("10")));
 
       await bondManager.connect(spokePoolManager).seize(comptroller.address, e18("110"), recoverer.address);
-      expect(await bondManager.getSeizableAmount(comptroller.address)).to.equal(e18("900"));
+      expect(await bondManager.getCurrentBondAmount(comptroller.address)).to.equal(e18("900"));
     });
 
     it("reverts when the pool has no bond", async () => {
-      await expect(bondManager.getSeizableAmount(comptroller.address))
+      await expect(bondManager.getCurrentBondAmount(comptroller.address))
         .to.be.revertedWithCustomError(bondManager, "BondNotFound")
         .withArgs(comptroller.address);
     });
@@ -530,7 +530,7 @@ describe("SpokeBondManager", () => {
         .withArgs(comptroller.address, account.address);
       expect(await bondManager.bondAccounts(comptroller.address)).to.equal(constants.AddressZero);
       expect(await account.released()).to.equal(true);
-      expect(await account.seizableAmount()).to.equal(0);
+      expect(await account.currentBondAmount()).to.equal(0);
       await expect(
         bondManager.connect(spokePoolManager).seize(comptroller.address, 1, recoverer.address),
       ).to.be.revertedWithCustomError(bondManager, "BondNotFound");
@@ -553,7 +553,7 @@ describe("SpokeBondManager", () => {
       const newAccount = await createBond(usdt);
       expect(newAccount.address).to.not.equal(oldAccount.address);
       expect(await bondManager.isBondAccount(oldAccount.address)).to.equal(true);
-      expect(await newAccount.seizableAmount()).to.equal(BOND);
+      expect(await newAccount.currentBondAmount()).to.equal(BOND);
     });
   });
 
@@ -634,7 +634,7 @@ describe("SpokeBondManager", () => {
         .and.to.emit(account, "Paid")
         .withArgs(recoverer.address, e18("100"));
       expect(await idleToken.balanceOf(recoverer.address)).to.equal(e18("100"));
-      expect(await account.seizableAmount()).to.equal(e18("930"));
+      expect(await account.currentBondAmount()).to.equal(e18("930"));
     });
 
     it("seizes nothing and pays no one for a zero seizure", async () => {
@@ -661,7 +661,7 @@ describe("SpokeBondManager", () => {
         .to.emit(account, "Paid")
         .withArgs(bondHolder.address, BOND.add(e18("5")));
       expect(await account.released()).to.equal(true);
-      expect(await account.seizableAmount()).to.equal(0);
+      expect(await account.currentBondAmount()).to.equal(0);
     });
 
     it("shares its implementation's bond manager", async () => {

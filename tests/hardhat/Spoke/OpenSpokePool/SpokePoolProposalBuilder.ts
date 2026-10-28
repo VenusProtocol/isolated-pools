@@ -71,7 +71,7 @@ const EXIT_PAUSED_ACTIONS = [0, 2, 7];
 
 /// An action as [target, signature, argument types, arguments]
 type Action = [string, string, string[], unknown[]];
-type Feed = { oracle: string; feed: string };
+type Feed = { oracle: string; feed: string; maxStalePeriod: number };
 
 describe("SpokePoolProposalBuilder", () => {
   let deployer: SignerWithAddress;
@@ -104,20 +104,20 @@ describe("SpokePoolProposalBuilder", () => {
   let vTokenBeacon: string;
   let builder: SpokePoolProposalBuilder;
 
-  const tier = (loanAssets: object[]) => ({ enabled: true, minTierBondUsd: e18("100000"), limits: LIMITS, loanAssets });
-  const usdtLoanAsset = (supplyCap: BigNumberish = LOAN_CAP) => ({
-    asset: usdt.address,
-    supplyCap,
-    interestRateModels: [loanIrm.address],
+  const tier = (loanSupplyCapUsd: BigNumberish = LOAN_CAP) => ({
+    enabled: true,
+    minTierBondUsd: e18("100000"),
+    limits: { ...LIMITS, loanSupplyCapUsd },
   });
 
-  const noFeed = (): Feed => ({ oracle: constants.AddressZero, feed: constants.AddressZero });
+  const noFeed = (): Feed => ({ oracle: constants.AddressZero, feed: constants.AddressZero, maxStalePeriod: 0 });
+  const feedOn = (oracle: string, feed: string): Feed => ({ oracle, feed, maxStalePeriod: MAX_STALE_PERIOD });
 
   const loanMarket = () => ({ asset: usdt.address, interestRateModel: loanIrm.address });
 
   const collateralMarket = (
     asset: MockToken,
-    feeds: Feed[] = [{ oracle: chainlinkOracle.address, feed: mainFeed.address }, noFeed(), noFeed()],
+    feeds: Feed[] = [feedOn(chainlinkOracle.address, mainFeed.address), noFeed(), noFeed()],
   ) => ({
     asset: asset.address,
     collateralFactor: e18("0.4"),
@@ -197,12 +197,12 @@ describe("SpokePoolProposalBuilder", () => {
     [vToken, "setReduceReservesBlockDelta(uint256)", ["uint256"], [REDUCE_RESERVES_BLOCK_DELTA]],
   ];
 
-  /// An oracle's batch of feeds, each as [asset, feed]
-  const feedConfigs = (feedOracle: string, feeds: [string, string][]): Action => [
+  /// An oracle's batch of feeds, each as [asset, feed] or [asset, feed, staleness limit]
+  const feedConfigs = (feedOracle: string, feeds: ([string, string] | [string, string, number])[]): Action => [
     feedOracle,
     "setTokenConfigs((address,address,uint256)[])",
     ["tuple(address,address,uint256)[]"],
-    [feeds.map(([asset, feed]) => [asset, feed, MAX_STALE_PERIOD])],
+    [feeds.map(([asset, feed, maxStalePeriod = MAX_STALE_PERIOD]) => [asset, feed, maxStalePeriod])],
   ];
 
   const boundConfigs = (assets: string[]): Action => [
@@ -318,6 +318,7 @@ describe("SpokePoolProposalBuilder", () => {
     boundedOracle = await smock.fake<IDeviationBoundedOracle>("IDeviationBoundedOracle");
     oracle = await smock.fake<IResilientOracle>("IResilientOracle");
     oracle.boundValidator.returns(boundValidator.address);
+    oracle.getPrice.returns(e18("1"));
     yieldGroup = await smock.fake<IYieldGroup>("IYieldGroup");
 
     const tokenFactory = new MockToken__factory(deployer);
@@ -329,7 +330,8 @@ describe("SpokePoolProposalBuilder", () => {
     collateralIrm = await irmFactory.deploy(0, 0, false, BLOCKS_PER_YEAR);
 
     registry = await deployProxy(await new SpokePoolPolicyRegistry__factory(deployer).deploy(), acm.address);
-    await registry.setTier(TIER_ID, tier([usdtLoanAsset()]));
+    await registry.setTier(TIER_ID, tier());
+    await registry.setLoanAssetConfig(usdt.address, { factor: e18("1"), interestRateModels: [loanIrm.address] });
 
     manager = await smock.fake<SpokePoolManager>("SpokePoolManager");
     manager.POLICY_REGISTRY.returns(registry.address);
@@ -339,7 +341,9 @@ describe("SpokePoolProposalBuilder", () => {
       collateralInterestRateModel: collateralIrm.address,
       reserveFactor: RESERVE_FACTOR,
       reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA,
-      maxStalePeriod: MAX_STALE_PERIOD,
+    });
+    await registry.setOracleParams({
+      deviationBoundedOracleEnabled: true,
       cooldownPeriod: COOLDOWN_PERIOD,
       triggerThreshold: TRIGGER_THRESHOLD,
       resetThreshold: RESET_THRESHOLD,
@@ -487,7 +491,7 @@ describe("SpokePoolProposalBuilder", () => {
         let comptroller: FakeContract<SpokeComptroller>;
 
         const marketsRequest = (collateralMarkets: object[]) =>
-          request({ requestType: RequestType.Markets, comptroller: comptroller.address, collateralMarkets });
+          request({ requestType: RequestType.NewMarkets, comptroller: comptroller.address, collateralMarkets });
 
         beforeEach(async () => {
           comptroller = await fakeComptroller([]);
@@ -496,14 +500,14 @@ describe("SpokePoolProposalBuilder", () => {
 
         it("batches every new asset's feeds per oracle, bounds those with a pivot, then the ResilientOracle and bounded configs", async () => {
           const marketA = collateralMarket(colA, [
-            { oracle: chainlinkOracle.address, feed: mainFeed.address },
-            { oracle: redstoneOracle.address, feed: pivotFeed.address },
+            feedOn(chainlinkOracle.address, mainFeed.address),
+            feedOn(redstoneOracle.address, pivotFeed.address),
             noFeed(),
           ]);
           const marketB = collateralMarket(colB, [
-            { oracle: redstoneOracle.address, feed: mainFeed.address },
-            { oracle: binanceOracle.address, feed: pivotFeed.address },
-            { oracle: chainlinkOracle.address, feed: fallbackFeed.address },
+            feedOn(redstoneOracle.address, mainFeed.address),
+            { ...feedOn(binanceOracle.address, pivotFeed.address), maxStalePeriod: 3600 },
+            feedOn(chainlinkOracle.address, fallbackFeed.address),
           ]);
           const marketC = collateralMarket(usdt);
           const [, vTokens, proposal] = await build(marketsRequest([marketA, marketB, marketC]));
@@ -518,7 +522,7 @@ describe("SpokePoolProposalBuilder", () => {
               [colA.address, pivotFeed.address],
               [colB.address, mainFeed.address],
             ]),
-            feedConfigs(binanceOracle.address, [[colB.address, pivotFeed.address]]),
+            feedConfigs(binanceOracle.address, [[colB.address, pivotFeed.address, 3600]]),
             boundConfigs([colA.address, colB.address]),
             resilientConfigs([
               [
@@ -546,11 +550,7 @@ describe("SpokePoolProposalBuilder", () => {
 
         it("skips an unset supported oracle and an oracle no new feed is on", async () => {
           manager.supportedOracles.whenCalledWith(0).returns(constants.AddressZero);
-          const market = collateralMarket(colA, [
-            { oracle: redstoneOracle.address, feed: mainFeed.address },
-            noFeed(),
-            noFeed(),
-          ]);
+          const market = collateralMarket(colA, [feedOn(redstoneOracle.address, mainFeed.address), noFeed(), noFeed()]);
           const [, vTokens, proposal] = await build(marketsRequest([market]));
           expectActions(proposal, [
             settlement(),
@@ -575,8 +575,8 @@ describe("SpokePoolProposalBuilder", () => {
             cachingEnabled: false,
           });
           const priced = collateralMarket(colA, [
-            { oracle: chainlinkOracle.address, feed: mainFeed.address },
-            { oracle: redstoneOracle.address, feed: pivotFeed.address },
+            feedOn(chainlinkOracle.address, mainFeed.address),
+            feedOn(redstoneOracle.address, pivotFeed.address),
             noFeed(),
           ]);
           const unpriced = collateralMarket(colB);
@@ -612,10 +612,34 @@ describe("SpokePoolProposalBuilder", () => {
           expectActions(proposal, [settlement(), ...collateralListing(market, vTokens[0])]);
         });
 
+        it("skips every bounded config while the DeviationBoundedOracle is disabled", async () => {
+          await registry.setOracleParams({
+            deviationBoundedOracleEnabled: false,
+            cooldownPeriod: COOLDOWN_PERIOD,
+            triggerThreshold: TRIGGER_THRESHOLD,
+            resetThreshold: RESET_THRESHOLD,
+            boundDeviation: BOUND_DEVIATION,
+          });
+          const market = collateralMarket(colA);
+          const [, vTokens, proposal] = await build(marketsRequest([market]));
+          expectActions(proposal, [
+            settlement(),
+            feedConfigs(chainlinkOracle.address, [[colA.address, mainFeed.address]]),
+            resilientConfigs([
+              [
+                colA.address,
+                [chainlinkOracle.address, constants.AddressZero, constants.AddressZero],
+                [true, false, false],
+              ],
+            ]),
+            ...collateralListing(market, vTokens[0]),
+          ]);
+        });
+
         it("adds no oracle config for a request of only loan markets", async () => {
           const [, vTokens, proposal] = await build(
             request({
-              requestType: RequestType.Markets,
+              requestType: RequestType.NewMarkets,
               comptroller: comptroller.address,
               loanMarkets: [loanMarket()],
             }),
@@ -636,7 +660,7 @@ describe("SpokePoolProposalBuilder", () => {
         const loan = loanMarket();
         const [marketsComptroller, vTokens, proposal] = await build(
           request({
-            requestType: RequestType.Markets,
+            requestType: RequestType.NewMarkets,
             comptroller,
             collateralMarkets: [collateral],
             loanMarkets: [loan],
@@ -663,7 +687,7 @@ describe("SpokePoolProposalBuilder", () => {
       let collateralVToken: FakeContract<VToken>;
 
       const tierRequest = (tierId = UPGRADE_TIER_ID) =>
-        request({ requestType: RequestType.Tier, comptroller: comptroller.address, tierId });
+        request({ requestType: RequestType.TierUpgrade, comptroller: comptroller.address, tierId });
 
       const buildTier = async (tierId = UPGRADE_TIER_ID) => {
         manager.getRequest.returns(tierRequest(tierId));
@@ -694,7 +718,7 @@ describe("SpokePoolProposalBuilder", () => {
         makeLoanMarket(comptroller, loanVToken.address);
         makeLoanMarket(comptroller, unlistedLoanVToken.address);
         yieldGroup.resourceCap.whenCalledWith(loanVToken.address).returns(LOAN_CAP);
-        await registry.setTier(UPGRADE_TIER_ID, tier([usdtLoanAsset(UPGRADE_CAP)]));
+        await registry.setTier(UPGRADE_TIER_ID, tier(UPGRADE_CAP));
       });
 
       it("settles, then sets each listed loan market's caps to the new tier's and raises its Hub cap", async () => {
@@ -730,13 +754,9 @@ describe("SpokePoolProposalBuilder", () => {
         comptroller.getAllMarkets.returns([loanVToken.address, collateralVToken.address, usdcVToken.address]);
         makeLoanMarket(comptroller, usdcVToken.address);
         yieldGroup.resourceCap.whenCalledWith(usdcVToken.address).returns(e18("300"));
-        await registry.setTier(
-          UPGRADE_TIER_ID,
-          tier([
-            usdtLoanAsset(UPGRADE_CAP),
-            { asset: usdc.address, supplyCap: e18("200"), interestRateModels: [loanIrm.address] },
-          ]),
-        );
+        await registry.setLoanAssetConfig(usdc.address, { factor: e18("1"), interestRateModels: [loanIrm.address] });
+        // The tier's 1,000,000 USD cap at 5,000 USD per USDC
+        oracle.getPrice.whenCalledWith(usdc.address).returns(e18("5000"));
 
         const [, , proposal] = await buildTier();
         expectActions(proposal, [
@@ -753,15 +773,9 @@ describe("SpokePoolProposalBuilder", () => {
         expectActions(proposal, [settlement()]);
       });
 
-      it("rejects a tier that does not offer one of the pool's loan assets", async () => {
-        await registry.setTier(
-          3,
-          tier([{ asset: colA.address, supplyCap: UPGRADE_CAP, interestRateModels: [loanIrm.address] }]),
-        );
-        manager.getRequest.returns(tierRequest(3));
-        await expect(builder.connect(manager.wallet).buildRequestProposal(REQUEST_ID, DESCRIPTION))
-          .to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed")
-          .withArgs(usdt.address);
+      it("rejects a pool with a market of an asset no longer lent", async () => {
+        await registry.setLoanAssetConfig(usdt.address, { factor: 0, interestRateModels: [] });
+        await expect(buildTier()).to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed").withArgs(usdt.address);
       });
     });
   });

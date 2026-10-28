@@ -99,12 +99,12 @@ interface IBondAccount {
     function release() external;
 
     /**
-     * @notice Returns what the bond holds and a seizure can take, net of a source loss and a Hub's exit fee; zero once
-     *   released. It is read before the Hub accrues its fees, so `seize` may see a different amount
+     * @notice Returns what the bond holds now, net of a source loss and a Hub's exit fee; zero once released. It is read
+     *   before the Hub accrues its fees, so `seize` may see a different amount
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
-    function seizableAmount() external view returns (uint256);
+    function currentBondAmount() external view returns (uint256);
 
     /**
      * @notice Returns the SpokeBondManager, the account's only caller. It is an immutable of the implementation, so

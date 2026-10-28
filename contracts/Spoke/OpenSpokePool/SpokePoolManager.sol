@@ -119,39 +119,41 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         CollateralMarketRequestParams[] calldata collateralMarkets,
         LoanMarketRequestParams[] calldata loanMarkets
     ) external returns (uint256 requestId) {
-        uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
+        uint256 tierId = _ensureCallerHasLivePool(comptroller).tierId;
 
         Contracts memory contracts = _contracts();
         SpokePoolValidationLib.validateBond(contracts, comptroller, tierId);
 
         requestId = ++requestCount;
-        Request storage request = _newRequest(requestId, RequestType.Markets, comptroller, tierId);
+        Request storage request = _newRequest(requestId, RequestType.NewMarkets, comptroller, tierId);
         _pushRequestMarkets(request, collateralMarkets, loanMarkets);
         // Checked once stored: the library reads the markets from the request, which is cheaper than encoding them
         SpokePoolValidationLib.validateMarkets(contracts, request);
 
-        emit RequestSubmitted(requestId, RequestType.Markets, msg.sender, comptroller);
+        emit RequestSubmitted(requestId, RequestType.NewMarkets, msg.sender, comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId) {
-        uint256 fromTierId = _ensureActiveDeployer(comptroller).tierId;
+        uint256 fromTierId = _ensureCallerHasLivePool(comptroller).tierId;
         if (!POLICY_REGISTRY.isUpgrade(fromTierId, tierId)) {
-            revert NotAnUpgrade(fromTierId, tierId);
+            revert InvalidTierUpgrade(fromTierId, tierId);
         }
 
         SpokePoolValidationLib.validateBond(_contracts(), comptroller, tierId);
 
         requestId = ++requestCount;
-        _newRequest(requestId, RequestType.Tier, comptroller, tierId);
+        _newRequest(requestId, RequestType.TierUpgrade, comptroller, tierId);
 
-        emit RequestSubmitted(requestId, RequestType.Tier, msg.sender, comptroller);
+        emit RequestSubmitted(requestId, RequestType.TierUpgrade, msg.sender, comptroller);
     }
 
     /// @inheritdoc ISpokePoolManager
     function cancelRequest(uint256 requestId) external nonReentrant {
         Request storage request = requests[requestId];
-        _ensureDeployer(request.deployer);
+        if (msg.sender != request.deployer) {
+            revert NotDeployer(msg.sender);
+        }
         _ensureRequestStatus(requestId, RequestStatus.Pending);
 
         request.status = RequestStatus.Canceled;
@@ -191,7 +193,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (requestType != RequestType.Pool) {
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
         }
-        if (requestType != RequestType.Tier) {
+        if (requestType != RequestType.TierUpgrade) {
             Contracts memory contracts = _contracts();
             SpokePoolValidationLib.validateMarkets(contracts, request);
             _pullSeeds(contracts, request, requestSeeds[requestId]);
@@ -214,7 +216,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         request.status = RequestStatus.Settled;
         if (requestType == RequestType.Pool) {
             _activatePool(request, requestId);
-        } else if (requestType == RequestType.Tier) {
+        } else if (requestType == RequestType.TierUpgrade) {
             Pool storage pool = pools[comptroller];
             emit PoolTierUpgraded(comptroller, pool.tierId, request.tierId);
             pool.tierId = request.tierId;
@@ -252,7 +254,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         uint256 collateralFactor,
         uint256 liquidationThreshold
     ) external {
-        uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
+        uint256 tierId = _ensureCallerHasLivePool(comptroller).tierId;
         SpokePoolGovernanceLib.publishCollateralFactorUpdate(
             _contracts(),
             tierId,
@@ -265,13 +267,13 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function setCollateralSupplyCap(address comptroller, address vToken, uint256 supplyCap) external {
-        uint256 tierId = _ensureActiveDeployer(comptroller).tierId;
+        uint256 tierId = _ensureCallerHasLivePool(comptroller).tierId;
         SpokePoolGovernanceLib.publishSupplyCapUpdate(_contracts(), tierId, comptroller, vToken, supplyCap);
     }
 
     /// @inheritdoc ISpokePoolManager
     function pauseCollateralSupply(address comptroller, address vToken) external {
-        _ensureActiveDeployer(comptroller);
+        _ensureCallerHasLivePool(comptroller);
         SpokePoolGovernanceLib.publishSupplyPause(_contracts(), comptroller, vToken);
     }
 
@@ -282,7 +284,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function withdrawBondExcess(address comptroller) external nonReentrant {
         Pool storage pool = pools[comptroller];
-        _ensureDeployer(pool.deployer);
+        if (msg.sender != pool.deployer) {
+            revert NotDeployer(msg.sender);
+        }
 
         uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
         bondManager.withdrawExcess(comptroller, floor);
@@ -290,7 +294,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function topUpBond(address comptroller, uint256 amount) external nonReentrant {
-        _ensureDeployer(pools[comptroller].deployer);
+        if (msg.sender != pools[comptroller].deployer) {
+            revert NotDeployer(msg.sender);
+        }
         IERC20Upgradeable bondAsset = IBondAccount(bondManager.bondAccounts(comptroller)).asset();
 
         bondAsset.safeTransferFrom(msg.sender, address(this), amount);
@@ -324,7 +330,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function requestExit(address comptroller) external {
-        Pool storage pool = _ensureActiveDeployer(comptroller);
+        Pool storage pool = _ensureCallerHasLivePool(comptroller);
 
         // A markets or tier VIP settles only on a live pool
         _ensureNoOpenRequest(msg.sender);
@@ -508,7 +514,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function getExcessBondAmount(address comptroller) external view returns (uint256) {
-        uint256 bond = bondManager.getSeizableAmount(comptroller);
+        uint256 bond = bondManager.getCurrentBondAmount(comptroller);
         uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), pools[comptroller].tierId, comptroller);
         return bond > floor ? bond - floor : 0;
     }
@@ -666,17 +672,12 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Checks the caller is `deployer`
-    function _ensureDeployer(address deployer) private view {
-        if (msg.sender != deployer) {
+    /// @dev Returns a live pool after checking the caller is its deployer and is not paused
+    function _ensureCallerHasLivePool(address comptroller) private view returns (Pool storage pool) {
+        pool = pools[comptroller];
+        if (msg.sender != pool.deployer) {
             revert NotDeployer(msg.sender);
         }
-    }
-
-    /// @dev Returns a live pool after checking the caller is its deployer and is not paused
-    function _ensureActiveDeployer(address comptroller) private view returns (Pool storage pool) {
-        pool = pools[comptroller];
-        _ensureDeployer(pool.deployer);
         if (pool.status != PoolStatus.Live) {
             revert InvalidPoolStatus(comptroller);
         }

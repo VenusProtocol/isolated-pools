@@ -104,7 +104,7 @@ contract BondAccount is Initializable, IBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    function seizableAmount() external view returns (uint256) {
+    function currentBondAmount() external view returns (uint256) {
         return released ? 0 : _bondAssets();
     }
 

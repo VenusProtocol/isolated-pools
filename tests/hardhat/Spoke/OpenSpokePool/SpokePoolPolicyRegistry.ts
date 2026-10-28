@@ -17,8 +17,9 @@ const LIMITS = {
   maxLiquidationThreshold: e18("0.65"),
   maxCollateralMarkets: 3,
   maxCollateralSupplyCapUsd: e18("1000000"),
+  loanSupplyCapUsd: e18("500000"),
 };
-const ZERO_TIER = [false, 0, [0, 0, 0, 0, 0], []];
+const ZERO_TIER = [false, 0, [0, 0, 0, 0, 0, 0]];
 const POOL_PARAMS = {
   closeFactor: e18("0.5"),
   liquidationIncentive: e18("1.1"),
@@ -33,12 +34,14 @@ const MARKET_PARAMS = (irm: string) => ({
   collateralInterestRateModel: irm,
   reserveFactor: e18("0.1"),
   reduceReservesBlockDelta: 28800,
-  maxStalePeriod: 86400,
+});
+const ORACLE_PARAMS = {
+  deviationBoundedOracleEnabled: true,
   cooldownPeriod: 60 * 60,
   triggerThreshold: e18("0.1"),
   resetThreshold: e18("0.05"),
   boundDeviation: e18("0.05"),
-});
+};
 
 /// Checks each field of `expected` on a struct returned by a getter.
 const expectFields = (actual: object, expected: object) => {
@@ -47,15 +50,9 @@ const expectFields = (actual: object, expected: object) => {
   }
 };
 
-type LoanAsset = { asset: string; supplyCap: BigNumberish; interestRateModels: string[] };
-type Tier = { enabled: boolean; minTierBondUsd: BigNumberish; limits: typeof LIMITS; loanAssets: LoanAsset[] };
+type Tier = { enabled: boolean; minTierBondUsd: BigNumberish; limits: typeof LIMITS };
 
-const tierTuple = (tier: Tier) => [
-  tier.enabled,
-  tier.minTierBondUsd,
-  Object.values(tier.limits),
-  tier.loanAssets.map(({ asset, supplyCap, interestRateModels }) => [asset, supplyCap, interestRateModels]),
-];
+const tierTuple = (tier: Tier) => [tier.enabled, tier.minTierBondUsd, Object.values(tier.limits)];
 
 describe("SpokePoolPolicyRegistry", () => {
   let owner: SignerWithAddress;
@@ -66,8 +63,6 @@ describe("SpokePoolPolicyRegistry", () => {
   let other: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
   let registry: SpokePoolPolicyRegistry;
-  let usdtAsset: LoanAsset;
-  let usdcAsset: LoanAsset;
   let tier: Tier;
 
   beforeEach(async () => {
@@ -76,13 +71,7 @@ describe("SpokePoolPolicyRegistry", () => {
     acm.isAllowedToCall.returns(true);
     registry = await deployProxy(await new SpokePoolPolicyRegistry__factory(owner).deploy(), acm.address);
 
-    usdtAsset = { asset: usdt.address, supplyCap: e18("500000"), interestRateModels: [irm.address] };
-    usdcAsset = {
-      asset: usdc.address,
-      supplyCap: e18("250000"),
-      interestRateModels: [irm.address, otherIrm.address],
-    };
-    tier = { enabled: true, minTierBondUsd: e18("100000"), limits: LIMITS, loanAssets: [usdtAsset] };
+    tier = { enabled: true, minTierBondUsd: e18("100000"), limits: LIMITS };
   });
 
   describe("initialize", () => {
@@ -106,8 +95,7 @@ describe("SpokePoolPolicyRegistry", () => {
   });
 
   describe("setTier", () => {
-    it("stores a tier with its loan assets and emits TierUpdated", async () => {
-      tier.loanAssets = [usdtAsset, usdcAsset];
+    it("stores a tier and emits TierUpdated", async () => {
       await expect(registry.setTier(1, tier))
         .to.emit(registry, "TierUpdated")
         .withArgs(
@@ -116,29 +104,28 @@ describe("SpokePoolPolicyRegistry", () => {
           (newTier: unknown) => expect(newTier).to.deep.equal(tierTuple(tier)),
         );
       expect(await registry.getTier(1)).to.deep.equal(tierTuple(tier));
+      expect(await registry.getTier(2)).to.deep.equal(ZERO_TIER);
     });
 
-    it("replaces the previous loan assets", async () => {
-      const previous = { ...tier, loanAssets: [usdtAsset, usdcAsset] };
-      await registry.setTier(1, previous);
+    it("replaces a tier, emitting the previous one", async () => {
+      await registry.setTier(1, tier);
 
-      tier.loanAssets = [usdcAsset];
-      await expect(registry.setTier(1, tier))
+      const updated = { ...tier, limits: { ...LIMITS, loanSupplyCapUsd: e18("750000") } };
+      await expect(registry.setTier(1, updated))
         .to.emit(registry, "TierUpdated")
         .withArgs(
           1,
-          (oldTier: unknown) => expect(oldTier).to.deep.equal(tierTuple(previous)),
-          (newTier: unknown) => expect(newTier).to.deep.equal(tierTuple(tier)),
+          (oldTier: unknown) => expect(oldTier).to.deep.equal(tierTuple(tier)),
+          (newTier: unknown) => expect(newTier).to.deep.equal(tierTuple(updated)),
         );
-      expect(await registry.getTier(1)).to.deep.equal(tierTuple(tier));
-      expect(await registry.getLoanSupplyCap(1, usdt.address)).to.equal(0);
-      expect(await registry.isAllowedInterestRateModel(1, usdt.address, irm.address)).to.equal(false);
+      expect(await registry.getTier(1)).to.deep.equal(tierTuple(updated));
     });
 
-    it("stores a tier without loan assets", async () => {
-      tier.loanAssets = [];
+    it("lists each tier id once, in the order first set", async () => {
+      await registry.setTier(3, tier);
       await registry.setTier(1, tier);
-      expect(await registry.getTier(1)).to.deep.equal(tierTuple(tier));
+      await registry.setTier(3, { ...tier, enabled: false });
+      expect(await registry.getTierIds()).to.deep.equal([3, 1]);
     });
 
     it("rejects inconsistent limits", async () => {
@@ -150,6 +137,7 @@ describe("SpokePoolPolicyRegistry", () => {
         { ...tier, limits: { ...LIMITS, minCoverageRatio: 0 } },
         { ...tier, limits: { ...LIMITS, minCoverageRatio: 0 }, enabled: false },
         { ...tier, limits: { ...LIMITS, minCoverageRatio: e18("1").add(1) } },
+        { ...tier, limits: { ...LIMITS, loanSupplyCapUsd: 0 } },
       ];
       for (const invalidTier of invalidTiers) {
         await expect(registry.setTier(1, invalidTier))
@@ -164,38 +152,6 @@ describe("SpokePoolPolicyRegistry", () => {
       expect(await registry.getTier(1)).to.deep.equal(tierTuple(tier));
     });
 
-    it("rejects a zero loan asset or interest rate model", async () => {
-      const invalidAssets = [
-        { ...usdtAsset, asset: constants.AddressZero },
-        { ...usdtAsset, interestRateModels: [irm.address, constants.AddressZero] },
-      ];
-      for (const loanAsset of invalidAssets) {
-        await expect(registry.setTier(1, { ...tier, loanAssets: [loanAsset] })).to.be.revertedWithCustomError(
-          registry,
-          "ZeroAddressNotAllowed",
-        );
-      }
-    });
-
-    it("rejects a loan asset with a zero supply cap or no interest rate model", async () => {
-      const invalidAssets = [
-        { ...usdcAsset, supplyCap: 0 },
-        { ...usdcAsset, interestRateModels: [] },
-      ];
-      for (const loanAsset of invalidAssets) {
-        await expect(registry.setTier(1, { ...tier, loanAssets: [usdtAsset, loanAsset] }))
-          .to.be.revertedWithCustomError(registry, "InvalidLoanAsset")
-          .withArgs(1, usdc.address);
-      }
-    });
-
-    it("rejects a loan asset listed twice", async () => {
-      tier.loanAssets = [usdtAsset, usdcAsset, { ...usdtAsset, supplyCap: e18("1") }];
-      await expect(registry.setTier(1, tier))
-        .to.be.revertedWithCustomError(registry, "DuplicateLoanAsset")
-        .withArgs(1, usdt.address);
-    });
-
     it("needs the ACM role", async () => {
       const signature = "setTier(uint256,Tier)";
       acm.isAllowedToCall.whenCalledWith(other.address, signature).returns(false);
@@ -205,38 +161,137 @@ describe("SpokePoolPolicyRegistry", () => {
     });
   });
 
-  describe("loan asset views", () => {
-    beforeEach(async () => {
-      await registry.setTier(1, { ...tier, loanAssets: [usdtAsset, usdcAsset] });
+  describe("setLoanAssetConfig", () => {
+    const config = (factor: BigNumberish, interestRateModels: string[]) => ({ factor, interestRateModels });
+
+    it("lists a loan asset with its factor and models, and emits LoanAssetConfigUpdated", async () => {
+      await expect(registry.setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address, otherIrm.address])))
+        .to.emit(registry, "LoanAssetConfigUpdated")
+        .withArgs(
+          usdt.address,
+          (oldConfig: unknown) => expect(oldConfig).to.deep.equal([0, []]),
+          (newConfig: unknown) => expect(newConfig).to.deep.equal([e18("1"), [irm.address, otherIrm.address]]),
+        );
+      expect(await registry.getLoanAssets()).to.deep.equal([usdt.address]);
+      expect(await registry.getLoanAssetConfig(usdt.address)).to.deep.equal([
+        e18("1"),
+        [irm.address, otherIrm.address],
+      ]);
+      expect(await registry.isAllowedInterestRateModel(usdt.address, otherIrm.address)).to.equal(true);
+      expect(await registry.isAllowedInterestRateModel(usdc.address, irm.address)).to.equal(false);
     });
 
-    it("returns a tier's terms without its loan assets, and zeros for an unset tier", async () => {
-      const [enabled, minTierBondUsd, limits] = await registry.getTierTerms(1);
-      expect(enabled).to.equal(true);
-      expect(minTierBondUsd).to.equal(tier.minTierBondUsd);
-      expect(limits).to.deep.equal(Object.values(LIMITS));
+    it("updates a listed asset in place, and delists it by moving the last asset into its place", async () => {
+      for (const asset of [usdt, usdc, other]) {
+        await registry.setLoanAssetConfig(asset.address, config(e18("1"), [irm.address]));
+      }
 
-      const [unsetEnabled, unsetMinBondUsd, unsetLimits] = await registry.getTierTerms(2);
-      expect(unsetEnabled).to.equal(false);
-      expect(unsetMinBondUsd).to.equal(0);
-      expect(unsetLimits).to.deep.equal([0, 0, 0, 0, 0]);
+      await registry.setLoanAssetConfig(usdt.address, config(e18("0.5"), [otherIrm.address]));
+      expect(await registry.getLoanAssets()).to.deep.equal([usdt.address, usdc.address, other.address]);
+      expect(await registry.isAllowedInterestRateModel(usdt.address, irm.address)).to.equal(false);
+
+      await registry.setLoanAssetConfig(usdt.address, config(0, []));
+      expect(await registry.getLoanAssets()).to.deep.equal([other.address, usdc.address]);
+      expect(await registry.isAllowedInterestRateModel(usdt.address, otherIrm.address)).to.equal(false);
+
+      await registry.setLoanAssetConfig(usdc.address, config(0, []));
+      expect(await registry.getLoanAssets()).to.deep.equal([other.address]);
     });
 
-    it("returns a loan asset's supply cap, and zero for an asset the tier does not offer", async () => {
-      expect(await registry.getLoanSupplyCap(1, usdt.address)).to.equal(usdtAsset.supplyCap);
-      expect(await registry.getLoanSupplyCap(1, usdc.address)).to.equal(usdcAsset.supplyCap);
-      expect(await registry.getLoanSupplyCap(1, other.address)).to.equal(0);
-      expect(await registry.getLoanSupplyCap(2, usdt.address)).to.equal(0);
+    it("scales a tier's loan supply cap by the factor, and gives zero to an asset not lent", async () => {
+      await registry.setTier(1, tier);
+      await registry.setLoanAssetConfig(usdt.address, config(e18("0.5"), [irm.address]));
+      expect(await registry.getLoanSupplyCapUsd(1, usdt.address)).to.equal(e18("250000"));
+      expect(await registry.getLoanSupplyCapUsd(1, usdc.address)).to.equal(0);
     });
 
-    it("tells whether a tier allows an interest rate model for a loan asset", async () => {
-      expect(await registry.isAllowedInterestRateModel(1, usdt.address, irm.address)).to.equal(true);
-      expect(await registry.isAllowedInterestRateModel(1, usdc.address, irm.address)).to.equal(true);
-      expect(await registry.isAllowedInterestRateModel(1, usdc.address, otherIrm.address)).to.equal(true);
+    it("rejects a factor without a model, or a model without a factor", async () => {
+      for (const invalid of [config(e18("1"), []), config(0, [irm.address])]) {
+        await expect(registry.setLoanAssetConfig(usdt.address, invalid))
+          .to.be.revertedWithCustomError(registry, "InvalidLoanAssetConfig")
+          .withArgs(usdt.address);
+      }
+    });
 
-      expect(await registry.isAllowedInterestRateModel(1, usdt.address, otherIrm.address)).to.equal(false);
-      expect(await registry.isAllowedInterestRateModel(1, other.address, irm.address)).to.equal(false);
-      expect(await registry.isAllowedInterestRateModel(2, usdt.address, irm.address)).to.equal(false);
+    it("rejects a zero asset or model", async () => {
+      const calls = [
+        () => registry.setLoanAssetConfig(constants.AddressZero, config(e18("1"), [irm.address])),
+        () => registry.setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address, constants.AddressZero])),
+      ];
+      for (const call of calls) {
+        await expect(call()).to.be.revertedWithCustomError(registry, "ZeroAddressNotAllowed");
+      }
+    });
+
+    it("rejects a model listed twice", async () => {
+      await expect(
+        registry.setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address, otherIrm.address, irm.address])),
+      )
+        .to.be.revertedWithCustomError(registry, "DuplicateInterestRateModel")
+        .withArgs(usdt.address, irm.address);
+    });
+
+    it("setLoanAssetFactor changes a listed asset's factor and keeps its models", async () => {
+      await registry.setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address]));
+      await expect(registry.setLoanAssetFactor(usdt.address, e18("0.5")))
+        .to.emit(registry, "LoanAssetConfigUpdated")
+        .withArgs(
+          usdt.address,
+          (oldConfig: unknown) => expect(oldConfig).to.deep.equal([e18("1"), [irm.address]]),
+          (newConfig: unknown) => expect(newConfig).to.deep.equal([e18("0.5"), [irm.address]]),
+        );
+      expect(await registry.getLoanAssets()).to.deep.equal([usdt.address]);
+
+      await expect(registry.setLoanAssetFactor(usdt.address, 0))
+        .to.be.revertedWithCustomError(registry, "InvalidLoanAssetConfig")
+        .withArgs(usdt.address);
+      await expect(registry.setLoanAssetFactor(usdc.address, e18("1")))
+        .to.be.revertedWithCustomError(registry, "LoanAssetNotListed")
+        .withArgs(usdc.address);
+    });
+
+    it("addInterestRateModel adds a model to a listed asset", async () => {
+      await registry.setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address]));
+      await expect(registry.addInterestRateModel(usdt.address, otherIrm.address))
+        .to.emit(registry, "LoanAssetConfigUpdated")
+        .withArgs(
+          usdt.address,
+          (oldConfig: unknown) => expect(oldConfig).to.deep.equal([e18("1"), [irm.address]]),
+          (newConfig: unknown) => expect(newConfig).to.deep.equal([e18("1"), [irm.address, otherIrm.address]]),
+        );
+      expect(await registry.isAllowedInterestRateModel(usdt.address, otherIrm.address)).to.equal(true);
+
+      await expect(registry.addInterestRateModel(usdt.address, irm.address))
+        .to.be.revertedWithCustomError(registry, "DuplicateInterestRateModel")
+        .withArgs(usdt.address, irm.address);
+      await expect(registry.addInterestRateModel(usdt.address, constants.AddressZero)).to.be.revertedWithCustomError(
+        registry,
+        "ZeroAddressNotAllowed",
+      );
+      await expect(registry.addInterestRateModel(usdc.address, irm.address))
+        .to.be.revertedWithCustomError(registry, "LoanAssetNotListed")
+        .withArgs(usdc.address);
+    });
+
+    it("needs the ACM role", async () => {
+      await registry.setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address]));
+      const calls: [string, () => Promise<unknown>][] = [
+        [
+          "setLoanAssetConfig(address,LoanAssetConfig)",
+          () => registry.connect(other).setLoanAssetConfig(usdt.address, config(e18("1"), [irm.address])),
+        ],
+        ["setLoanAssetFactor(address,uint256)", () => registry.connect(other).setLoanAssetFactor(usdt.address, 1)],
+        [
+          "addInterestRateModel(address,address)",
+          () => registry.connect(other).addInterestRateModel(usdt.address, otherIrm.address),
+        ],
+      ];
+      for (const [signature, call] of calls) {
+        acm.isAllowedToCall.whenCalledWith(other.address, signature).returns(false);
+        await expect(call())
+          .to.be.revertedWithCustomError(registry, "Unauthorized")
+          .withArgs(other.address, registry.address, signature);
+      }
     });
   });
 
@@ -246,6 +301,17 @@ describe("SpokePoolPolicyRegistry", () => {
         .to.emit(registry, "BondAssetFactorUpdated")
         .withArgs(usdt.address, 0, e18("1.5"));
       expect(await registry.bondAssetFactors(usdt.address)).to.equal(e18("1.5"));
+    });
+
+    it("lists the bond assets with a factor, and drops one set to zero", async () => {
+      for (const asset of [usdt, usdc, other]) {
+        await registry.setBondAssetFactor(asset.address, e18("1"));
+      }
+      await registry.setBondAssetFactor(usdt.address, e18("2"));
+      expect(await registry.getBondAssets()).to.deep.equal([usdt.address, usdc.address, other.address]);
+
+      await registry.setBondAssetFactor(usdt.address, 0);
+      expect(await registry.getBondAssets()).to.deep.equal([other.address, usdc.address]);
     });
 
     it("rejects a zero asset", async () => {
@@ -284,7 +350,7 @@ describe("SpokePoolPolicyRegistry", () => {
     });
   });
 
-  describe("pool and market params", () => {
+  describe("pool, market and oracle params", () => {
     it("setPoolParams sets new pools' params within the comptroller's bounds", async () => {
       await registry.setPoolParams(POOL_PARAMS);
       await expect(registry.setPoolParams(NEW_POOL_PARAMS))
@@ -320,13 +386,25 @@ describe("SpokePoolPolicyRegistry", () => {
         MARKET_PARAMS(constants.AddressZero),
         { ...params, reserveFactor: e18("1").add(1) },
         { ...params, reduceReservesBlockDelta: 0 },
-        { ...params, maxStalePeriod: 0 },
-        { ...params, boundDeviation: 0 },
-        { ...params, boundDeviation: e18("1") },
       ]) {
         await expect(registry.setMarketParams(invalid)).to.be.revertedWithCustomError(
           registry,
           "InvalidProtocolMarketParams",
+        );
+      }
+    });
+
+    it("setOracleParams sets new collateral assets' oracle configs", async () => {
+      await registry.setOracleParams(ORACLE_PARAMS);
+      const params = { ...ORACLE_PARAMS, deviationBoundedOracleEnabled: false, boundDeviation: e18("0.1") };
+      await expect(registry.setOracleParams(params))
+        .to.emit(registry, "OracleParamsUpdated")
+        .withArgs(Object.values(ORACLE_PARAMS), Object.values(params));
+      expectFields(await registry.oracleParams(), params);
+      for (const boundDeviation of [0, e18("1")]) {
+        await expect(registry.setOracleParams({ ...params, boundDeviation })).to.be.revertedWithCustomError(
+          registry,
+          "InvalidOracleParams",
         );
       }
     });
@@ -339,6 +417,9 @@ describe("SpokePoolPolicyRegistry", () => {
       await expect(registry.connect(other).setMarketParams(MARKET_PARAMS(irm.address)))
         .to.be.revertedWithCustomError(registry, "Unauthorized")
         .withArgs(other.address, registry.address, "setMarketParams(ProtocolMarketParams)");
+      await expect(registry.connect(other).setOracleParams(ORACLE_PARAMS))
+        .to.be.revertedWithCustomError(registry, "Unauthorized")
+        .withArgs(other.address, registry.address, "setOracleParams(OracleParams)");
     });
   });
 
@@ -348,6 +429,7 @@ describe("SpokePoolPolicyRegistry", () => {
       maxCollateralFactor: e18("0.6"),
       maxLiquidationThreshold: e18("0.7"),
       maxCollateralSupplyCapUsd: e18("2000000"),
+      loanSupplyCapUsd: e18("1000000"),
     };
     let higherTier: Tier;
 
@@ -356,7 +438,6 @@ describe("SpokePoolPolicyRegistry", () => {
         enabled: true,
         minTierBondUsd: e18("200000"),
         limits: HIGHER_LIMITS,
-        loanAssets: [{ ...usdtAsset, supplyCap: e18("1000000") }],
       };
       await registry.setTier(1, tier);
       await registry.setTier(2, higherTier);
@@ -381,29 +462,10 @@ describe("SpokePoolPolicyRegistry", () => {
         { limits: { maxLiquidationThreshold: e18("0.6") } },
         { limits: { maxCollateralMarkets: 2 } },
         { limits: { maxCollateralSupplyCapUsd: e18("999999") } },
+        { limits: { loanSupplyCapUsd: e18("499999") } },
       ];
       for (const { tier: tierChange, limits } of nonUpgrades) {
         await registry.setTier(3, { ...higherTier, ...tierChange, limits: { ...LIMITS, ...limits } });
-        expect(await registry.isUpgrade(1, 3)).to.equal(false);
-      }
-    });
-
-    it("needs every loan asset of the pool's tier at a supply cap at least as high", async () => {
-      await registry.setTier(3, { ...higherTier, loanAssets: [usdtAsset] });
-      expect(await registry.isUpgrade(1, 3)).to.equal(true);
-
-      await registry.setTier(3, { ...higherTier, loanAssets: [usdcAsset, { ...usdtAsset, supplyCap: e18("600000") }] });
-      expect(await registry.isUpgrade(1, 3)).to.equal(true);
-
-      await registry.setTier(3, {
-        ...higherTier,
-        loanAssets: [{ ...usdtAsset, interestRateModels: [otherIrm.address] }],
-      });
-      expect(await registry.isUpgrade(1, 3)).to.equal(true);
-
-      const nonUpgrades = [[{ ...usdtAsset, supplyCap: e18("499999") }], [usdcAsset], []];
-      for (const loanAssets of nonUpgrades) {
-        await registry.setTier(3, { ...higherTier, loanAssets });
         expect(await registry.isUpgrade(1, 3)).to.equal(false);
       }
     });

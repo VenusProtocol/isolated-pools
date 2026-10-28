@@ -71,7 +71,6 @@ library SpokePoolValidationLib {
      * @param bondAsset The bond's asset
      * @param bondAmount The bond's amount
      * @custom:error TierDisabled is thrown when the tier is disabled
-     * @custom:error BondAssetNotAllowed is thrown by the registry when the bond asset has no factor
      * @custom:error The `_ensureRequiredBondValue` errors
      */
     function validateNewBond(
@@ -80,17 +79,11 @@ library SpokePoolValidationLib {
         address bondAsset,
         uint256 bondAmount
     ) external view {
-        (bool enabled, , ) = contracts.policyRegistry.getTierTerms(tierId);
-        if (!enabled) {
+        if (!contracts.policyRegistry.getTier(tierId).enabled) {
             revert ISpokePoolManager.TierDisabled(tierId);
         }
 
-        _ensureRequiredBondValue(
-            contracts,
-            bondAsset,
-            bondAmount,
-            contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset)
-        );
+        _ensureRequiredBondValue(contracts, tierId, bondAsset, bondAmount);
     }
 
     /**
@@ -107,14 +100,8 @@ library SpokePoolValidationLib {
         uint256 tierId
     ) external view {
         IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
-        address bondAsset = address(bondAccount.asset());
 
-        _ensureRequiredBondValue(
-            contracts,
-            bondAsset,
-            bondAccount.seizableAmount(),
-            contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset)
-        );
+        _ensureRequiredBondValue(contracts, tierId, address(bondAccount.asset()), bondAccount.currentBondAmount());
     }
 
     /**
@@ -143,7 +130,8 @@ library SpokePoolValidationLib {
      * @param tierId The request's tier
      * @param market The collateral market
      * @custom:error InvalidOracleFeed is thrown when an unpriced asset's main feed is missing or has no live positive
-     *   answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     *   answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback feed without
+     *   a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when the supply cap is worth more than the tier allows
      */
@@ -152,7 +140,7 @@ library SpokePoolValidationLib {
         uint256 tierId,
         ISpokePoolManager.CollateralMarketRequestParams memory market
     ) external view {
-        (, , ISpokePoolPolicyRegistry.PoolLimits memory limits) = contracts.policyRegistry.getTierTerms(tierId);
+        ISpokePoolPolicyRegistry.PoolLimits memory limits = contracts.policyRegistry.getTier(tierId).limits;
         _checkSupplyCapUsd(contracts, market, limits.maxCollateralSupplyCapUsd);
     }
 
@@ -164,7 +152,8 @@ library SpokePoolValidationLib {
      * @return assets The markets' assets, collateral markets first
      * @return seeds Each asset's seed
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     *   positive answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback
+     *   feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      */
@@ -184,15 +173,13 @@ library SpokePoolValidationLib {
             seeds[i] = _seed(market.asset, _collateralPrice(contracts, market), market.supplyCap);
         }
 
-        // Loan markets: priced by the ResilientOracle, capped by their tier
+        // Loan markets: priced by the ResilientOracle, capped by their USD cap at that price
         for (uint256 i; i < loanCount; ++i) {
             address asset = request.loanMarkets[i].asset;
+            uint256 price = contracts.resilientOracle.getPrice(asset);
+            uint256 supplyCapUsd = contracts.policyRegistry.getLoanSupplyCapUsd(request.tierId, asset);
             assets[collateralCount + i] = asset;
-            seeds[collateralCount + i] = _seed(
-                asset,
-                contracts.resilientOracle.getPrice(asset),
-                contracts.policyRegistry.getLoanSupplyCap(request.tierId, asset)
-            );
+            seeds[collateralCount + i] = _seed(asset, price, (supplyCapUsd * EXP_SCALE) / price);
         }
     }
 
@@ -209,17 +196,18 @@ library SpokePoolValidationLib {
      * @custom:error ExceedsTierLimit is thrown when a collateral factor, liquidation threshold or supply cap's worth is
      *   above the tier's
      * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     *   positive answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback
+     *   feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
-     * @custom:error LoanAssetNotAllowed is thrown when the tier does not offer a loan asset
-     * @custom:error InterestRateModelNotAllowed is thrown when the tier does not allow a loan market's model
+     * @custom:error LoanAssetNotAllowed is thrown when a loan market's asset is not a loan asset
+     * @custom:error InterestRateModelNotAllowed is thrown when a loan market's model is not one of its asset's
      * @custom:error DuplicateAsset is thrown when an asset repeats in the request or is already in the pool
      */
     function validateMarkets(
         ISpokePoolManager.Contracts memory contracts,
         ISpokePoolManager.Request storage request
     ) external view {
-        (, , ISpokePoolPolicyRegistry.PoolLimits memory limits) = contracts.policyRegistry.getTierTerms(request.tierId);
+        ISpokePoolPolicyRegistry.PoolLimits memory limits = contracts.policyRegistry.getTier(request.tierId).limits;
         _checkPoolMarkets(contracts, request, limits.maxCollateralMarkets);
         _checkCollateralMarkets(contracts, request, limits);
         _checkLoanMarkets(contracts.policyRegistry, request);
@@ -299,8 +287,8 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @dev Checks each loan market's asset is one the tier offers, with an interest rate model the tier allows.
-     *   Reverts with LoanAssetNotAllowed or InterestRateModelNotAllowed
+     * @dev Checks each loan market's asset is a loan asset, with one of its interest rate models. Reverts with
+     *   LoanAssetNotAllowed or InterestRateModelNotAllowed
      */
     function _checkLoanMarkets(
         ISpokePoolPolicyRegistry policyRegistry,
@@ -310,11 +298,11 @@ library SpokePoolValidationLib {
         uint256 loanCount = request.loanMarkets.length;
         for (uint256 i; i < loanCount; ++i) {
             ISpokePoolManager.LoanMarketRequestParams memory market = request.loanMarkets[i];
-            // A zero cap means the tier does not offer the asset, as `setTier` rejects a zero cap for one it offers
-            if (policyRegistry.getLoanSupplyCap(tierId, market.asset) == 0) {
+            // Zero only for an asset that is not a loan asset, as `setTier` rejects a zero cap
+            if (policyRegistry.getLoanSupplyCapUsd(tierId, market.asset) == 0) {
                 revert ISpokePoolManager.LoanAssetNotAllowed(market.asset);
             }
-            if (!policyRegistry.isAllowedInterestRateModel(tierId, market.asset, market.interestRateModel)) {
+            if (!policyRegistry.isAllowedInterestRateModel(market.asset, market.interestRateModel)) {
                 revert ISpokePoolManager.InterestRateModelNotAllowed(market.interestRateModel);
             }
         }
@@ -374,7 +362,7 @@ library SpokePoolValidationLib {
 
     /**
      * @dev Returns a collateral asset's price, scaled like the ResilientOracle's: from the ResilientOracle once it
-     *   prices the asset, else from the market's main feed, whose latest answer must be positive and within Venus's
+     *   prices the asset, else from the market's main feed, whose latest answer must be positive and within the feed's
      *   staleness limit. The pivot and fallback feeds are not considered, but every set feed's oracle is checked
      */
     function _collateralPrice(
@@ -394,10 +382,9 @@ library SpokePoolValidationLib {
         _checkFeedOracles(asset, feeds);
 
         // Only the main feed prices the asset here
-        (, , , uint256 maxStalePeriod, , , , ) = contracts.policyRegistry.marketParams();
         IChainlinkFeed feed = IChainlinkFeed(feeds[0].feed);
         (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
-        if (answer <= 0 || block.timestamp - updatedAt > maxStalePeriod) {
+        if (answer <= 0 || block.timestamp - updatedAt > feeds[0].maxStalePeriod) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
 
@@ -406,9 +393,10 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @dev Checks each set feed is on one of the manager's supported oracles, and on its own: one oracle holds one feed
-     *   per asset, so a second feed would replace the first. A fallback feed needs a pivot feed, as the ResilientOracle
-     *   only uses a fallback price it can check against the pivot. Reverts with UnsupportedOracle or InvalidOracleFeed
+     * @dev Checks each set feed has a staleness limit and is on one of the manager's supported oracles, and on its own:
+     *   one oracle holds one feed per asset, so a second feed would replace the first. A fallback feed needs a pivot
+     *   feed, as the ResilientOracle only uses a fallback price it can check against the pivot. Reverts with
+     *   UnsupportedOracle or InvalidOracleFeed
      */
     function _checkFeedOracles(address asset, ISpokePoolManager.OracleFeed[3] memory feeds) private view {
         if (feeds[2].feed != address(0) && feeds[1].feed == address(0)) {
@@ -425,6 +413,9 @@ library SpokePoolValidationLib {
         for (uint256 i; i < 3; ++i) {
             if (feeds[i].feed == address(0)) {
                 continue;
+            }
+            if (feeds[i].maxStalePeriod == 0) {
+                revert ISpokePoolManager.InvalidOracleFeed(asset);
             }
 
             address oracle = feeds[i].oracle;
@@ -447,15 +438,17 @@ library SpokePoolValidationLib {
 
     /**
      * @dev Checks a bond on every request, so a deployer short of it tops up first: `amount`, what the bond holds or
-     *   a new bond's amount, must be worth `requiredBondUsd`, the whole bond its tier requires. The tier's coverage
-     *   ratio, at most 100%, only loosens the deployer's risk setters. Reverts with InsufficientBondValue
+     *   a new bond's amount, must be worth the whole bond `tierId` requires. The tier's coverage ratio, at most 100%,
+     *   only loosens the deployer's risk setters. Reverts with the registry's BondAssetNotAllowed when the asset has
+     *   no factor, or InsufficientBondValue
      */
     function _ensureRequiredBondValue(
         ISpokePoolManager.Contracts memory contracts,
+        uint256 tierId,
         address bondAsset,
-        uint256 amount,
-        uint256 requiredBondUsd
+        uint256 amount
     ) private view {
+        uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
         uint256 amountUsd = (amount * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
         if (amountUsd < requiredBondUsd) {
             revert ISpokePoolManager.InsufficientBondValue(amountUsd, requiredBondUsd);

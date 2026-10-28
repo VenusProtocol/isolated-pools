@@ -203,7 +203,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
         ISpokePoolManager.Request memory request = SPOKE_POOL_MANAGER.getRequest(requestId);
         comptroller = request.comptroller;
-        if (request.requestType == ISpokePoolManager.RequestType.Tier) {
+        if (request.requestType == ISpokePoolManager.RequestType.TierUpgrade) {
             return (
                 comptroller,
                 vTokens,
@@ -330,7 +330,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 collateralCount = request.collateralMarkets.length;
         uint256 loanCount = request.loanMarkets.length;
         vTokens = new address[](collateralCount + loanCount);
-        (address collateralInterestRateModel, , , , , , , ) = POLICY_REGISTRY.marketParams();
+        (address collateralInterestRateModel, , ) = POLICY_REGISTRY.marketParams();
 
         for (uint256 i; i < collateralCount; ++i) {
             vTokens[i] = _deployMarket(
@@ -364,7 +364,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         address interestRateModel,
         address executor
     ) private returns (address vToken) {
-        (, uint256 reserveFactor, , , , , , ) = POLICY_REGISTRY.marketParams();
+        (, uint256 reserveFactor, ) = POLICY_REGISTRY.marketParams();
         string memory assetSymbol = IERC20MetadataUpgradeable(asset).symbol();
         vToken = address(new BeaconProxy(VTOKEN_BEACON, ""));
         VToken(vToken).initialize(
@@ -443,7 +443,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         for (uint256 i; i < request.loanMarkets.length; ++i) {
             address asset = request.loanMarkets[i].asset;
             address vToken = vTokens[collateralCount + i];
-            uint256 supplyCap = POLICY_REGISTRY.getLoanSupplyCap(request.tierId, asset);
+            uint256 supplyCap = _loanSupplyCap(request.tierId, asset);
             uint256 seed = SPOKE_POOL_MANAGER.requestSeeds(requestId, asset);
             _addMarketListing(
                 proposal,
@@ -466,7 +466,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
      * @dev Adds the collateral assets' oracle configs with Venus's parameters, one batch per oracle. Each asset the
      *   ResilientOracle does not price yet gets its set feeds, each on its own oracle, its BoundValidator bounds when a
      *   pivot feed is set, and its ResilientOracle config with each set feed's oracle enabled. Each asset the
-     *   DeviationBoundedOracle does not have yet gets its config there
+     *   DeviationBoundedOracle does not have yet gets its config there, if Venus enables it
      */
     function _addOracleConfigs(
         Proposal memory proposal,
@@ -497,7 +497,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         bool[] memory unpriced,
         address oracle
     ) private view {
-        (, , , uint256 maxStalePeriod, , , , ) = POLICY_REGISTRY.marketParams();
         uint256 marketCount = markets.length;
         FeedConfig[] memory configs = new FeedConfig[](marketCount);
         uint256 count;
@@ -509,7 +508,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             for (uint256 j; j < 3; ++j) {
                 ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
                 if (feed.feed != address(0) && feed.oracle == oracle) {
-                    configs[count] = FeedConfig(markets[i].asset, feed.feed, maxStalePeriod);
+                    configs[count] = FeedConfig(markets[i].asset, feed.feed, feed.maxStalePeriod);
                     ++count;
                     break;
                 }
@@ -535,7 +534,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         bool[] memory unpriced,
         address boundValidator
     ) private view {
-        (, , , , , , , uint256 boundDeviation) = POLICY_REGISTRY.marketParams();
+        (, , , , uint256 boundDeviation) = POLICY_REGISTRY.oracleParams();
         uint256 marketCount = markets.length;
         BoundConfig[] memory configs = new BoundConfig[](marketCount);
         uint256 count;
@@ -604,13 +603,16 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         }
     }
 
-    /// @dev Adds the DeviationBoundedOracle's batch of configs for the assets it does not have yet, if any
+    /// @dev Adds the DeviationBoundedOracle's batch of configs for the assets it does not have yet, if Venus enables it
     function _addDeviationBoundedOracleConfigs(
         Proposal memory proposal,
         ISpokePoolManager.CollateralMarketRequestParams[] memory markets
     ) private view {
-        (, , , , uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold, ) = POLICY_REGISTRY
-            .marketParams();
+        (bool enabled, uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold, ) = POLICY_REGISTRY
+            .oracleParams();
+        if (!enabled) {
+            return;
+        }
         uint256 marketCount = markets.length;
         IDeviationBoundedOracle.TokenConfigInput[] memory configs = new IDeviationBoundedOracle.TokenConfigInput[](
             marketCount
@@ -665,7 +667,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 seedVTokens = (input.initialSupply * EXP_SCALE) / VToken(vToken).exchangeRateStored();
         _addAction(proposal, vToken, "transfer(address,uint256)", abi.encode(address(0), seedVTokens));
 
-        (, , uint256 reduceReservesBlockDelta, , , , , ) = POLICY_REGISTRY.marketParams();
+        (, , uint256 reduceReservesBlockDelta) = POLICY_REGISTRY.marketParams();
         _addAction(proposal, vToken, "setReduceReservesBlockDelta(uint256)", abi.encode(reduceReservesBlockDelta));
     }
 
@@ -715,7 +717,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             }
 
             address asset = VToken(vToken).underlying();
-            uint256 supplyCap = POLICY_REGISTRY.getLoanSupplyCap(tierId, asset);
+            uint256 supplyCap = _loanSupplyCap(tierId, asset);
             if (supplyCap == 0) {
                 revert LoanAssetNotAllowed(asset);
             }
@@ -779,6 +781,12 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         assembly {
             mstore(listed, listedCount)
         }
+    }
+
+    /// @dev Returns a tier's supply cap for a loan market of `asset`: its USD cap at the asset's current price
+    function _loanSupplyCap(uint256 tierId, address asset) private view returns (uint256) {
+        uint256 supplyCapUsd = POLICY_REGISTRY.getLoanSupplyCapUsd(tierId, asset);
+        return (supplyCapUsd * EXP_SCALE) / SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getPrice(asset);
     }
 
     /// @dev Returns empty VIP actions with room for `capacity` of them

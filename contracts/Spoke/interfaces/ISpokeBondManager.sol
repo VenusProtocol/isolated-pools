@@ -165,7 +165,7 @@ interface ISpokeBondManager {
     /**
      * @notice Takes `amount` from a pool's bond and pays it to `receiver` at once
      * @param comptroller The pool's comptroller
-     * @param amount The amount to take, in the bond's asset; at most `getSeizableAmount`
+     * @param amount The amount to take, in the bond's asset; at most `getCurrentBondAmount`
      * @param receiver The receiver
      * @custom:event Emits BondSeized; the account emits Paid when something is paid
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
@@ -222,14 +222,14 @@ interface ISpokeBondManager {
     function setAssetConfig(address asset, AssetConfig calldata config) external;
 
     /**
-     * @notice Returns the most `seize` can take from a pool's bond. It is read before the Hub accrues its fees, so
-     *   `seize` may see a different amount
+     * @notice Returns what a pool's bond holds now, the most `seize` can take. It is read before the Hub accrues its
+     *   fees, so `seize` may see a different amount
      * @param comptroller The pool's comptroller
      * @return The amount, in the bond's asset
      * @custom:error BondNotFound is thrown when the pool has no live bond
      * @custom:error The source's errors when it cannot report the bond's position
      */
-    function getSeizableAmount(address comptroller) external view returns (uint256);
+    function getCurrentBondAmount(address comptroller) external view returns (uint256);
 
     /**
      * @notice Returns the SpokePoolManager, the only caller of `createBond`, `topUp`, `withdrawExcess`, `seize` and

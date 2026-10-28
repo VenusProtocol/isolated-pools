@@ -162,7 +162,7 @@ library SpokePoolGovernanceLib {
             revert ISpokePoolManager.RedundantUpdate(vToken);
         }
 
-        (, , ISpokePoolPolicyRegistry.PoolLimits memory limits) = contracts.policyRegistry.getTierTerms(tierId);
+        ISpokePoolPolicyRegistry.PoolLimits memory limits = contracts.policyRegistry.getTier(tierId).limits;
         if (collateralFactor > limits.maxCollateralFactor || liquidationThreshold > limits.maxLiquidationThreshold) {
             revert ISpokePoolManager.ExceedsTierLimit(vToken);
         }
@@ -200,7 +200,7 @@ library SpokePoolGovernanceLib {
             revert ISpokePoolManager.RedundantUpdate(vToken);
         }
 
-        (, , ISpokePoolPolicyRegistry.PoolLimits memory limits) = contracts.policyRegistry.getTierTerms(tierId);
+        ISpokePoolPolicyRegistry.PoolLimits memory limits = contracts.policyRegistry.getTier(tierId).limits;
         uint256 supplyCapUsd = (supplyCap * contracts.resilientOracle.getUnderlyingPrice(vToken)) / EXP_SCALE;
         if (supplyCapUsd > limits.maxCollateralSupplyCapUsd) {
             revert ISpokePoolManager.ExceedsTierLimit(vToken);
@@ -293,7 +293,7 @@ library SpokePoolGovernanceLib {
         uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
 
         // What the bond holds, net of a loss and a Hub's exit fee
-        uint256 bondUsd = (bondAccount.seizableAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
+        uint256 bondUsd = (bondAccount.currentBondAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
         if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert ISpokePoolManager.CoverageTooLow((bondUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);
         }

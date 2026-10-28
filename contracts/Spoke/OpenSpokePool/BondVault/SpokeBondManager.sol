@@ -184,8 +184,8 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokeBondManager
-    function getSeizableAmount(address comptroller) external view returns (uint256) {
-        return _ensureBondExists(comptroller).seizableAmount();
+    function getCurrentBondAmount(address comptroller) external view returns (uint256) {
+        return _ensureBondExists(comptroller).currentBondAmount();
     }
 
     // ──────────────────────────────────────────────────────────────────────

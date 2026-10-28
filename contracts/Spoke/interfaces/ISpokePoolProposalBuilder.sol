@@ -27,7 +27,7 @@ interface ISpokePoolProposalBuilder {
     error NotSpokePoolManager(address caller);
 
     /**
-     * @notice Thrown when a loan market's asset is not one the tier offers
+     * @notice Thrown when one of the pool's loan market assets is no longer a loan asset
      * @param asset The market's asset
      */
     error LoanAssetNotAllowed(address asset);
@@ -37,16 +37,15 @@ interface ISpokePoolProposalBuilder {
 
     /**
      * @notice Deploys a request's contracts and builds its VIP, which settles it; a tier request deploys nothing and
-     *   its VIP sets the pool's loan market caps to the new tier's. The markets' seeds come from the manager's
-     *   `requestSeeds`
+     *   its VIP sets the pool's loan market caps to the new tier's USD cap at current prices. The markets' seeds come
+     *   from the manager's `requestSeeds`
      * @param requestId The request
      * @param description The VIP's description
      * @return comptroller The pool's comptroller, deployed for a pool request
      * @return vTokens The deployed markets, the collateral markets' then the loan markets'; empty for a tier request
      * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
-     * @custom:error LoanAssetNotAllowed is thrown when a tier request's tier does not offer one of the pool's loan
-     *   assets
+     * @custom:error LoanAssetNotAllowed is thrown when a tier request's pool has a market of an asset no longer lent
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function buildRequestProposal(

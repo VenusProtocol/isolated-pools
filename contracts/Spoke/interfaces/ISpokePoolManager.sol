@@ -18,8 +18,8 @@ interface ISpokePoolManager {
     /// @notice What a request asks for
     enum RequestType {
         Pool,
-        Markets,
-        Tier
+        NewMarkets,
+        TierUpgrade
     }
 
     /// @notice Lifecycle of a request
@@ -43,10 +43,12 @@ interface ISpokePoolManager {
         HandedOver
     }
 
-    /// @notice A collateral asset's Chainlink-compatible feed and the oracle it is set on
+    /// @notice A collateral asset's Chainlink-compatible feed, the oracle it is set on and the oracle's staleness limit
     struct OracleFeed {
         address oracle;
         address feed;
+        // In seconds; it depends on how often the feed updates
+        uint256 maxStalePeriod;
     }
 
     /// @notice A new collateral market's parameters set by the deployer
@@ -314,13 +316,13 @@ interface ISpokePoolManager {
     error InvalidMarketParams(address asset);
 
     /**
-     * @notice Thrown when a loan market's asset is not one the tier offers
+     * @notice Thrown when a loan market's asset is not a loan asset
      * @param asset The market's asset
      */
     error LoanAssetNotAllowed(address asset);
 
     /**
-     * @notice Thrown when a loan market's interest rate model is not one its tier allows for its asset
+     * @notice Thrown when a loan market's interest rate model is not one of its asset's
      * @param interestRateModel The interest rate model
      */
     error InterestRateModelNotAllowed(address interestRateModel);
@@ -366,7 +368,7 @@ interface ISpokePoolManager {
      * @param fromTierId The pool's tier
      * @param toTierId The target tier
      */
-    error NotAnUpgrade(uint256 fromTierId, uint256 toTierId);
+    error InvalidTierUpgrade(uint256 fromTierId, uint256 toTierId);
 
     /**
      * @notice Thrown when a request is not in a status the function accepts
@@ -375,8 +377,8 @@ interface ISpokePoolManager {
     error InvalidRequestStatus(uint256 requestId);
 
     /**
-     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, two of its
-     *   feeds share an oracle, or it has a fallback feed without a pivot feed
+     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, a set feed
+     *   has no staleness limit, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
      * @param asset The asset
      */
     error InvalidOracleFeed(address asset);
@@ -494,7 +496,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error OpenRequestExists is thrown while the caller has an open request
-     * @custom:error NotAnUpgrade is thrown when the target tier is not an upgrade of the pool's tier
+     * @custom:error InvalidTierUpgrade is thrown when the target tier is not an upgrade of the pool's tier
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the target tier
      *   requires
@@ -523,7 +525,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
      * @custom:error InvalidOracleFeed is thrown when an unpriced asset's new main feed is missing or has no live
-     *   positive answer, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     *   positive answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback
+     *   feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when the supply cap, priced again, is worth more than the tier allows
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
