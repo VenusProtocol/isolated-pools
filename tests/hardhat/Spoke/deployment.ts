@@ -2,9 +2,12 @@ import { expect } from "chai";
 import hre, { artifacts, deployments, ethers, getNamedAccounts } from "hardhat";
 
 import deploySpokeComptroller from "../../../deploy/025-deploy-spoke-comptroller";
-import { getBlockOrTimestampBasedDeploymentInfo } from "../../../helpers/deploymentUtils";
+import {
+  deployUnlessOnlyMetadataChanged,
+  getBlockOrTimestampBasedDeploymentInfo,
+} from "../../../helpers/deploymentUtils";
 import { getRateModelName, getRateModelParams } from "../../../helpers/rateModelHelpers";
-import { getSpokePoolConfig } from "../../../helpers/spokeDeploymentConfig";
+import { getSpokePoolConfigs } from "../../../helpers/spokeDeploymentConfig";
 
 const EIP_170_LIMIT = 24576;
 const BEACON_ABI = ["function implementation() view returns (address)", "function owner() view returns (address)"];
@@ -13,9 +16,10 @@ const BEACON_ABI = ["function implementation() view returns (address)", "functio
 // There is no getter for it, and it is the only place the proxy records which beacon it will follow through upgrades.
 const EIP_1967_BEACON_SLOT = "0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50";
 
-// The markets the deploy scripts build on this network. `009-deploy-vtokens.ts` never sees these, which is why they
-// live outside `deploymentConfig.ts`.
-const spokeMarkets = getSpokePoolConfig("hardhat")?.vtokens ?? [];
+// The pools and markets the deploy scripts build on this network. `009-deploy-vtokens.ts` never sees these, which is
+// why they live outside `deploymentConfig.ts`.
+const spokePools = getSpokePoolConfigs("hardhat");
+const spokeMarkets = spokePools.flatMap(({ id, vtokens }) => vtokens.map(config => ({ poolId: id, config })));
 const timeManagerParams = getBlockOrTimestampBasedDeploymentInfo("hardhat");
 
 async function spokeComptroller() {
@@ -53,6 +57,22 @@ describe("SpokeComptroller: deployment", function () {
     expect(spokeBeacon.address).to.not.equal(sharedBeacon.address);
   });
 
+  it("deploys a comptroller for every configured pool behind the one spoke beacon", async () => {
+    const spokeBeacon = (await deployments.get("SpokeComptrollerBeacon")).address;
+    const spokeRegistry = (await deployments.get("SpokePoolRegistry")).address;
+
+    expect(spokePools.length, "the hardhat config should cover more than one pool").to.be.greaterThan(1);
+    const proxies = new Set<string>();
+    for (const { id } of spokePools) {
+      const proxy = (await deployments.get(`Comptroller_${id}`)).address;
+      const slot = await ethers.provider.getStorageAt(proxy, EIP_1967_BEACON_SLOT);
+      expect(ethers.utils.getAddress(ethers.utils.hexDataSlice(slot, 12)), `${id} beacon`).to.equal(spokeBeacon);
+      expect(await (await ethers.getContractAt("SpokeComptroller", proxy)).poolRegistry()).to.equal(spokeRegistry);
+      proxies.add(proxy);
+    }
+    expect(proxies.size).to.equal(spokePools.length);
+  });
+
   it("gives the spoke markets a VToken beacon of their own", async () => {
     const spokeBeacon = await ethers.getContractAt(BEACON_ABI, (await deployments.get("SpokeVTokenBeacon")).address);
     const sharedBeacon = await ethers.getContractAt(BEACON_ABI, (await deployments.get("VTokenBeacon")).address);
@@ -80,10 +100,12 @@ describe("SpokeComptroller: deployment", function () {
   it("builds every configured market behind the spoke VToken beacon", async () => {
     const spokeBeacon = (await deployments.get("SpokeVTokenBeacon")).address;
     const sharedBeacon = (await deployments.get("VTokenBeacon")).address;
-    const comptroller = await spokeComptroller();
 
     expect(spokeMarkets, "no spoke markets configured for this network").to.not.have.lengthOf(0);
-    for (const { symbol } of spokeMarkets) {
+    for (const {
+      poolId,
+      config: { symbol },
+    } of spokeMarkets) {
       const market = (await deployments.get(`VToken_${symbol}`)).address;
       const slot = await ethers.provider.getStorageAt(market, EIP_1967_BEACON_SLOT);
       const beacon = ethers.utils.getAddress(ethers.utils.hexDataSlice(slot, 12));
@@ -92,12 +114,14 @@ describe("SpokeComptroller: deployment", function () {
       // every isolated market on the chain takes with it, and the other way round.
       expect(beacon, `${symbol} beacon`).to.equal(spokeBeacon);
       expect(beacon, `${symbol} beacon`).to.not.equal(sharedBeacon);
-      expect(await (await ethers.getContractAt("VToken", market)).comptroller()).to.equal(comptroller.address);
+      expect(await (await ethers.getContractAt("VToken", market)).comptroller()).to.equal(
+        (await deployments.get(`Comptroller_${poolId}`)).address,
+      );
     }
   });
 
   it("initializes each market with its configured token metadata and rate model", async () => {
-    for (const config of spokeMarkets) {
+    for (const { config } of spokeMarkets) {
       const market = await ethers.getContractAt("VToken", (await deployments.get(`VToken_${config.symbol}`)).address);
 
       expect(await market.name()).to.equal(config.name);
@@ -127,18 +151,29 @@ describe("SpokeComptroller: deployment", function () {
     expect(await registry.getAllPools()).to.have.lengthOf(0);
   });
 
-  it("deploys the proxy as a SpokeComptroller, initialized, owned by the deployer", async () => {
+  it("deploys each proxy as a SpokeComptroller, initialized, owned by the deployer", async () => {
     const { deployer } = await getNamedAccounts();
-    const comptroller = await spokeComptroller();
 
-    expect(await comptroller.poolRegistry()).to.equal((await deployments.get("SpokePoolRegistry")).address);
-    expect(await comptroller.accessControlManager()).to.equal((await deployments.get("AccessControlManager")).address);
-    expect(await comptroller.maxLoopsLimit()).to.equal(50);
-    expect(await comptroller.owner()).to.equal(deployer);
+    for (const { id } of spokePools) {
+      const comptroller = await ethers.getContractAt(
+        "SpokeComptroller",
+        (
+          await deployments.get(`Comptroller_${id}`)
+        ).address,
+      );
 
-    // Spoke-only surface, which proves the proxy runs the fork rather than the shared implementation.
-    expect(await comptroller.isLiquidationAllowlistEnabled()).to.equal(false);
-    expect(await comptroller.deviationBoundedOracle()).to.equal(ethers.constants.AddressZero);
+      expect(await comptroller.poolRegistry()).to.equal((await deployments.get("SpokePoolRegistry")).address);
+      expect(await comptroller.accessControlManager()).to.equal(
+        (await deployments.get("AccessControlManager")).address,
+      );
+      expect(await comptroller.maxLoopsLimit()).to.equal(50);
+      expect(await comptroller.owner(), `${id} owner`).to.equal(deployer);
+      expect(await comptroller.pendingOwner(), `${id} pending owner`).to.equal(ethers.constants.AddressZero);
+
+      // Spoke-only surface, which proves the proxy runs the fork rather than the shared implementation.
+      expect(await comptroller.isLiquidationAllowlistEnabled()).to.equal(false);
+      expect(await comptroller.deviationBoundedOracle()).to.equal(ethers.constants.AddressZero);
+    }
   });
 
   it("leaves the pool unregistered and unconfigured, which is the listing VIP's job", async () => {
@@ -191,6 +226,90 @@ describe("SpokeComptroller: deployment", function () {
     } finally {
       await deployments.save("Comptroller_HubSpoke", recorded);
     }
+  });
+
+  it("reuses an implementation whose build differs only in its metadata hash", async () => {
+    // An edit to a file the contract only imports changes the metadata hash and nothing else. Simulate a deployment
+    // built before such an edit: the same code with one byte of the hash flipped, behind the beacon.
+    const { deployer } = await getNamedAccounts();
+    const recorded = await deployments.get("SpokeComptrollerImpl");
+    const artifact = await deployments.getArtifact("SpokeComptroller");
+    const metadataStart = artifact.bytecode.length - (parseInt(artifact.bytecode.slice(-4), 16) + 2) * 2;
+    // Past the CBOR map header and the `ipfs` key, inside the 34-byte hash itself.
+    const flipAt = metadataStart + 30;
+    const flipped = artifact.bytecode[flipAt] === "0" ? "1" : "0";
+    const bytecode = artifact.bytecode.slice(0, flipAt) + flipped + artifact.bytecode.slice(flipAt + 1);
+    const signer = await ethers.getSigner(deployer);
+    const earlier = await new ethers.ContractFactory(artifact.abi, bytecode, signer).deploy(...(recorded.args ?? []));
+    await earlier.deployed();
+
+    const beacon = await ethers.getContractAt(
+      "UpgradeableBeacon",
+      (
+        await deployments.get("SpokeComptrollerBeacon")
+      ).address,
+    );
+    await beacon.upgradeTo(earlier.address);
+    await deployments.save("SpokeComptrollerImpl", {
+      abi: artifact.abi,
+      address: earlier.address,
+      bytecode,
+      args: recorded.args,
+      transactionHash: earlier.deployTransaction.hash,
+    });
+    try {
+      // hardhat-deploy on its own would redeploy, which is what the script must not do here.
+      const { differences } = await deployments.fetchIfDifferent("SpokeComptrollerImpl", {
+        contract: "SpokeComptroller",
+        from: deployer,
+        args: recorded.args,
+      });
+      expect(differences).to.equal(true);
+
+      await deploySpokeComptroller(hre);
+      expect((await deployments.get("SpokeComptrollerImpl")).address).to.equal(earlier.address);
+      expect(await beacon.implementation()).to.equal(earlier.address);
+    } finally {
+      await beacon.upgradeTo(recorded.address);
+      await deployments.save("SpokeComptrollerImpl", recorded);
+    }
+  });
+
+  describe("deployUnlessOnlyMetadataChanged", () => {
+    const PROBE = "MetadataReuseProbe";
+    const rateModelArgs = (baseRatePerYear: number) => [baseRatePerYear, 0, false, 10_512_000];
+
+    afterEach(async () => {
+      await deployments.delete(PROBE);
+    });
+
+    it("redeploys when the constructor arguments differ", async () => {
+      const { deployer } = await getNamedAccounts();
+      const options = { contract: "WhitePaperInterestRateModel", from: deployer };
+      const first = await deployUnlessOnlyMetadataChanged(hre, PROBE, { ...options, args: rateModelArgs(0) });
+      const second = await deployUnlessOnlyMetadataChanged(hre, PROBE, { ...options, args: rateModelArgs(1) });
+
+      expect(second.newlyDeployed).to.equal(true);
+      expect(second.address).to.not.equal(first.address);
+    });
+
+    it("redeploys when the code differs, constructor included", async () => {
+      // The recorded arguments do not fit the new constructor, so they must not be encoded against it.
+      const { deployer } = await getNamedAccounts();
+      const first = await deployUnlessOnlyMetadataChanged(hre, PROBE, {
+        contract: "WhitePaperInterestRateModel",
+        from: deployer,
+        args: rateModelArgs(0),
+      });
+      const second = await deployUnlessOnlyMetadataChanged(hre, PROBE, {
+        contract: "MockToken",
+        from: deployer,
+        args: ["Probe", "PRB", 18],
+      });
+
+      expect(second.newlyDeployed).to.equal(true);
+      expect(second.address).to.not.equal(first.address);
+    });
   });
 
   describe("contract size", () => {

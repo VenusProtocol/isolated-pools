@@ -5,6 +5,7 @@ import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { getConfig, getMaxBorrowRateMantissa } from "../helpers/deploymentConfig";
 import {
+  deployUnlessOnlyMetadataChanged,
   getBlockOrTimestampBasedDeploymentInfo,
   readBackAddress,
   sameAddress,
@@ -41,10 +42,12 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // As in 025-deploy-spoke-comptroller.ts, the implementation is the one deployment here that does not set
   // `skipIfAlreadyDeployed`: that flag returns the recorded address before comparing anything, so a re-run after a
   // source change would hand back the old implementation and the check below would compare stale state against itself.
+  // It is deployed through `deployUnlessOnlyMetadataChanged`, so an edit to a file `VToken` only imports does not
+  // redeploy it.
   // The beacon keeps the flag, because its constructor argument carries the implementation address and comparing that
   // would build a second beacon and orphan the markets already behind the first.
   const implArgs = [isTimeBased, blocksPerYear, maxBorrowRateMantissa];
-  const spokeVTokenImpl: DeployResult = await deploy("SpokeVTokenImpl", {
+  const spokeVTokenImpl: DeployResult = await deployUnlessOnlyMetadataChanged(hre, "SpokeVTokenImpl", {
     contract: "VToken",
     from: deployer,
     args: implArgs,
