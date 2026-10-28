@@ -1,3 +1,8 @@
+## 4.4.0-dev.14 (2026-10-28)
+
+* Merge pull request #576 from VenusProtocol/fix/storage-layout-deployed-renames ([84ab3e6](https://github.com/VenusProtocol/isolated-pools/commit/84ab3e6)), closes [#576](https://github.com/VenusProtocol/isolated-pools/issues/576)
+* fix: ignore already-deployed oz-renamed-from in storage layout check ([c65d9b7](https://github.com/VenusProtocol/isolated-pools/commit/c65d9b7))
+
 ## 4.4.0-dev.13 (2026-10-27)
 
 * Merge pull request #574 from VenusProtocol/fix/spoke-lens ([fbcce55](https://github.com/VenusProtocol/isolated-pools/commit/fbcce55)), closes [#574](https://github.com/VenusProtocol/isolated-pools/issues/574)
