@@ -2273,13 +2273,6 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
-        name: "Applied Materials",
-        symbol: "AMATB",
-        decimals: 18,
-        tokenAddress: "0xa304BD78e739C0F777202B3eB73Ac3736d1df801",
-      },
-      {
-        isMock: false,
         name: "TSMC",
         symbol: "TSMB",
         decimals: 18,

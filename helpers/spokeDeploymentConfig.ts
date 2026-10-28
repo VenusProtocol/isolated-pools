@@ -47,8 +47,8 @@ export type SpokePoolConfig = Omit<PoolConfig, "vtokens" | PoolListingParameter>
 // may supply and who may liquidate, not who may borrow; it does not take more risk per market, so there is no reason
 // for these to differ from the isolated stablecoin markets.
 //
-// On `bscmainnet` they are the listing parameters of the "bStock index" pool. The "Bluechips" pool sets only what
-// deployment needs, and its listing VIP sets the rest.
+// On `bscmainnet` they are the listing parameters of the "bStock index" pool. The "bStock mainstream" pool sets only
+// what deployment needs, and its listing VIP sets the rest.
 
 // Receives the seed vTokens `addMarket` mints, so the seed can never be redeemed.
 const SEED_RECEIVER = "0x000000000000000000000000000000000000dEaD";
@@ -76,10 +76,10 @@ const HARDHAT_SECOND_POOL: SpokePoolConfig = {
   ],
 };
 
-// The second `bscmainnet` pool. As with the isolated pools, the id is the name without spaces. Each vToken symbol
-// ends in the id and each vToken name in the name, and neither can change once `028` deploys the market.
-const BLUECHIPS_ID = "Bluechips";
-const BLUECHIPS_NAME = "Bluechips";
+// The second `bscmainnet` pool. The id is the name in camel case, as `bStockIndex` is for the first pool. Each vToken
+// symbol ends in the id and each vToken name in the name, and neither can change once `028` deploys the market.
+const BSTOCK_MAINSTREAM_ID = "bStockMainstream";
+const BSTOCK_MAINSTREAM_NAME = "bStock mainstream";
 
 // The bStock index pool's curves, so `028` reuses the rate models already deployed for them.
 const LIQUIDITY_RATE_MODEL = {
@@ -97,20 +97,20 @@ const COLLATERAL_RATE_MODEL = {
   kink_: "0",
 };
 
-const bluechipsMarket = (asset: string, rateModel: typeof LIQUIDITY_RATE_MODEL): SpokeVTokenConfig => ({
-  name: `Venus ${asset} (${BLUECHIPS_NAME})`,
+const bStockMainstreamMarket = (asset: string, rateModel: typeof LIQUIDITY_RATE_MODEL): SpokeVTokenConfig => ({
+  name: `Venus ${asset} (${BSTOCK_MAINSTREAM_NAME})`,
   asset,
-  symbol: `v${asset}_${BLUECHIPS_ID}`,
+  symbol: `v${asset}_${BSTOCK_MAINSTREAM_ID}`,
   ...rateModel,
   reserveFactor: convertToUnit("0.1", 18),
 });
 
-const BLUECHIPS: SpokePoolConfig = {
-  id: BLUECHIPS_ID,
-  name: BLUECHIPS_NAME,
+const BSTOCK_MAINSTREAM: SpokePoolConfig = {
+  id: BSTOCK_MAINSTREAM_ID,
+  name: BSTOCK_MAINSTREAM_NAME,
   vtokens: [
     // Liquidity side: supplied only by each Hub's Spoke source, borrowable, and never collateral.
-    ...["USDT", "USDC", "U"].map(asset => bluechipsMarket(asset, LIQUIDITY_RATE_MODEL)),
+    ...["USDT", "USDC", "U"].map(asset => bStockMainstreamMarket(asset, LIQUIDITY_RATE_MODEL)),
     // Collateral side, with a zero-rate model since these markets are not borrowable. BNCB is left out until Atlas has
     // a feed for it.
     ...[
@@ -132,10 +132,9 @@ const BLUECHIPS: SpokePoolConfig = {
       "MUB",
       "INTCB",
       "DRAMB",
-      "AMATB",
       "TSMB",
       "COINB",
-    ].map(asset => bluechipsMarket(asset, COLLATERAL_RATE_MODEL)),
+    ].map(asset => bStockMainstreamMarket(asset, COLLATERAL_RATE_MODEL)),
   ],
 };
 
@@ -344,7 +343,7 @@ export const spokePoolConfig: Record<string, SpokePoolConfig[]> = {
         },
       ],
     },
-    BLUECHIPS,
+    BSTOCK_MAINSTREAM,
   ],
 };
 
