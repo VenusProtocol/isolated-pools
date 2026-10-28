@@ -52,12 +52,12 @@ interface ISpokePoolPolicyRegistry {
         uint256 reduceReservesBlockDelta;
     }
 
-    /// @notice The oracle configs every new collateral asset gets, set by Venus
+    /// @notice The oracle configs a new collateral asset gets unless the Venus team set its own for the request
     struct OracleParams {
         // Whether the VIP sets the DeviationBoundedOracle config below; without one, that oracle returns the
         // ResilientOracle's price unbounded
         bool deviationBoundedOracleEnabled;
-        // Its DeviationBoundedOracle config, set unless that oracle has the asset already
+        // Its DeviationBoundedOracle config, set for an asset neither that oracle nor the ResilientOracle has yet
         uint64 cooldownPeriod;
         uint256 triggerThreshold;
         uint256 resetThreshold;

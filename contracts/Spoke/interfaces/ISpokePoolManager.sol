@@ -63,6 +63,17 @@ interface ISpokePoolManager {
         OracleFeed[3] feeds;
     }
 
+    /// @notice A collateral asset's oracle configs the Venus team set for a request, in place of the registry's
+    struct OracleOverrides {
+        // The BoundValidator deviation, scaled by 1e18; zero takes the registry's
+        uint256 boundDeviation;
+        // The DeviationBoundedOracle config; a zero trigger threshold, which that oracle never accepts, takes the
+        // registry's
+        uint64 cooldownPeriod;
+        uint256 triggerThreshold;
+        uint256 resetThreshold;
+    }
+
     /// @notice A new loan market's parameters set by the deployer; its caps come from its tier
     struct LoanMarketRequestParams {
         address asset;
@@ -131,8 +142,30 @@ interface ISpokePoolManager {
      * @param requestId The request
      * @param asset The collateral market's asset
      * @param feeds The new feeds: main, pivot, fallback; a zero feed for no pivot or fallback
+     * @param boundDeviation The new BoundValidator deviation; zero for the registry's
      */
-    event OracleFeedsUpdated(uint256 indexed requestId, address indexed asset, OracleFeed[3] feeds);
+    event OracleFeedsUpdated(
+        uint256 indexed requestId,
+        address indexed asset,
+        OracleFeed[3] feeds,
+        uint256 boundDeviation
+    );
+
+    /**
+     * @notice Emitted when the Venus team sets a request's collateral asset's DeviationBoundedOracle config
+     * @param requestId The request
+     * @param asset The collateral market's asset
+     * @param cooldownPeriod The new cooldown, in seconds
+     * @param triggerThreshold The new trigger threshold; zero for the registry's config
+     * @param resetThreshold The new reset threshold
+     */
+    event DeviationBoundedOracleParamsUpdated(
+        uint256 indexed requestId,
+        address indexed asset,
+        uint64 cooldownPeriod,
+        uint256 triggerThreshold,
+        uint256 resetThreshold
+    );
 
     /**
      * @notice Emitted when a request's VIP payload is built and stored
@@ -378,7 +411,8 @@ interface ISpokePoolManager {
 
     /**
      * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, a set feed
-     *   has no staleness limit, two of its feeds share an oracle, or it has a fallback feed without a pivot feed
+     *   has no staleness limit, two of its feeds share an oracle, it has a fallback feed without a pivot feed, or a
+     *   bound deviation of 1e18 or above
      * @param asset The asset
      */
     error InvalidOracleFeed(address asset);
@@ -515,23 +549,51 @@ interface ISpokePoolManager {
     function cancelRequest(uint256 requestId) external;
 
     /**
-     * @notice Replaces a pending request's collateral market oracle feeds without the deployer's approval; a built
-     *   request is final, and changing it takes a new request
+     * @notice Replaces a pending request's collateral market oracle feeds and BoundValidator deviation without the
+     *   deployer's approval; a built request is final, and changing it takes a new request
      * @param requestId The request
      * @param asset The collateral market's asset
      * @param feeds The new feeds: main, pivot, fallback, each on its own supported oracle; a zero feed for no pivot or
      *   fallback
+     * @param boundDeviation The BoundValidator deviation, scaled by 1e18, used only with a pivot feed; zero for the
+     *   registry's
      * @custom:event Emits OracleFeedsUpdated
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
-     * @custom:error InvalidOracleFeed is thrown when an unpriced asset's new main feed is missing or has no live
-     *   positive answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback
-     *   feed without a pivot feed
+     * @custom:error InvalidOracleFeed is thrown when the bound deviation is 1e18 or above, or an unpriced asset's new
+     *   main feed is missing or has no live positive answer, a set feed has no staleness limit, two of its feeds share
+     *   an oracle, or it has a fallback feed without a pivot feed
      * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
      * @custom:error ExceedsTierLimit is thrown when the supply cap, priced again, is worth more than the tier allows
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
-    function setOracleFeeds(uint256 requestId, address asset, OracleFeed[3] calldata feeds) external;
+    function setOracleFeeds(
+        uint256 requestId,
+        address asset,
+        OracleFeed[3] calldata feeds,
+        uint256 boundDeviation
+    ) external;
+
+    /**
+     * @notice Sets a pending request's collateral asset's DeviationBoundedOracle config, in place of the registry's.
+     *   The VIP sets it even while the registry's is disabled. The DeviationBoundedOracle checks it when the VIP runs
+     * @param requestId The request
+     * @param asset The collateral market's asset
+     * @param cooldownPeriod The cooldown, in seconds
+     * @param triggerThreshold The trigger threshold, scaled by 1e18; zero for the registry's config
+     * @param resetThreshold The reset threshold, scaled by 1e18
+     * @custom:event Emits DeviationBoundedOracleParamsUpdated
+     * @custom:error InvalidRequestStatus is thrown when the request is not pending
+     * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
+     * @custom:access Controlled by AccessControlManager, granted to the Venus team
+     */
+    function setDeviationBoundedOracleParams(
+        uint256 requestId,
+        address asset,
+        uint64 cooldownPeriod,
+        uint256 triggerThreshold,
+        uint256 resetThreshold
+    ) external;
 
     /**
      * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. For a pool or markets
@@ -637,10 +699,13 @@ interface ISpokePoolManager {
 
     /**
      * @notice Pays the pool's deployer what its bond holds beyond the bond its tier requires at current prices, yield
-     *   and extra top-ups alike, in any pool status while its bond is live, even while paused
+     *   and extra top-ups alike. Only a live pool's deployer who is not paused can, as the bond backs a seizure
+     *   until the pool closes
      * @param comptroller The pool's comptroller
      * @custom:event The bond manager emits ExcessWithdrawn
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live
+     * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
@@ -969,6 +1034,24 @@ interface ISpokePoolManager {
      * @return The seed, in the asset; zero before the build; kept after the seed is released
      */
     function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
+
+    /**
+     * @notice Returns a request's collateral asset's oracle configs the Venus team set, in place of the registry's
+     * @param requestId The request
+     * @param asset The collateral market's asset
+     * @return boundDeviation The BoundValidator deviation, scaled by 1e18; zero for the registry's
+     * @return cooldownPeriod The DeviationBoundedOracle cooldown, in seconds
+     * @return triggerThreshold The DeviationBoundedOracle trigger threshold, scaled by 1e18; zero for the registry's
+     *   config
+     * @return resetThreshold The DeviationBoundedOracle reset threshold, scaled by 1e18
+     */
+    function requestOracleOverrides(
+        uint256 requestId,
+        address asset
+    )
+        external
+        view
+        returns (uint256 boundDeviation, uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold);
 
     /**
      * @notice Returns a request's VIP payload, an ABI-encoded GovernorBravo `propose` call

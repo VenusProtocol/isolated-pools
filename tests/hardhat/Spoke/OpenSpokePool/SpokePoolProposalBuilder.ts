@@ -205,11 +205,11 @@ describe("SpokePoolProposalBuilder", () => {
     [feeds.map(([asset, feed, maxStalePeriod = MAX_STALE_PERIOD]) => [asset, feed, maxStalePeriod])],
   ];
 
-  const boundConfigs = (assets: string[]): Action => [
+  const boundConfigs = (assets: string[], deviation = BOUND_DEVIATION): Action => [
     boundValidator.address,
     "setValidateConfigs((address,uint256,uint256)[])",
     ["tuple(address,uint256,uint256)[]"],
-    [assets.map(asset => [asset, e18("1").add(BOUND_DEVIATION), e18("1").sub(BOUND_DEVIATION)])],
+    [assets.map(asset => [asset, e18("1").add(deviation), e18("1").sub(deviation)])],
   ];
 
   /// The ResilientOracle's batch, each config as [asset, oracles, enable flags]
@@ -220,11 +220,18 @@ describe("SpokePoolProposalBuilder", () => {
     [configs.map(([asset, oracles, enabled]) => [asset, oracles, enabled, false])],
   ];
 
-  const boundedConfigs = (assets: string[]): Action => [
+  /// The DeviationBoundedOracle's batch, with the registry's config unless each asset is given [asset, config]
+  const boundedConfigs = (assets: (string | [string, BigNumberish[]])[]): Action => [
     boundedOracle.address,
     "setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])",
     ["tuple(address,uint64,uint256,uint256,bool,bool)[]"],
-    [assets.map(asset => [asset, COOLDOWN_PERIOD, TRIGGER_THRESHOLD, RESET_THRESHOLD, true, false])],
+    [
+      assets.map(entry => {
+        const [asset, config] =
+          typeof entry === "string" ? [entry, [COOLDOWN_PERIOD, TRIGGER_THRESHOLD, RESET_THRESHOLD]] : entry;
+        return [asset, ...config, true, false];
+      }),
+    ],
   ];
 
   const collateralListing = (market: ReturnType<typeof collateralMarket>, vToken: string) =>
@@ -567,7 +574,7 @@ describe("SpokePoolProposalBuilder", () => {
           ]);
         });
 
-        it("skips the feeds, bounds and ResilientOracle config of an asset the ResilientOracle prices", async () => {
+        it("skips every oracle config of an asset the ResilientOracle prices", async () => {
           oracle.getTokenConfig.whenCalledWith(colA.address).returns({
             asset: colA.address,
             oracles: [chainlinkOracle.address, constants.AddressZero, constants.AddressZero],
@@ -591,35 +598,16 @@ describe("SpokePoolProposalBuilder", () => {
                 [true, false, false],
               ],
             ]),
-            boundedConfigs([colA.address, colB.address]),
+            boundedConfigs([colB.address]),
             ...collateralListing(priced, vTokens[0]),
             ...collateralListing(unpriced, vTokens[1]),
           ]);
         });
 
-        it("skips the bounded config of an asset the DeviationBoundedOracle has, and every batch when all are set", async () => {
-          oracle.getTokenConfig.whenCalledWith(colA.address).returns({
-            asset: colA.address,
-            oracles: [chainlinkOracle.address, constants.AddressZero, constants.AddressZero],
-            enableFlagsForOracles: [true, false, false],
-            cachingEnabled: false,
-          });
+        it("skips the bounded config of an asset the DeviationBoundedOracle has", async () => {
           boundedOracle.assetProtectionConfig
             .whenCalledWith(colA.address)
             .returns([0, 0, false, true, 0, COOLDOWN_PERIOD, colA.address, 0, 0, false]);
-          const market = collateralMarket(colA);
-          const [, vTokens, proposal] = await build(marketsRequest([market]));
-          expectActions(proposal, [settlement(), ...collateralListing(market, vTokens[0])]);
-        });
-
-        it("skips every bounded config while the DeviationBoundedOracle is disabled", async () => {
-          await registry.setOracleParams({
-            deviationBoundedOracleEnabled: false,
-            cooldownPeriod: COOLDOWN_PERIOD,
-            triggerThreshold: TRIGGER_THRESHOLD,
-            resetThreshold: RESET_THRESHOLD,
-            boundDeviation: BOUND_DEVIATION,
-          });
           const market = collateralMarket(colA);
           const [, vTokens, proposal] = await build(marketsRequest([market]));
           expectActions(proposal, [
@@ -633,6 +621,83 @@ describe("SpokePoolProposalBuilder", () => {
               ],
             ]),
             ...collateralListing(market, vTokens[0]),
+          ]);
+        });
+
+        it("uses the Venus team's bound deviation and bounded config for the request over the registry's", async () => {
+          const teamConfig = [600, e18("0.2"), e18("0.1")];
+          manager.requestOracleOverrides.whenCalledWith(REQUEST_ID, colA.address).returns([e18("0.02"), ...teamConfig]);
+          const feeds = [
+            feedOn(chainlinkOracle.address, mainFeed.address),
+            feedOn(redstoneOracle.address, pivotFeed.address),
+            noFeed(),
+          ];
+          const marketA = collateralMarket(colA, feeds);
+          const marketB = collateralMarket(colB, feeds);
+          const [, vTokens, proposal] = await build(marketsRequest([marketA, marketB]));
+          expectActions(proposal, [
+            settlement(),
+            feedConfigs(chainlinkOracle.address, [
+              [colA.address, mainFeed.address],
+              [colB.address, mainFeed.address],
+            ]),
+            feedConfigs(redstoneOracle.address, [
+              [colA.address, pivotFeed.address],
+              [colB.address, pivotFeed.address],
+            ]),
+            [
+              boundValidator.address,
+              "setValidateConfigs((address,uint256,uint256)[])",
+              ["tuple(address,uint256,uint256)[]"],
+              [
+                [
+                  [colA.address, e18("1.02"), e18("0.98")],
+                  [colB.address, e18("1").add(BOUND_DEVIATION), e18("1").sub(BOUND_DEVIATION)],
+                ],
+              ],
+            ],
+            resilientConfigs(
+              [colA, colB].map(token => [
+                token.address,
+                [chainlinkOracle.address, redstoneOracle.address, constants.AddressZero],
+                [true, true, false],
+              ]),
+            ),
+            boundedConfigs([[colA.address, teamConfig], colB.address]),
+            ...collateralListing(marketA, vTokens[0]),
+            ...collateralListing(marketB, vTokens[1]),
+          ]);
+        });
+
+        it("skips every bounded config but the Venus team's while the registry's is disabled", async () => {
+          await registry.setOracleParams({
+            deviationBoundedOracleEnabled: false,
+            cooldownPeriod: COOLDOWN_PERIOD,
+            triggerThreshold: TRIGGER_THRESHOLD,
+            resetThreshold: RESET_THRESHOLD,
+            boundDeviation: BOUND_DEVIATION,
+          });
+          const teamConfig = [600, e18("0.2"), e18("0.1")];
+          manager.requestOracleOverrides.whenCalledWith(REQUEST_ID, colB.address).returns([0, ...teamConfig]);
+          const marketA = collateralMarket(colA);
+          const marketB = collateralMarket(colB);
+          const [, vTokens, proposal] = await build(marketsRequest([marketA, marketB]));
+          expectActions(proposal, [
+            settlement(),
+            feedConfigs(chainlinkOracle.address, [
+              [colA.address, mainFeed.address],
+              [colB.address, mainFeed.address],
+            ]),
+            resilientConfigs(
+              [colA, colB].map(token => [
+                token.address,
+                [chainlinkOracle.address, constants.AddressZero, constants.AddressZero],
+                [true, false, false],
+              ]),
+            ),
+            boundedConfigs([[colB.address, teamConfig]]),
+            ...collateralListing(marketA, vTokens[0]),
+            ...collateralListing(marketB, vTokens[1]),
           ]);
         });
 

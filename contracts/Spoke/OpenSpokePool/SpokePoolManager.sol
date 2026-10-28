@@ -8,6 +8,7 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
+import { MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { IBondAccount } from "../interfaces/IBondAccount.sol";
 import { ISpokeBondManager } from "../interfaces/ISpokeBondManager.sol";
@@ -156,32 +157,52 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
         _ensureRequestStatus(requestId, RequestStatus.Pending);
 
-        request.status = RequestStatus.Canceled;
-        _refund(request, requestSeeds[requestId]);
-
+        _closeRequest(requestId, RequestStatus.Canceled);
         emit RequestCanceled(requestId);
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setOracleFeeds(uint256 requestId, address asset, OracleFeed[3] calldata feeds) external {
-        _checkAccessAllowed("setOracleFeeds(uint256,address,OracleFeed[3])");
-        Request storage request = _ensureRequestStatus(requestId, RequestStatus.Pending);
-
-        uint256 collateralCount = request.collateralMarkets.length;
-        for (uint256 i; i < collateralCount; ++i) {
-            CollateralMarketRequestParams storage market = request.collateralMarkets[i];
-            if (market.asset == asset) {
-                for (uint256 j; j < 3; ++j) {
-                    market.feeds[j] = feeds[j];
-                }
-                SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), request.tierId, market);
-
-                emit OracleFeedsUpdated(requestId, asset, feeds);
-                return;
-            }
+    function setOracleFeeds(
+        uint256 requestId,
+        address asset,
+        OracleFeed[3] calldata feeds,
+        uint256 boundDeviation
+    ) external {
+        _checkAccessAllowed("setOracleFeeds(uint256,address,OracleFeed[3],uint256)");
+        if (boundDeviation >= MANTISSA_ONE) {
+            revert InvalidOracleFeed(asset);
         }
+        (Request storage request, CollateralMarketRequestParams storage market) = _ensurePendingCollateralMarket(
+            requestId,
+            asset
+        );
 
-        revert InvalidMarketParams(asset);
+        for (uint256 i; i < 3; ++i) {
+            market.feeds[i] = feeds[i];
+        }
+        requestOracleOverrides[requestId][asset].boundDeviation = boundDeviation;
+        SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), request.tierId, market);
+
+        emit OracleFeedsUpdated(requestId, asset, feeds, boundDeviation);
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function setDeviationBoundedOracleParams(
+        uint256 requestId,
+        address asset,
+        uint64 cooldownPeriod,
+        uint256 triggerThreshold,
+        uint256 resetThreshold
+    ) external {
+        _checkAccessAllowed("setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)");
+        _ensurePendingCollateralMarket(requestId, asset);
+
+        OracleOverrides storage overrides = requestOracleOverrides[requestId][asset];
+        overrides.cooldownPeriod = cooldownPeriod;
+        overrides.triggerThreshold = triggerThreshold;
+        overrides.resetThreshold = resetThreshold;
+
+        emit DeviationBoundedOracleParamsUpdated(requestId, asset, cooldownPeriod, triggerThreshold, resetThreshold);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -237,9 +258,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             revert InvalidRequestStatus(requestId);
         }
 
-        request.status = RequestStatus.Rejected;
-        _refund(request, requestSeeds[requestId]);
-
+        _closeRequest(requestId, RequestStatus.Rejected);
         emit RequestRejected(requestId);
     }
 
@@ -283,13 +302,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function withdrawBondExcess(address comptroller) external nonReentrant {
-        Pool storage pool = pools[comptroller];
-        if (msg.sender != pool.deployer) {
-            revert NotDeployer(msg.sender);
-        }
-
-        uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
-        bondManager.withdrawExcess(comptroller, floor);
+        Pool storage pool = _ensureCallerHasLivePool(comptroller);
+        uint256 requiredBondAmount = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
+        bondManager.withdrawExcess(comptroller, requiredBondAmount);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -603,13 +618,16 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Refunds a canceled or rejected request's escrowed bond, for a pool request, and seeds to its deployer
-    function _refund(Request storage request, mapping(address asset => uint256 seed) storage seeds) private {
+    /// @dev Closes a request as `status`, refunding its deployer the escrowed seeds and a pool request's bond
+    function _closeRequest(uint256 requestId, RequestStatus status) private {
+        Request storage request = requests[requestId];
+        request.status = status;
+
         address deployer = request.deployer;
         if (request.requestType == RequestType.Pool) {
             IERC20Upgradeable(request.bondAsset).safeTransfer(deployer, request.bondAmount);
         }
-        _releaseSeeds(request, seeds, deployer);
+        _releaseSeeds(request, requestSeeds[requestId], deployer);
     }
 
     /// @dev Sends a request's escrowed seeds to `to`
@@ -670,6 +688,22 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (request.status != status) {
             revert InvalidRequestStatus(requestId);
         }
+    }
+
+    /// @dev Returns a pending request and its collateral market of `asset`, reverting with InvalidMarketParams if none
+    function _ensurePendingCollateralMarket(
+        uint256 requestId,
+        address asset
+    ) private view returns (Request storage request, CollateralMarketRequestParams storage market) {
+        request = _ensureRequestStatus(requestId, RequestStatus.Pending);
+        uint256 collateralCount = request.collateralMarkets.length;
+        for (uint256 i; i < collateralCount; ++i) {
+            market = request.collateralMarkets[i];
+            if (market.asset == asset) {
+                return (request, market);
+            }
+        }
+        revert InvalidMarketParams(asset);
     }
 
     /// @dev Returns a live pool after checking the caller is its deployer and is not paused
