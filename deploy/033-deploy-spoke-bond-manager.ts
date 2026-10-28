@@ -8,9 +8,6 @@ import { readBackAddress, sameAddress, toAddress, verifyProxyDeployment } from "
 
 const DEPLOYMENT_NAME = "SpokeBondManager";
 
-// The XVSVault pool that stakes XVS with XVS as its reward token; `setAssetConfig` checks it on chain
-const XVS_POOL_IDS: Record<string, number> = { bscmainnet: 0, bsctestnet: 1 };
-
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;
   const { deploy } = deployments;
@@ -20,10 +17,6 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager);
   const owner = await toAddress(preconfiguredAddresses.NormalTimelock);
   const manager = await toAddress("SpokePoolManager");
-  const xvsPoolId = XVS_POOL_IDS[hre.getNetworkName()];
-  if (xvsPoolId === undefined) {
-    throw new Error(`No XVSVault pool id for XVS on ${hre.getNetworkName()}`);
-  }
 
   const args = [manager];
   const proxyAdmin = await hre.artifacts.readArtifact(
@@ -48,8 +41,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   // Account implementations, one per source type; each fixes the bond manager its clones answer to, so they are
   // deployed after the proxy. The setup VIP registers them with `setAccountImplementation`
   const implementations: [string, unknown[]][] = [
-    ["IdleBondAccount", [deployment.address]],
-    ["XVSVaultBondAccount", [deployment.address, xvsPoolId]],
+    ["BondAccount", [deployment.address]],
     ["LiquidityHubBondAccount", [deployment.address]],
   ];
   for (const [name, implementationArgs] of implementations) {

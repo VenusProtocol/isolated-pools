@@ -633,17 +633,16 @@ interface ISpokePoolManager {
     function pauseCollateralSupply(address comptroller, address vToken) external;
 
     /**
-     * @notice Pays the pool's bond yield to its deployer, in any pool status while its bond is live, even while paused.
-     *   The yield is what the bond holds beyond its deposits and the bond its tier requires at current prices, so a
-     *   claim never thins the bond below what the tier asks for
+     * @notice Pays the pool's deployer what its bond holds beyond the bond its tier requires at current prices, yield
+     *   and extra top-ups alike, in any pool status while its bond is live, even while paused
      * @param comptroller The pool's comptroller
-     * @custom:event The bond manager emits YieldClaimed when something is paid
+     * @custom:event The bond manager emits ExcessWithdrawn when something is paid
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
-     * @custom:error The bond manager's `claimYield` errors
+     * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
      */
-    function claimBondYield(address comptroller) external;
+    function withdrawBondExcess(address comptroller) external;
 
     /**
      * @notice Adds to the pool's bond from the caller, in any pool status while its bond is live, even while paused
@@ -658,17 +657,15 @@ interface ISpokePoolManager {
     function topUpBond(address comptroller, uint256 amount) external;
 
     /**
-     * @notice Takes part of a pool's bond for a receiver; an XVSVault bond owes what it cannot pay now and pays it
-     *   later, any other bond reverts
+     * @notice Takes part of a pool's bond and pays it to a receiver at once
      * @param comptroller The pool's comptroller
      * @param amount The amount, in the bond's asset
      * @param receiver The receiver
-     * @return paidNow The amount paid now
      * @custom:event The bond manager emits BondSeized
      * @custom:error The bond manager's `seize` errors, such as ZeroAddressNotAllowed for a zero receiver
      * @custom:access Controlled by AccessControlManager, granted to `SpokePoolShortfall`
      */
-    function seizeBond(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow);
+    function seizeBond(address comptroller, uint256 amount, address receiver) external;
 
     /**
      * @notice Releases a closed or handed-over pool's bond to its bond holder once governance accepts the pool's
@@ -764,7 +761,7 @@ interface ISpokePoolManager {
 
     /**
      * @notice Pauses a pool deployer's requests, risk controls and exit request until `unpauseDeployer`; it can still
-     *   cancel open requests, claim yield and top up the bond
+     *   cancel open requests, withdraw the bond's excess and top up the bond
      * @param comptroller The pool's comptroller
      * @custom:event Emits DeployerPausedUpdated
      * @custom:error InvalidPoolStatus is thrown when the pool does not exist
@@ -862,6 +859,17 @@ interface ISpokePoolManager {
      * @return The pool
      */
     function getPool(address comptroller) external view returns (Pool memory);
+
+    /**
+     * @notice Returns what `withdrawBondExcess` would pay the pool's deployer now: what its bond holds beyond the bond
+     *   its tier requires at current prices. It is read before the Hub accrues its fees, so the withdrawal may differ
+     *   slightly
+     * @param comptroller The pool's comptroller
+     * @return The amount, in the bond's asset
+     * @custom:error BondNotFound is thrown by the bond manager when the pool has no live bond
+     * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
+     */
+    function getExcessBondAmount(address comptroller) external view returns (uint256);
 
     /**
      * @notice Returns the oracle bonds, seeds, caps and debts are priced with

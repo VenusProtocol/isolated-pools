@@ -292,7 +292,7 @@ library SpokePoolGovernanceLib {
         address bondAsset = address(bondAccount.asset());
         uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
 
-        // What the bond holds, net of a loss, a Hub's exit fee and what it owes receivers
+        // What the bond holds, net of a loss and a Hub's exit fee
         uint256 bondUsd = (bondAccount.seizableAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
         if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert ISpokePoolManager.CoverageTooLow((bondUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);

@@ -16,16 +16,14 @@ interface ISpokePoolShortfall {
      * @param vToken The market
      * @param recoverer The account that repaid the bad debt
      * @param amount The bad debt repaid, in the market's asset
-     * @param seizedAmount The amount taken from the bond for the recoverer, in the bond's asset
-     * @param paidNow The part of it paid now; the bond manager's `payReceiver` pays the rest of an XVSVault bond
+     * @param seizedAmount The amount taken from the bond and paid to the recoverer, in the bond's asset
      */
     event BadDebtRecovered(
         address indexed comptroller,
         address indexed vToken,
         address indexed recoverer,
         uint256 amount,
-        uint256 seizedAmount,
-        uint256 paidNow
+        uint256 seizedAmount
     );
 
     /**
@@ -51,21 +49,20 @@ interface ISpokePoolShortfall {
 
     /**
      * @notice Repays a market's bad debt with the caller's funds, then pays the caller its worth in the pool's bond
-     *   asset at ResilientOracle prices. An XVSVault bond owes what it cannot pay now and pays it later, any other bond
-     *   reverts
+     *   asset at ResilientOracle prices, at once
      * @param vToken The market
      * @param amount The bad debt to repay, in the market's asset, which the caller must have approved; capped at the
      *   market's bad debt
-     * @return paidNow The bond asset paid to the caller now
+     * @return seizedAmount The bond asset paid to the caller
      * @custom:event Emits BadDebtRecovered; the market emits BadDebtRecovered and the bond manager BondSeized
      * @custom:error MarketNotListed is thrown when the market is not listed in its pool
      * @custom:error TransferAmountMismatch is thrown when the market receives a different amount
      * @custom:error The manager's `seizeBond` errors, such as the bond account's InsufficientFunds when the repaid
-     *   bad debt is worth more than the bond holds
+     *   bad debt is worth more than the bond holds, or its Hub's when the Hub cannot pay it at once
      * @custom:error Reverts without data when the pool has no live bond
      * @custom:access Controlled by AccessControlManager, granted to the whitelisted recoverers
      */
-    function recoverBadDebt(VToken vToken, uint256 amount) external returns (uint256 paidNow);
+    function recoverBadDebt(VToken vToken, uint256 amount) external returns (uint256 seizedAmount);
 
     /**
      * @notice Repays a market's bad debt with the caller's funds without touching the pool's bond, so Venus can cover

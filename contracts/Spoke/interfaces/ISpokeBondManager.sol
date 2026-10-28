@@ -10,14 +10,13 @@ interface ISpokeBondManager {
     /// @notice Where a bond's asset earns yield
     enum SourceType {
         Idle,
-        XVSVault,
         LiquidityHub
     }
 
     /// @notice How a bond asset is held and where it earns yield; the policy registry says whether pools may use it
     struct AssetConfig {
         SourceType sourceType;
-        // The XVSVault or Hub; zero for an idle asset
+        // The Hub; zero for an idle asset
         address source;
     }
 
@@ -45,20 +44,19 @@ interface ISpokeBondManager {
     event BondToppedUp(address indexed comptroller, uint256 amount);
 
     /**
-     * @notice Emitted when a bond's yield is paid to its bond holder
+     * @notice Emitted when what a bond holds beyond its tier's required bond is paid to its bond holder
      * @param comptroller The pool's comptroller
      * @param amount The amount paid
      */
-    event YieldClaimed(address indexed comptroller, uint256 amount);
+    event ExcessWithdrawn(address indexed comptroller, uint256 amount);
 
     /**
      * @notice Emitted when part of a bond is seized
      * @param comptroller The pool's comptroller
      * @param receiver The receiver
-     * @param amount The amount taken from the bond
-     * @param paidNow The part of it paid now; an XVSVault account pays the rest by `payReceiver`
+     * @param amount The amount taken from the bond and paid
      */
-    event BondSeized(address indexed comptroller, address indexed receiver, uint256 amount, uint256 paidNow);
+    event BondSeized(address indexed comptroller, address indexed receiver, uint256 amount);
 
     /**
      * @notice Emitted when a pool's bond is released and its account detached from the pool
@@ -112,7 +110,8 @@ interface ISpokeBondManager {
     error NotBondAccount(address account);
 
     /**
-     * @notice Thrown when a bond asset's source type has no account implementation
+     * @notice Thrown when a bond asset's source type has no account implementation, or its source does not fit the
+     *   asset
      * @param asset The asset
      */
     error InvalidAssetConfig(address asset);
@@ -150,74 +149,54 @@ interface ISpokeBondManager {
     function topUp(address comptroller, uint256 amount) external;
 
     /**
-     * @notice Pays a pool's bond yield, what its bond holds beyond its deposits and `floor`, to its bond holder; an
-     *   XVSVault account pays it only from its balance beyond what it owes receivers
+     * @notice Pays a pool's bond holder at once what its bond holds beyond `floor`, its yield and extra top-ups alike
      * @param comptroller The pool's comptroller
-     * @param floor The bond the pool's tier requires, in the asset; nothing below it is paid out as yield
+     * @param floor The bond the pool's tier requires, in the asset; the bond keeps at least this much
      * @return amount The amount paid
-     * @custom:event Emits YieldClaimed, and the account emits Paid, when something is paid
+     * @custom:event Emits ExcessWithdrawn, and the account emits Paid, when something is paid
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondNotFound is thrown when the pool has no live bond
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
+     * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
-    function claimYield(address comptroller, uint256 floor) external returns (uint256 amount);
+    function withdrawExcess(address comptroller, uint256 floor) external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from a pool's bond, yield first, and pays `receiver` what is liquid now. An XVSVault
-     *   account owes the rest and pays it by `payReceiver`; any other account reverts
+     * @notice Takes `amount` from a pool's bond and pays it to `receiver` at once
      * @param comptroller The pool's comptroller
      * @param amount The amount to take, in the bond's asset; at most `getSeizableAmount`
      * @param receiver The receiver
-     * @return paidNow The amount paid now
-     * @custom:event Emits BondSeized; the account emits Paid for what is paid now and PaymentOwed for what is owed
+     * @custom:event Emits BondSeized; the account emits Paid when something is paid
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error ZeroAddressNotAllowed is thrown when the receiver is zero
      * @custom:error BondNotFound is thrown when the pool has no live bond
-     * @custom:error InsufficientFunds is thrown by the account when the bond holds less than `amount` beyond what it
-     *   owes receivers
-     * @custom:error InsufficientLiquidity is thrown by an account other than an XVSVault one that cannot pay it all now
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
+     * @custom:error InsufficientFunds is thrown by the account when the bond holds less than `amount`
+     * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
-    function seize(address comptroller, uint256 amount, address receiver) external returns (uint256 paidNow);
+    function seize(address comptroller, uint256 amount, address receiver) external;
 
     /**
-     * @notice Releases a pool's bond and detaches its account, which pays the bond holder everything at once. An
-     *   XVSVault account instead requests its whole stake, and `payReceiver` pays the bond holder the balance beyond
-     *   what seizures still hold, the stake included once it unlocks
+     * @notice Releases a pool's bond and detaches its account, which pays the bond holder everything at once
      * @param comptroller The pool's comptroller
      * @custom:event Emits BondReleased; the account emits Paid when it pays the bond holder
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error BondNotFound is thrown when the pool has no live bond
-     * @custom:error InsufficientLiquidity is thrown by an account other than an XVSVault one that cannot pay it all now
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
+     * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function release(address comptroller) external;
 
     /**
-     * @notice Pays a receiver what a bond's XVSVault account owes it, as far as matured withdrawals and its balance
-     *   allow; after release the bond holder receives the balance beyond what unpaid seizures still hold. A no-op for
-     *   other accounts. Anyone can call it, as it pays only what is owed, to whom it is owed
-     * @param account The bond's account, live or released
-     * @param receiver The receiver
-     * @custom:event The account emits Paid for every payment
-     * @custom:error NotBondAccount is thrown when the account was not created here
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
-     * @custom:access Not restricted
-     */
-    function payReceiver(address account, address receiver) external;
-
-    /**
-     * @notice Deposits a bond account's balance beyond what it owes receivers in its source, such as a refused deposit
-     *   once the source accepts deposits again; a no-op when there is none or the bond is released
+     * @notice Deposits a bond account's balance in its source, such as a refused deposit once the source accepts
+     *   deposits again; a no-op when there is none
      * @param account The bond's account
      * @custom:event The account emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotBondAccount is thrown when the account was not created here
+     * @custom:error BondAlreadyReleased is thrown by the account once its bond is released
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function deposit(address account) external;
+    function depositInSource(address account) external;
 
     /**
      * @notice Sets the account implementation new bonds of a source type are cloned from; existing accounts keep theirs
@@ -232,18 +211,18 @@ interface ISpokeBondManager {
     /**
      * @notice Sets a bond asset's config; bonds already deposited keep their source
      * @param asset The asset
-     * @param config The config; its source must fit the asset: an XVSVault whose XVS pool stakes it, a Liquidity Hub
-     *   for it, or zero for Idle
+     * @param config The config; its source must fit the asset: a Liquidity Hub for it, or zero for Idle
      * @custom:event Emits AssetConfigUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the asset is zero
-     * @custom:error InvalidAssetConfig is thrown when the type has no account implementation
+     * @custom:error InvalidAssetConfig is thrown when the type has no account implementation, or the source is not a
+     *   Liquidity Hub for the asset, or not zero for Idle
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setAssetConfig(address asset, AssetConfig calldata config) external;
 
     /**
-     * @notice Returns the most `seize` can take from a pool's bond. It is read before yield accrues, so `seize` may
-     *   see a different amount, such as more once unclaimed XVS rewards are claimed
+     * @notice Returns the most `seize` can take from a pool's bond. It is read before the Hub accrues its fees, so
+     *   `seize` may see a different amount
      * @param comptroller The pool's comptroller
      * @return The amount, in the bond's asset
      * @custom:error BondNotFound is thrown when the pool has no live bond
@@ -252,7 +231,7 @@ interface ISpokeBondManager {
     function getSeizableAmount(address comptroller) external view returns (uint256);
 
     /**
-     * @notice Returns the SpokePoolManager, the only caller of `createBond`, `topUp`, `claimYield`, `seize` and
+     * @notice Returns the SpokePoolManager, the only caller of `createBond`, `topUp`, `withdrawExcess`, `seize` and
      *   `release`
      * @return The SpokePoolManager
      */
@@ -270,7 +249,7 @@ interface ISpokeBondManager {
      * @notice Returns a bond asset's config
      * @param asset The asset
      * @return sourceType The source type; Idle for an asset never set
-     * @return source The XVSVault or Liquidity Hub; zero for Idle
+     * @return source The Liquidity Hub; zero for Idle
      */
     function assetConfigs(address asset) external view returns (SourceType sourceType, address source);
 

@@ -63,7 +63,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolShortfall
-    function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 paidNow) {
+    function recoverBadDebt(VToken vToken, uint256 amount) external nonReentrant returns (uint256 seizedAmount) {
         _checkAccessAllowed("recoverBadDebt(address,uint256)");
         address comptroller = _ensureMarketListed(vToken);
 
@@ -73,13 +73,13 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
         uint256 bondPrice = resilientOracle.getPrice(address(bondAccount.asset()));
 
         uint256 repaid = _repayBadDebt(vToken, amount);
-        uint256 seizedAmount = (repaid * debtPrice) / bondPrice;
+        seizedAmount = (repaid * debtPrice) / bondPrice;
 
         if (seizedAmount != 0) {
-            paidNow = SPOKE_POOL_MANAGER.seizeBond(comptroller, seizedAmount, msg.sender);
+            SPOKE_POOL_MANAGER.seizeBond(comptroller, seizedAmount, msg.sender);
         }
 
-        emit BadDebtRecovered(comptroller, address(vToken), msg.sender, repaid, seizedAmount, paidNow);
+        emit BadDebtRecovered(comptroller, address(vToken), msg.sender, repaid, seizedAmount);
     }
 
     // ──────────────────────────────────────────────────────────────────────

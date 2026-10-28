@@ -27,7 +27,6 @@ chai.use(smock.matchers);
 const BAD_DEBT = e18("100");
 /// 100 repaid at $2 is $200, paid as 50 of the bond asset at $4
 const SEIZED = e18("50");
-const PAID_NOW = e18("30");
 
 describe("SpokePoolShortfall", () => {
   let owner: SignerWithAddress;
@@ -57,7 +56,6 @@ describe("SpokePoolShortfall", () => {
     acm.isAllowedToCall.returns(true);
     manager.RESILIENT_ORACLE.returns(oracle.address);
     manager.bondManager.returns(bondManager.address);
-    manager.seizeBond.returns(PAID_NOW);
     bondManager.bondAccounts.whenCalledWith(comptroller.address).returns(bondAccount.address);
     bondAccount.asset.returns(bondAsset.address);
     oracle.getUnderlyingPrice.whenCalledWith(vToken.address).returns(e18("2"));
@@ -132,8 +130,8 @@ describe("SpokePoolShortfall", () => {
         .withArgs(vToken.address);
     });
 
-    it("returns the bond asset paid now", async () => {
-      expect(await shortfall.connect(recoverer).callStatic.recoverBadDebt(vToken.address, BAD_DEBT)).to.equal(PAID_NOW);
+    it("returns the bond asset paid", async () => {
+      expect(await shortfall.connect(recoverer).callStatic.recoverBadDebt(vToken.address, BAD_DEBT)).to.equal(SEIZED);
     });
 
     it("repays the bad debt, then pays the recoverer its worth from the bond", async () => {
@@ -141,7 +139,7 @@ describe("SpokePoolShortfall", () => {
 
       await expect(tx)
         .to.emit(shortfall, "BadDebtRecovered")
-        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, SEIZED, PAID_NOW);
+        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, SEIZED);
       await expect(tx).to.changeTokenBalances(underlying, [recoverer, vToken], [BAD_DEBT.mul(-1), BAD_DEBT]);
       expect(vToken.badDebtRecovered).to.have.been.calledOnceWith(BAD_DEBT);
       expect(manager.seizeBond).to.have.been.calledOnceWith(comptroller.address, SEIZED, recoverer.address);
@@ -151,7 +149,7 @@ describe("SpokePoolShortfall", () => {
     it("caps the amount at the market's bad debt", async () => {
       await expect(shortfall.connect(recoverer).recoverBadDebt(vToken.address, BAD_DEBT.mul(2), NO_ESTIMATE))
         .to.emit(shortfall, "BadDebtRecovered")
-        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, SEIZED, PAID_NOW);
+        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, SEIZED);
       expect(vToken.badDebtRecovered).to.have.been.calledOnceWith(BAD_DEBT);
       expect(manager.seizeBond).to.have.been.calledOnceWith(comptroller.address, SEIZED, recoverer.address);
     });
@@ -162,14 +160,14 @@ describe("SpokePoolShortfall", () => {
 
       await expect(shortfall.connect(recoverer).recoverBadDebt(vToken.address, BAD_DEBT, NO_ESTIMATE))
         .to.emit(shortfall, "BadDebtRecovered")
-        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, BAD_DEBT, PAID_NOW);
+        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, BAD_DEBT);
       expect(manager.seizeBond).to.have.been.calledOnceWith(comptroller.address, BAD_DEBT, recoverer.address);
     });
 
     it("skips the bond when the payout rounds to zero", async () => {
       await expect(shortfall.connect(recoverer).recoverBadDebt(vToken.address, 1, NO_ESTIMATE))
         .to.emit(shortfall, "BadDebtRecovered")
-        .withArgs(comptroller.address, vToken.address, recoverer.address, 1, 0, 0);
+        .withArgs(comptroller.address, vToken.address, recoverer.address, 1, 0);
       expect(vToken.badDebtRecovered).to.have.been.calledOnceWith(1);
       expect(manager.seizeBond).to.not.have.been.called;
     });
@@ -179,7 +177,7 @@ describe("SpokePoolShortfall", () => {
 
       await expect(shortfall.connect(recoverer).recoverBadDebt(vToken.address, BAD_DEBT, NO_ESTIMATE))
         .to.emit(shortfall, "BadDebtRecovered")
-        .withArgs(comptroller.address, vToken.address, recoverer.address, 0, 0, 0);
+        .withArgs(comptroller.address, vToken.address, recoverer.address, 0, 0);
       expect(manager.seizeBond).to.not.have.been.called;
     });
 

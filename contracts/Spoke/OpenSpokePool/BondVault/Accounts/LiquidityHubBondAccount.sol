@@ -4,19 +4,17 @@ pragma solidity 0.8.25;
 import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import { SafeERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 
-import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
 import { ILiquidityHub } from "../../../interfaces/external/ILiquidityHub.sol";
-import { BaseBondAccount } from "./BaseBondAccount.sol";
+import { BondAccount } from "./BondAccount.sol";
 
 /**
  * @title LiquidityHubBondAccount
  * @author Venus
- * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. A seizure or the release
- * reverts when the Hub cannot pay it at once. The position is valued net of the Hub's exit fee. A Hub loss lowers the
- * bond's value, and no yield is paid until the position grows back above the deposits
+ * @notice A bond account that deposits its stablecoin in the stablecoin's Liquidity Hub. A withdrawal, a seizure or the
+ * release reverts when the Hub cannot pay it at once. The position is valued net of the Hub's exit fee
  * @custom:oz-upgrades-unsafe-allow constructor
  */
-contract LiquidityHubBondAccount is BaseBondAccount {
+contract LiquidityHubBondAccount is BondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /**
@@ -24,20 +22,18 @@ contract LiquidityHubBondAccount is BaseBondAccount {
      * @custom:error ZeroAddressNotAllowed is thrown when the bond manager is zero
      */
     // solhint-disable-next-line no-empty-blocks
-    constructor(address bondManager) BaseBondAccount(bondManager) {}
+    constructor(address bondManager) BondAccount(bondManager) {}
 
     // ──────────────────────────────────────────────────────────────────────
-    // SpokeBondManager functions
+    // Source hooks
     // ──────────────────────────────────────────────────────────────────────
 
-    /// @inheritdoc IBondAccount
-    function deposit(uint256 amount) external onlyBondManager {
-        _recordDeposit(amount);
+    /// @dev Deposits the balance in the Hub, which refuses it while paused or at its cap
+    function _depositInSource() internal override {
         uint256 balance = asset.balanceOf(address(this));
-        if (released || balance == 0) {
+        if (balance == 0) {
             return;
         }
-        // The Hub refuses a deposit while paused or at its cap
         asset.forceApprove(source, balance);
         // solhint-disable-next-line no-empty-blocks
         try ILiquidityHub(source).deposit(balance, address(this)) {} catch {
@@ -46,43 +42,29 @@ contract LiquidityHubBondAccount is BaseBondAccount {
         }
     }
 
-    /// @inheritdoc IBondAccount
-    function claimYield(uint256 floor) external onlyBondManager returns (uint256 amount) {
-        _accrueFees();
-        (uint256 balance, uint256 inHub) = _holdings();
-        uint256 yield = _claimable(floor, balance + inHub);
-        if (yield != 0) {
-            amount = _pay(bondHolder, yield, balance, inHub);
+    /// @dev Settles the Hub's fees so its share price is current; skipped while it is paused, when it pays nothing
+    function _accrueSource() internal override {
+        if (!ILiquidityHub(source).hubPaused()) {
+            ILiquidityHub(source).accrueFees();
         }
     }
 
-    /// @inheritdoc IBondAccount
-    function seize(uint256 amount, address receiver) external onlyBondManager returns (uint256 paidNow) {
-        _accrueFees();
+    /**
+     * @dev Withdraws what the balance lacks of `amount` from the Hub, which reverts when it cannot pay it now. The
+     *   whole position is redeemed by shares, as withdrawing it by assets rounds the exit fee up and would leave a wei
+     */
+    function _withdrawFromSource(uint256 amount) internal override {
         (uint256 balance, uint256 inHub) = _holdings();
-        _ensureSeizable(amount, balance + inHub);
-        paidNow = _pay(receiver, amount, balance, inHub);
-        if (paidNow < amount) {
-            revert InsufficientLiquidity(amount - paidNow);
+        if (amount <= balance) {
+            return;
+        }
+        ILiquidityHub hub = ILiquidityHub(source);
+        if (amount - balance >= inHub) {
+            hub.redeem(hub.balanceOf(address(this)), address(this), address(this));
+        } else {
+            hub.withdraw(amount - balance, address(this), address(this));
         }
     }
-
-    /// @inheritdoc IBondAccount
-    function release() external onlyBondManager {
-        released = true;
-        deposited = 0;
-        _accrueFees();
-        (uint256 balance, uint256 inHub) = _holdings();
-        uint256 total = balance + inHub;
-        uint256 paid = _pay(bondHolder, total, balance, inHub);
-        if (paid < total) {
-            revert InsufficientLiquidity(total - paid);
-        }
-    }
-
-    // ──────────────────────────────────────────────────────────────────────
-    // Internal functions
-    // ──────────────────────────────────────────────────────────────────────
 
     /// @dev Returns the balance plus the Hub position
     function _bondAssets() internal view override returns (uint256) {
@@ -90,39 +72,9 @@ contract LiquidityHubBondAccount is BaseBondAccount {
         return balance + inHub;
     }
 
-    /// @dev Settles the Hub's fees so its share price is current; skipped while it is paused, when it pays nothing
-    function _accrueFees() private {
-        if (!ILiquidityHub(source).hubPaused()) {
-            ILiquidityHub(source).accrueFees();
-        }
-    }
-
-    /**
-     * @dev Pays `receiver` up to `amount` now: up to `balance` from the account, then what the Hub pays at once. When
-     *   the whole position is wanted, it is redeemed by shares, as `maxWithdraw` rounds the exit fee up and would leave
-     *   a wei. The Hub's fees were accrued this block, so the limits read here hold
-     */
-    function _pay(address receiver, uint256 amount, uint256 balance, uint256 inHub) private returns (uint256 paid) {
-        paid = amount < balance ? amount : balance;
-        if (paid < amount) {
-            ILiquidityHub hub = ILiquidityHub(source);
-            uint256 wanted = amount - paid;
-            if (wanted >= inHub) {
-                uint256 shares = hub.maxRedeem(address(this));
-                if (shares != 0) {
-                    paid += hub.redeem(shares, address(this), address(this));
-                }
-            } else {
-                uint256 liquid = hub.maxWithdraw(address(this));
-                uint256 withdrawn = wanted < liquid ? wanted : liquid;
-                if (withdrawn != 0) {
-                    hub.withdraw(withdrawn, address(this), address(this));
-                    paid += withdrawn;
-                }
-            }
-        }
-        _transferOut(receiver, paid);
-    }
+    // ──────────────────────────────────────────────────────────────────────
+    // Internal functions
+    // ──────────────────────────────────────────────────────────────────────
 
     /// @dev Returns the balance and the Hub position, net of the exit fee
     function _holdings() private view returns (uint256 balance, uint256 inHub) {

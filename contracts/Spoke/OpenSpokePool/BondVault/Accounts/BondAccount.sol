@@ -9,18 +9,16 @@ import { ensureNonzeroAddress } from "../../../../lib/validators.sol";
 import { IBondAccount } from "../../../interfaces/IBondAccount.sol";
 
 /**
- * @title BaseBondAccount
+ * @title BondAccount
  * @author Venus
- * @notice Base of the bond accounts: keeps what a bond holder has deposited, the floor above which yield is paid, and
- * what the bond holds. Yield is everything beyond the deposits and the bond the tier requires, including assets sent
- * here directly; a seizure takes from what the bond holds and leaves the deposits as they are, so no yield is paid
- * until the bond grows back or a top-up forgives the loss
- * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. Each
- * account moves the asset in `deposit`, `claimYield`, `seize` and `release`, keeping the books with `_recordDeposit`,
- * `_claimable`, `_ensureSeizable` and `_transferOut`, and reports what it holds in `_bondAssets`
+ * @notice Holds one open spoke pool bond, keeping its asset idle in the account. The bond holder can withdraw what the
+ * bond holds beyond the bond the tier requires, yield and extra top-ups alike
+ * @dev An EIP-1167 clone created by `BOND_MANAGER`, its only caller; clones share the implementation's immutables. An
+ * account whose asset earns yield in a source overrides `_depositInSource`, `_accrueSource`, `_withdrawFromSource` and
+ * `_bondAssets`
  * @custom:oz-upgrades-unsafe-allow constructor
  */
-abstract contract BaseBondAccount is Initializable, IBondAccount {
+contract BondAccount is Initializable, IBondAccount {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     /// @inheritdoc IBondAccount
@@ -38,9 +36,6 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     /// @inheritdoc IBondAccount
     address public source;
 
-    /// @inheritdoc IBondAccount
-    uint256 public deposited;
-
     /// @dev Reverts unless the caller is `BOND_MANAGER`
     modifier onlyBondManager() {
         if (msg.sender != BOND_MANAGER) {
@@ -55,9 +50,7 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
      */
     constructor(address bondManager) {
         ensureNonzeroAddress(bondManager);
-
         BOND_MANAGER = bondManager;
-
         _disableInitializers();
     }
 
@@ -73,9 +66,37 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc IBondAccount
-    /// @dev A no-op for an account that never owes; an account whose source pays later overrides it
-    // solhint-disable-next-line no-empty-blocks
-    function payReceiver(address receiver) external virtual onlyBondManager {}
+    function depositInSource() external onlyBondManager {
+        if (released) revert BondAlreadyReleased();
+        _depositInSource();
+    }
+
+    /// @inheritdoc IBondAccount
+    function withdrawExcess(uint256 floor) external onlyBondManager returns (uint256 amount) {
+        _accrueSource();
+        uint256 bondAssets = _bondAssets();
+        if (bondAssets > floor) {
+            amount = bondAssets - floor;
+            _pay(bondHolder, amount);
+        }
+    }
+
+    /// @inheritdoc IBondAccount
+    function seize(uint256 amount, address receiver) external onlyBondManager {
+        _accrueSource();
+        uint256 bondAssets = _bondAssets();
+        if (amount > bondAssets) {
+            revert InsufficientFunds(amount, bondAssets);
+        }
+        _pay(receiver, amount);
+    }
+
+    /// @inheritdoc IBondAccount
+    function release() external onlyBondManager {
+        released = true;
+        _accrueSource();
+        _pay(bondHolder, _bondAssets());
+    }
 
     // ──────────────────────────────────────────────────────────────────────
     // View functions
@@ -87,43 +108,37 @@ abstract contract BaseBondAccount is Initializable, IBondAccount {
     }
 
     // ──────────────────────────────────────────────────────────────────────
+    // Source hooks
+    // ──────────────────────────────────────────────────────────────────────
+
+    /// @dev Moves the account's balance into the source, keeping it here if refused; a no-op with no source
+    // solhint-disable-next-line no-empty-blocks
+    function _depositInSource() internal virtual {}
+
+    /// @dev Brings the source's valuation up to date before the bond is valued; a no-op with no source
+    // solhint-disable-next-line no-empty-blocks
+    function _accrueSource() internal virtual {}
+
+    /// @dev Withdraws from the source what the balance lacks to pay `amount`, or reverts; a no-op with no source
+    // solhint-disable-next-line no-empty-blocks
+    function _withdrawFromSource(uint256 amount) internal virtual {}
+
+    // ──────────────────────────────────────────────────────────────────────
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
 
-    /**
-     * @dev Adds `amount`, already in the account, to `deposited`, first lowering that to what the bond held before the
-     *   deposit, so a seizure or loss is forgiven and later growth counts as yield again
-     */
-    function _recordDeposit(uint256 amount) internal {
-        uint256 bondAssets = _bondAssets();
-        uint256 before = bondAssets > amount ? bondAssets - amount : 0;
-        if (before < deposited) {
-            deposited = before;
+    /// @dev Pays `receiver` all of `amount`, withdrawing from the source what the balance lacks
+    function _pay(address receiver, uint256 amount) internal {
+        if (amount == 0) {
+            return;
         }
-        deposited += amount;
+        _withdrawFromSource(amount);
+        asset.safeTransfer(receiver, amount);
+        emit Paid(receiver, amount);
     }
 
-    /// @dev Sends `amount` of the asset to `receiver`, if any
-    function _transferOut(address receiver, uint256 amount) internal {
-        if (amount != 0) {
-            asset.safeTransfer(receiver, amount);
-            emit Paid(receiver, amount);
-        }
-    }
-
-    /// @dev Returns the yield in `bondAssets`: what is beyond the higher of `deposited` and `floor`
-    function _claimable(uint256 floor, uint256 bondAssets) internal view returns (uint256) {
-        uint256 kept = deposited > floor ? deposited : floor;
-        return bondAssets > kept ? bondAssets - kept : 0;
-    }
-
-    /// @dev Returns what the bond holds, as the views read it: what is in the account and its source, less what it owes
-    function _bondAssets() internal view virtual returns (uint256);
-
-    /// @dev Checks a seizure of `amount` fits in `bondAssets`, what the bond holds now; reverts with InsufficientFunds
-    function _ensureSeizable(uint256 amount, uint256 bondAssets) internal pure {
-        if (amount > bondAssets) {
-            revert InsufficientFunds(amount, bondAssets);
-        }
+    /// @dev Returns what the bond holds: the balance, plus the position in the source if any
+    function _bondAssets() internal view virtual returns (uint256) {
+        return asset.balanceOf(address(this));
     }
 }

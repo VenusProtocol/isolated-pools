@@ -1496,23 +1496,23 @@ describe("SpokePoolManager", () => {
   describe("bond functions", () => {
     beforeEach(activatePool);
 
-    describe("claimBondYield", () => {
-      it("claims the bond's yield, even while exiting or paused", async () => {
+    describe("withdrawBondExcess", () => {
+      it("withdraws the bond's excess, even while exiting or paused", async () => {
         await manager.connect(deployer).requestExit(comptroller.address);
         await manager.pauseDeployer(comptroller.address);
-        await manager.connect(deployer).claimBondYield(comptroller.address, NO_ESTIMATE);
-        expect(bondManager.claimYield).to.have.been.calledOnceWith(comptroller.address, e18("1000"));
+        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, e18("1000"));
       });
 
-      it("keeps the tier's required bond, at the current price and rounded up, out of the yield", async () => {
+      it("keeps the tier's required bond, at the current price and rounded up, in the bond", async () => {
         await policyRegistry.setBondAssetFactor(bondToken.address, e18("1.5"));
         setPrice(bondToken.address, e18("3"));
-        await manager.connect(deployer).claimBondYield(comptroller.address, NO_ESTIMATE);
-        expect(bondManager.claimYield).to.have.been.calledOnceWith(comptroller.address, e18("500"));
+        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, e18("500"));
 
         setPrice(bondToken.address, e18("7"));
-        await manager.connect(deployer).claimBondYield(comptroller.address, NO_ESTIMATE);
-        expect(bondManager.claimYield).to.have.been.calledWith(
+        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        expect(bondManager.withdrawExcess).to.have.been.calledWith(
           comptroller.address,
           e18("1500").mul(e18("1")).div(e18("7")).add(1),
         );
@@ -1520,10 +1520,20 @@ describe("SpokePoolManager", () => {
 
       it("reverts for anyone but the pool's deployer", async () => {
         for (const pool of [comptroller.address, other.address]) {
-          await expect(manager.connect(other).claimBondYield(pool))
+          await expect(manager.connect(other).withdrawBondExcess(pool))
             .to.be.revertedWithCustomError(manager, "NotDeployer")
             .withArgs(other.address);
         }
+      });
+    });
+
+    describe("getExcessBondAmount", () => {
+      it("returns what the bond holds beyond the tier's required bond, and zero below it", async () => {
+        bondManager.getSeizableAmount.returns(e18("1200"));
+        expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(e18("200"));
+
+        bondManager.getSeizableAmount.returns(e18("900"));
+        expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(0);
       });
     });
 
@@ -1546,10 +1556,7 @@ describe("SpokePoolManager", () => {
     });
 
     describe("seizeBond", () => {
-      it("seizes from the pool's bond to the receiver and returns what is paid now", async () => {
-        bondManager.seize.returns(e18("5"));
-        expect(await manager.callStatic.seizeBond(comptroller.address, e18("7"), other.address)).to.equal(e18("5"));
-        bondManager.seize.reset();
+      it("seizes from the pool's bond to the receiver", async () => {
         await manager.seizeBond(comptroller.address, e18("7"), other.address, NO_ESTIMATE);
         expect(bondManager.seize).to.have.been.calledOnceWith(comptroller.address, e18("7"), other.address);
       });
@@ -2017,7 +2024,7 @@ describe("SpokePoolManager", () => {
       ["buildRequestProposal", () => manager.interface.encodeFunctionData("buildRequestProposal", [1, DESCRIPTION])],
       ["settleRequest", () => manager.interface.encodeFunctionData("settleRequest", [1])],
       ["rejectRequest", () => manager.interface.encodeFunctionData("rejectRequest", [1])],
-      ["claimBondYield", () => manager.interface.encodeFunctionData("claimBondYield", [comptroller.address])],
+      ["withdrawBondExcess", () => manager.interface.encodeFunctionData("withdrawBondExcess", [comptroller.address])],
       ["topUpBond", () => manager.interface.encodeFunctionData("topUpBond", [comptroller.address, 1])],
       ["seizeBond", () => manager.interface.encodeFunctionData("seizeBond", [comptroller.address, 1, other.address])],
       ["releaseBond", () => manager.interface.encodeFunctionData("releaseBond", [comptroller.address])],

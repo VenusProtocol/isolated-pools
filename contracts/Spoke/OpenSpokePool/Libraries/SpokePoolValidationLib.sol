@@ -119,7 +119,7 @@ library SpokePoolValidationLib {
 
     /**
      * @notice Returns the bond a pool's tier requires, in the pool's bond asset at the current price: the floor its
-     *   yield claims keep
+     *   withdrawals keep
      * @param contracts The manager's contracts
      * @param tierId The pool's tier
      * @param comptroller The pool's comptroller

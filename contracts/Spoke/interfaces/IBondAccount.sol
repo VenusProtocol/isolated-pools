@@ -6,8 +6,8 @@ import { IERC20Upgradeable } from "@openzeppelin/contracts-upgradeable/token/ERC
 /**
  * @title IBondAccount
  * @author Venus
- * @notice Functions, events and errors of the bond accounts, each holding one open spoke pool bond: `BaseBondAccount`
- * and its Idle, XVSVault and Liquidity Hub accounts
+ * @notice Functions, events and errors of the bond accounts, each holding one open spoke pool bond: `BondAccount`,
+ * which keeps its asset idle, and the Liquidity Hub account built on it
  */
 interface IBondAccount {
     /**
@@ -17,18 +17,11 @@ interface IBondAccount {
     event SourceDepositRefused(uint256 amount);
 
     /**
-     * @notice Emitted when the account pays out: a seizure, the yield, or the bond holder after release
+     * @notice Emitted when the account pays out: a seizure, a withdrawal, or the bond holder after release
      * @param receiver The receiver
      * @param amount The amount paid
      */
     event Paid(address indexed receiver, uint256 amount);
-
-    /**
-     * @notice Emitted when an account whose source pays later owes part of a seizure to its receiver
-     * @param receiver The seizure's receiver
-     * @param amount The amount owed
-     */
-    event PaymentOwed(address indexed receiver, uint256 amount);
 
     /**
      * @notice Thrown when the caller is not `BOND_MANAGER`
@@ -37,17 +30,14 @@ interface IBondAccount {
     error NotBondManager(address caller);
 
     /**
-     * @notice Thrown when a seizure asks for more than the bond holds beyond what it owes receivers
+     * @notice Thrown when a seizure asks for more than the bond holds
      * @param amount The amount asked for
-     * @param available What the bond holds beyond what it owes receivers
+     * @param available What the bond holds
      */
     error InsufficientFunds(uint256 amount, uint256 available);
 
-    /**
-     * @notice Thrown when the source cannot pay a seizure or the release at once
-     * @param amount The part it cannot pay
-     */
-    error InsufficientLiquidity(uint256 amount);
+    /// @notice Thrown when depositing in an account whose bond is released
+    error BondAlreadyReleased();
 
     /**
      * @notice Initializes the account
@@ -59,72 +49,50 @@ interface IBondAccount {
     function initialize(address bondHolder_, IERC20Upgradeable asset_, address source_) external;
 
     /**
-     * @notice Adds `amount`, which `BOND_MANAGER` sent here, to `deposited`, first lowering that to what the bond held
-     *   before so a seizure or loss is forgiven, then deposits the account's balance beyond what it owes receivers in
-     *   the source, keeping it here if refused; nothing is deposited after release
-     * @param amount The amount; zero only retries depositing the balance
+     * @notice Deposits the account's balance in the source, keeping it here if refused; `BOND_MANAGER` calls it after
+     *   each deposit it sends here, and to retry a refused one
      * @custom:event Emits SourceDepositRefused when the source refuses the deposit
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
+     * @custom:error BondAlreadyReleased is thrown once the bond is released
      * @custom:access Only `BOND_MANAGER`
      */
-    function deposit(uint256 amount) external;
+    function depositInSource() external;
 
     /**
-     * @notice Pays the yield, what the bond holds beyond the higher of `deposited` and `floor`, to the bond holder; a
-     *   Liquidity Hub account withdraws from the Hub as needed, an XVSVault account pays only from its balance beyond
-     *   what it owes
-     * @param floor The bond the pool's tier requires, in the asset; nothing below it is paid out as yield
+     * @notice Pays the bond holder at once what the bond holds beyond `floor`, its yield and extra top-ups alike
+     * @param floor The bond the pool's tier requires, in the asset; the bond keeps at least this much
      * @return amount The amount paid
      * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
+     * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `BOND_MANAGER`
      */
-    function claimYield(uint256 floor) external returns (uint256 amount);
+    function withdrawExcess(uint256 floor) external returns (uint256 amount);
 
     /**
-     * @notice Takes `amount` from the bond and pays `receiver` what is liquid now. An XVSVault account
-     *   owes the rest, such as XVS in its lock period, and pays it by `payReceiver`; any other account reverts
+     * @notice Takes `amount` from the bond and pays it to `receiver` at once
      * @param amount The amount to take
      * @param receiver The receiver
-     * @return paidNow The amount paid now
-     * @custom:event Emits Paid for what is paid now and PaymentOwed for what is owed
+     * @custom:event Emits Paid when something is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
-     * @custom:error InsufficientFunds is thrown when the bond holds less than `amount` beyond what it owes receivers
-     * @custom:error InsufficientLiquidity is thrown when an account other than an XVSVault one cannot pay it all now
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
+     * @custom:error InsufficientFunds is thrown when the bond holds less than `amount`
+     * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `BOND_MANAGER`
      */
-    function seize(uint256 amount, address receiver) external returns (uint256 paidNow);
+    function seize(uint256 amount, address receiver) external;
 
     /**
-     * @notice Releases the bond and pays the bond holder everything at once; an XVSVault account instead requests its
-     *   whole stake, and `payReceiver` pays the bond holder the balance beyond what seizures still hold, the stake
-     *   included once it unlocks
+     * @notice Releases the bond and pays the bond holder everything at once
      * @custom:event Emits Paid when the bond holder is paid
      * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
-     * @custom:error InsufficientLiquidity is thrown when an account other than an XVSVault one cannot pay it all now
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
+     * @custom:error The source's errors, such as the Hub's when it cannot pay it all now
      * @custom:access Only `BOND_MANAGER`
      */
     function release() external;
 
     /**
-     * @notice Pays `receiver` what the account owes it, as far as matured XVSVault withdrawals and the balance allow;
-     *   after release the bond holder receives the balance beyond what unpaid seizures still hold. A no-op for accounts
-     *   that never owe
-     * @param receiver The receiver
-     * @custom:event Emits Paid for every payment
-     * @custom:error NotBondManager is thrown when the caller is not `BOND_MANAGER`
-     * @custom:error The source's errors, such as the XVSVault's while it is paused
-     * @custom:access Only `BOND_MANAGER`
-     */
-    function payReceiver(address receiver) external;
-
-    /**
-     * @notice Returns what the bond holds and a seizure can take: its deposits and yield, net of a source loss, a Hub's
-     *   exit fee and what it owes receivers; zero once released. It is read before yield accrues, so `seize` may see a
-     *   different amount, such as more once unclaimed XVS rewards are claimed
+     * @notice Returns what the bond holds and a seizure can take, net of a source loss and a Hub's exit fee; zero once
+     *   released. It is read before the Hub accrues its fees, so `seize` may see a different amount
      * @return The amount, in the asset
      * @custom:error The source's errors when it cannot report the bond's position
      */
@@ -139,7 +107,8 @@ interface IBondAccount {
     function BOND_MANAGER() external view returns (address);
 
     /**
-     * @notice Returns the bond holder, in whose name the bond is created; paid the yield and, after release, the rest
+     * @notice Returns the bond holder, in whose name the bond is created; paid the withdrawals and, after release, the
+     *   rest
      * @return The bond holder
      */
     function bondHolder() external view returns (address);
@@ -161,11 +130,4 @@ interface IBondAccount {
      * @return The source; zero for an asset with no source
      */
     function source() external view returns (address);
-
-    /**
-     * @notice Returns what the bond holder has deposited, less what seizures and losses took as of the latest deposit.
-     *   Only the yield beyond it is claimable
-     * @return The amount, in the asset
-     */
-    function deposited() external view returns (uint256);
 }

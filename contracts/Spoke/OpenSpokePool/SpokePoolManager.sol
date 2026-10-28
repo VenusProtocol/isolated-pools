@@ -280,13 +280,12 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolManager
-    function claimBondYield(address comptroller) external nonReentrant {
+    function withdrawBondExcess(address comptroller) external nonReentrant {
         Pool storage pool = pools[comptroller];
         _ensureDeployer(pool.deployer);
 
-        // Only what the bond holds beyond the tier's required bond is yield, so a claim never thins it below that
         uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
-        bondManager.claimYield(comptroller, floor);
+        bondManager.withdrawExcess(comptroller, floor);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -300,14 +299,10 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function seizeBond(
-        address comptroller,
-        uint256 amount,
-        address receiver
-    ) external nonReentrant returns (uint256 paidNow) {
+    function seizeBond(address comptroller, uint256 amount, address receiver) external nonReentrant {
         _checkAccessAllowed("seizeBond(address,uint256,address)");
 
-        paidNow = bondManager.seize(comptroller, amount, receiver);
+        bondManager.seize(comptroller, amount, receiver);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -509,6 +504,13 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function getPool(address comptroller) external view returns (Pool memory) {
         return pools[comptroller];
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function getExcessBondAmount(address comptroller) external view returns (uint256) {
+        uint256 bond = bondManager.getSeizableAmount(comptroller);
+        uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), pools[comptroller].tierId, comptroller);
+        return bond > floor ? bond - floor : 0;
     }
 
     // ──────────────────────────────────────────────────────────────────────
