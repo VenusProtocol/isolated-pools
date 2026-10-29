@@ -210,12 +210,16 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _checkAccessAllowed("buildRequestProposal(uint256,string)");
         Request storage request = _ensureRequestStatus(requestId, RequestStatus.Pending);
 
+        // The bond may have lost value or the tier changed since the request, so it is checked again
         RequestType requestType = request.requestType;
-        if (requestType != RequestType.Pool) {
+        Contracts memory contracts = _contracts();
+        if (requestType == RequestType.Pool) {
+            SpokePoolValidationLib.validateNewBond(contracts, request.tierId, request.bondAsset, request.bondAmount);
+        } else {
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
+            SpokePoolValidationLib.validateBond(contracts, request.comptroller, request.tierId);
         }
         if (requestType != RequestType.TierUpgrade) {
-            Contracts memory contracts = _contracts();
             SpokePoolValidationLib.validateMarkets(contracts, request);
             _pullSeeds(contracts, request, requestSeeds[requestId]);
         }

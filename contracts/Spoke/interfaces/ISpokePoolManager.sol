@@ -596,14 +596,15 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. For a pool or markets
-     *   request it checks the markets again at current prices, then pulls each seed from the deployer, worth $10 at
-     *   current prices. The bond was priced at request and is not priced again
+     * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. It checks the bond
+     *   against the request's tier again at current prices. For a pool or markets request it also checks the markets
+     *   again, then pulls each seed from the deployer, worth $10 at current prices
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error The `SpokePoolValidationLib.validateNewBond` errors for a pool request, else the `validateBond` ones
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
