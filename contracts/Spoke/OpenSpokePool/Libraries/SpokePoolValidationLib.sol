@@ -309,17 +309,23 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @dev Returns how many markets a pool has and how many of them are collateral; zero for a new pool. A loan market
-     *   is one whose supply allowlist is on, as its listing VIP enables it for the Hub
+     * @dev Returns how many listed markets a pool has and how many of them are collateral; zero for a new pool. An
+     *   unlisted market stays in `getAllMarkets` but takes no slot. A loan market is one whose supply allowlist is on,
+     *   as its listing VIP enables it for the Hub
      */
     function _countPoolMarkets(
         address comptroller
     ) private view returns (uint256 marketCount, uint256 collateralMarketCount) {
         if (comptroller != address(0)) {
             VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
-            marketCount = vTokens.length;
-            for (uint256 i; i < marketCount; ++i) {
-                if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vTokens[i]))) {
+            uint256 allMarketCount = vTokens.length;
+            for (uint256 i; i < allMarketCount; ++i) {
+                VToken vToken = vTokens[i];
+                if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
+                    continue;
+                }
+                ++marketCount;
+                if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
                     ++collateralMarketCount;
                 }
             }
