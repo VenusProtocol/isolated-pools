@@ -65,7 +65,8 @@ library SpokePoolValidationLib {
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Checks a new pool's tier is enabled, its bond asset allowed and its bond worth what the tier requires
+     * @notice Checks a new pool's tier is enabled, its bond asset allowed and its bond worth what the tier requires,
+     *   valued as it will be once deposited in its source, so the pool's later bond checks pass at once
      * @param contracts The manager's contracts
      * @param tierId The requested tier
      * @param bondAsset The bond's asset
@@ -83,7 +84,12 @@ library SpokePoolValidationLib {
             revert ISpokePoolManager.TierDisabled(tierId);
         }
 
-        _ensureRequiredBondValue(contracts, tierId, bondAsset, bondAmount);
+        _ensureRequiredBondValue(
+            contracts,
+            tierId,
+            bondAsset,
+            contracts.bondManager.previewBondAmount(bondAsset, bondAmount)
+        );
     }
 
     /**

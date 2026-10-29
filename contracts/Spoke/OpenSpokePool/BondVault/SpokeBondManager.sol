@@ -188,6 +188,16 @@ contract SpokeBondManager is AccessControlledV8, ReentrancyGuardUpgradeable, ISp
         return _ensureBondExists(comptroller).currentBondAmount();
     }
 
+    /// @inheritdoc ISpokeBondManager
+    function previewBondAmount(address asset, uint256 amount) external view returns (uint256) {
+        AssetConfig memory assetConfig = assetConfigs[asset];
+        if (assetConfig.sourceType == SourceType.Idle) {
+            return amount;
+        }
+        ILiquidityHub hub = ILiquidityHub(assetConfig.source);
+        return hub.previewRedeem(hub.previewDeposit(amount));
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // Internal functions
     // ──────────────────────────────────────────────────────────────────────
