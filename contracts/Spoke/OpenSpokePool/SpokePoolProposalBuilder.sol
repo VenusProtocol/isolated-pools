@@ -691,6 +691,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 supplyCap
     ) private view {
         address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
+        ensureNonzeroAddress(yieldGroup);
         _addAction(proposal, comptroller, "setSupplyAllowlistEnabled(address,bool)", abi.encode(vToken, true));
         _addAction(
             proposal,

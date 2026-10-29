@@ -46,6 +46,7 @@ interface ISpokePoolProposalBuilder {
      * @return proposal The VIP, an ABI-encoded GovernorBravo `propose` call
      * @custom:error NotSpokePoolManager is thrown when the caller is not `SPOKE_POOL_MANAGER`
      * @custom:error LoanAssetNotAllowed is thrown when a tier request's pool has a market of an asset no longer lent
+     * @custom:error ZeroAddressNotAllowed is thrown when a new loan market's asset has no Hub YieldGroup set
      * @custom:access Only `SPOKE_POOL_MANAGER`
      */
     function buildRequestProposal(
