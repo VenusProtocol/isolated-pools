@@ -11,7 +11,7 @@ import {
  * @title CustodyReceiptToken
  * @author Venus
  * @notice A generic, non-upgradeable mintable / burnable ERC-20 that mirrors an asset held in
- * off-chain custody. It is used solely by the Fixed Rate Vaults, not by the core protocol.
+ * off-chain custody.
  *
  * Minting and burning are gated by the Venus AccessControlManager, so only the addresses that
  * governance grants the `mint(address,uint256)` / `burn(address,uint256)` permissions to (e.g. the
