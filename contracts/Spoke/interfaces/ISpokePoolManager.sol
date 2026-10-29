@@ -649,7 +649,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidCollateralFactors is thrown when the collateral factor is above the liquidation threshold,
      *   or the liquidation threshold is below the applied one
      * @custom:error RedundantUpdate is thrown when both values equal the applied ones
-     * @custom:error ExceedsTierLimit is thrown when either value is above the tier's limits
+     * @custom:error ExceedsTierLimit is thrown when the collateral factor, or a changed liquidation threshold, is above
+     *   the tier's limits
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:access Only the pool's deployer

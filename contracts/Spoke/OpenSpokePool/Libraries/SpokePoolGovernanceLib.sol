@@ -163,7 +163,12 @@ library SpokePoolGovernanceLib {
         }
 
         ISpokePoolPolicyRegistry.PoolLimits memory limits = contracts.policyRegistry.getTier(tierId).limits;
-        if (collateralFactor > limits.maxCollateralFactor || liquidationThreshold > limits.maxLiquidationThreshold) {
+        // A threshold kept as is passes a lowered tier maximum, so the collateral factor can still change
+        if (
+            collateralFactor > limits.maxCollateralFactor ||
+            (liquidationThreshold > limits.maxLiquidationThreshold &&
+                liquidationThreshold != marketLiquidationThreshold)
+        ) {
             revert ISpokePoolManager.ExceedsTierLimit(vToken);
         }
         _checkBondCoverage(contracts, comptroller, tierId, limits.minCoverageRatio);
