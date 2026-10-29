@@ -1,3 +1,4 @@
+import { FakeContract } from "@defi-wonderland/smock";
 import { Contract } from "ethers";
 import { parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
@@ -9,6 +10,17 @@ export const e18 = (value: string) => parseUnits(value, 18);
 /// Overrides for a transaction whose fake calls are counted: gas estimation can run it again, and smock records those
 /// calls too
 export const NO_ESTIMATE = { gasLimit: 10_000_000 };
+
+/// Clears every programmed answer and recorded call of `fakes`. `loadFixture` rewinds chain state but returns the same
+/// fakes, whose behaviour lives in JavaScript, so a stub one test sets would otherwise leak into the next. Fakes are
+/// created once per file because smock never releases the per-function listeners each fake adds to the VM
+export const resetFakes = (...fakes: Pick<FakeContract, "functions">[]) => {
+  for (const fake of fakes) {
+    for (const name of Object.keys(fake.functions)) {
+      (fake as unknown as Record<string, { reset: () => void }>)[name].reset();
+    }
+  }
+};
 
 /// Mirror the enums of `ISpokePoolManager`, in declaration order.
 export const RequestType = { Pool: 0, NewMarkets: 1, TierUpgrade: 2 };

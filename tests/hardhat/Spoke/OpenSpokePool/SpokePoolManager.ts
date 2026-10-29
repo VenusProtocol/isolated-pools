@@ -1,9 +1,9 @@
 import { FakeContract, smock } from "@defi-wonderland/smock";
-import { time } from "@nomicfoundation/hardhat-network-helpers";
+import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { BigNumber, BigNumberish, constants } from "ethers";
-import { defaultAbiCoder } from "ethers/lib/utils";
+import { defaultAbiCoder, parseUnits } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
 import {
@@ -29,7 +29,7 @@ import {
   SpokePoolPolicyRegistry__factory,
   VToken,
 } from "../../../../typechain";
-import { NO_ESTIMATE, PoolStatus, RequestStatus, RequestType, deployProxy, e18 } from "./utils";
+import { NO_ESTIMATE, PoolStatus, RequestStatus, RequestType, deployProxy, e18, resetFakes } from "./utils";
 
 const { expect } = chai;
 chai.use(smock.matchers);
@@ -38,10 +38,16 @@ const DESCRIPTION = "# VIP";
 const PROPOSAL = "0x1234";
 const EXIT_PROPOSAL = "0xabcd";
 const FORCE_CLOSE_PROPOSAL = "0xef01";
+/// The tiers' minimum bonds in USD, and the bonds paying for them: the bond token is priced at $1 with a factor of 1
 const BOND = e18("1000");
+const TIER2_BOND = e18("2000");
 /// $10 of an asset priced at $1
 const SEED = e18("10");
 const LOAN_CAP = e18("500000");
+const TIER2_LOAN_CAP = e18("600000");
+/// The liquidation thresholds an exit VIP winds the pool's two markets down with
+const EXIT_LIQUIDATION_THRESHOLDS = [e18("0.7"), 0];
+const FEED_DECIMALS = 8;
 const MAX_POOL_MARKETS = 5;
 const WIND_DOWN_PERIOD = 7 * 24 * 60 * 60;
 const MAX_STALE_PERIOD = 24 * 60 * 60;
@@ -66,6 +72,8 @@ const LIMITS = {
   maxCollateralMarkets: 3,
   maxCollateralSupplyCapUsd: e18("1000000"),
 };
+/// A bond worth exactly the tier's minimum coverage of the bond it requires
+const MIN_COVERED_BOND = BOND.mul(LIMITS.minCoverageRatio).div(e18("1"));
 
 type Feed = { oracle: string; feed: string; maxStalePeriod: number };
 
@@ -75,6 +83,12 @@ const expectFields = (actual: object, expected: object) => {
     expect((actual as Record<string, unknown>)[key], key).to.equal(value);
   }
 };
+
+/// A feed's answer for a USD price
+const feedAnswer = (usd: string) => parseUnits(usd, FEED_DECIMALS);
+
+/// The coverage ratio of a bond against the tier-1 bond
+const coverageOf = (bond: BigNumber) => bond.mul(e18("1")).div(BOND);
 
 describe("SpokePoolManager", () => {
   let owner: SignerWithAddress;
@@ -212,6 +226,13 @@ describe("SpokePoolManager", () => {
     return manager.requestCount();
   };
 
+  /// Requests the live pool's upgrade to tier 2, with a bond that pays for it
+  const requestTierUpgrade = async () => {
+    setBond(TIER2_BOND);
+    await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
+    return manager.requestCount();
+  };
+
   /// Sets what the live pool's bond holds
   const setBond = (amount: BigNumberish) => bondAccount.currentBondAmount.returns(amount);
 
@@ -230,7 +251,7 @@ describe("SpokePoolManager", () => {
     await settle(requestId);
   };
 
-  const buildExit = () => manager.buildExitProposal(comptroller.address, [e18("0.7"), 0], DESCRIPTION);
+  const buildExit = () => manager.buildExitProposal(comptroller.address, EXIT_LIQUIDATION_THRESHOLDS, DESCRIPTION);
 
   const startWindDown = async () => {
     await buildExit();
@@ -252,6 +273,21 @@ describe("SpokePoolManager", () => {
     await expect(call())
       .to.be.revertedWithCustomError(manager, "Unauthorized")
       .withArgs(other.address, manager.address, signature);
+  };
+
+  /// Checks `call`, made by a signer, reverts for anyone but the live pool's deployer, while the deployer is paused,
+  /// and once the deployer asks to exit
+  const expectActiveDeployerOnly = async (call: (signer: SignerWithAddress) => Promise<unknown>) => {
+    await expect(call(other)).to.be.revertedWithCustomError(manager, "NotDeployer").withArgs(other.address);
+
+    await manager.pauseDeployer(comptroller.address);
+    await expect(call(deployer)).to.be.revertedWithCustomError(manager, "DeployerPaused").withArgs(comptroller.address);
+
+    await manager.unpauseDeployer(comptroller.address);
+    await manager.connect(deployer).requestExit(comptroller.address);
+    await expect(call(deployer))
+      .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+      .withArgs(comptroller.address);
   };
 
   /// Makes `updateId` the latest RiskOracle update of every market, published at `publishedAt` with receiver `status`
@@ -276,30 +312,44 @@ describe("SpokePoolManager", () => {
     });
   };
 
-  beforeEach(async () => {
+  /// The fakes' default behaviour, reapplied before every test
+  const programFakes = () => {
+    acm.isAllowedToCall.returns(true);
+    oracle.getPrice.returns(e18("1"));
+    oracle.getUnderlyingPrice.returns(e18("1"));
+    // Every asset is priced by the ResilientOracle unless a test makes it unpriced
+    oracle.getTokenConfig.returns(([asset]: string[]) => tokenConfig(asset));
+    receiver.RISK_ORACLE.returns(riskOracle.address);
+    receiver.UPDATE_EXPIRATION_TIME.returns(UPDATE_EXPIRATION_TIME);
+    builder.buildExitProposal.returns(EXIT_PROPOSAL);
+    builder.buildForceCloseProposal.returns(FORCE_CLOSE_PROPOSAL);
+    builder.MAX_POOL_MARKETS.returns(MAX_POOL_MARKETS);
+    builder.POOL_REGISTRY.returns(poolRegistry.address);
+    for (const feed of [mainFeed, pivotFeed, fallbackFeed]) {
+      feed.decimals.returns(FEED_DECIMALS);
+    }
+    bondManager.bondAccounts.returns(bondAccount.address);
+    bondAccount.asset.returns(bondToken.address);
+    setBond(BOND);
+    comptroller.isMarketListed.returns(true);
+    comptroller.markets.returns([true, e18("0.4"), e18("0.6")]);
+    comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address]);
+    comptroller.isSupplyAllowlistEnabled.whenCalledWith(vTokenB.address).returns(true);
+  };
+
+  const deployFixture = async () => {
     [owner, deployer, timelock, other, irm, yieldGroup, chainlinkOracle, redstoneOracle, binanceOracle] =
       await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
-    acm.isAllowedToCall.returns(true);
     oracle = await smock.fake<ResilientOracleInterface & IResilientOracle>([
       ...ResilientOracleInterface__factory.abi,
       // Both declare `getPrice`
       ...IResilientOracle__factory.abi.filter(fragment => fragment.name !== "getPrice"),
     ]);
-    oracle.getPrice.returns(e18("1"));
-    oracle.getUnderlyingPrice.returns(e18("1"));
-    // Every asset is priced by the ResilientOracle unless a test makes it unpriced
-    oracle.getTokenConfig.returns(([asset]: string[]) => tokenConfig(asset));
     riskOracle = await smock.fake<IRiskOracle>("IRiskOracle");
     receiver = await smock.fake<IRiskStewardReceiver>("IRiskStewardReceiver");
-    receiver.RISK_ORACLE.returns(riskOracle.address);
-    receiver.UPDATE_EXPIRATION_TIME.returns(UPDATE_EXPIRATION_TIME);
     poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
     builder = await smock.fake<ISpokePoolProposalBuilder>("ISpokePoolProposalBuilder");
-    builder.buildExitProposal.returns(EXIT_PROPOSAL);
-    builder.buildForceCloseProposal.returns(FORCE_CLOSE_PROPOSAL);
-    builder.MAX_POOL_MARKETS.returns(MAX_POOL_MARKETS);
-    builder.POOL_REGISTRY.returns(poolRegistry.address);
     bondManager = await smock.fake<ISpokeBondManager>("ISpokeBondManager");
     bondAccount = await smock.fake<IBondAccount>("IBondAccount");
     comptroller = await smock.fake<SpokeComptroller>("contracts/Spoke/SpokeComptroller.sol:SpokeComptroller");
@@ -309,21 +359,21 @@ describe("SpokePoolManager", () => {
     mainFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
     pivotFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
     fallbackFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
-    mainFeed.decimals.returns(8);
 
     bondToken = await new MockToken__factory(owner).deploy("Tether", "USDT", 18);
     collateralAsset = await new MockToken__factory(owner).deploy("Collateral", "COL", 18);
     loanAsset = await new MockToken__factory(owner).deploy("Loan", "LOAN", 18);
+    programFakes();
     for (const token of [bondToken, collateralAsset, loanAsset]) {
       await token.connect(deployer).faucet(e18("100000"));
     }
 
     policyRegistry = await deployProxy(await new SpokePoolPolicyRegistry__factory(owner).deploy(), acm.address);
     await policyRegistry.setLoanAssetConfig(loanAsset.address, { factor: e18("1"), interestRateModels: [irm.address] });
-    await policyRegistry.setTier(1, tier(e18("1000"), LOAN_CAP));
+    await policyRegistry.setTier(1, tier(BOND, LOAN_CAP));
     await policyRegistry.setTier(
       2,
-      tier(e18("2000"), e18("600000"), { maxCollateralFactor: e18("0.6"), maxLiquidationThreshold: e18("0.7") }),
+      tier(TIER2_BOND, TIER2_LOAN_CAP, { maxCollateralFactor: e18("0.6"), maxLiquidationThreshold: e18("0.7") }),
     );
 
     manager = await deployManager();
@@ -331,20 +381,34 @@ describe("SpokePoolManager", () => {
       await token.connect(deployer).approve(manager.address, constants.MaxUint256);
     }
     await policyRegistry.setBondAssetFactor(bondToken.address, e18("1"));
-    bondManager.bondAccounts.returns(bondAccount.address);
-    bondAccount.asset.returns(bondToken.address);
-    setBond(BOND);
-    comptroller.isMarketListed.returns(true);
-    comptroller.markets.returns([true, e18("0.4"), e18("0.6")]);
-    comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address]);
-    comptroller.isSupplyAllowlistEnabled.whenCalledWith(vTokenB.address).returns(true);
-
     await manager.setProposalBuilder(builder.address);
     await manager.setBondManager(bondManager.address);
     await policyRegistry.setPoolParams(POOL_PARAMS);
     await policyRegistry.setMarketParams(MARKET_PARAMS(irm.address));
     await manager.setWindDownPeriod(WIND_DOWN_PERIOD);
     await manager.setSupportedOracles([chainlinkOracle.address, redstoneOracle.address, binanceOracle.address]);
+  };
+
+  beforeEach(async () => {
+    await loadFixture(deployFixture);
+    resetFakes(
+      acm,
+      oracle,
+      riskOracle,
+      receiver,
+      poolRegistry,
+      builder,
+      bondManager,
+      bondAccount,
+      comptroller,
+      vTokenA,
+      vTokenB,
+      vTokenC,
+      mainFeed,
+      pivotFeed,
+      fallbackFeed,
+    );
+    programFakes();
   });
 
   describe("constructor and initialize", () => {
@@ -381,51 +445,44 @@ describe("SpokePoolManager", () => {
   });
 
   describe("access control", () => {
-    it("needs the ACM role for every governance function", async () => {
-      const m = () => manager.connect(other);
-      const calls: [string, () => Promise<unknown>][] = [
-        [
-          "setOracleFeeds(uint256,address,OracleFeed[3],uint256)",
-          () => m().setOracleFeeds(1, collateralAsset.address, mainFeedOnly(), 0),
-        ],
-        [
-          "setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)",
-          () => m().setDeviationBoundedOracleParams(1, collateralAsset.address, 0, 0, 0),
-        ],
-        ["buildRequestProposal(uint256,string)", () => m().buildRequestProposal(1, DESCRIPTION)],
-        ["settleRequest(uint256)", () => m().settleRequest(1)],
-        ["rejectRequest(uint256)", () => m().rejectRequest(1)],
-        ["seizeBond(address,uint256,address)", () => m().seizeBond(comptroller.address, 1, other.address)],
-        ["releaseBond(address)", () => m().releaseBond(comptroller.address)],
-        [
-          "buildExitProposal(address,uint256[],string)",
-          () => m().buildExitProposal(comptroller.address, [], DESCRIPTION),
-        ],
-        ["startWindDown(address)", () => m().startWindDown(comptroller.address)],
-        [
-          "buildForceCloseProposal(address,string)",
-          () => m().buildForceCloseProposal(comptroller.address, DESCRIPTION),
-        ],
-        ["closePool(address)", () => m().closePool(comptroller.address)],
-        ["rejectExit(address)", () => m().rejectExit(comptroller.address)],
-        ["handoverPoolToGovernance(address)", () => m().handoverPoolToGovernance(comptroller.address)],
-        ["pauseDeployer(address)", () => m().pauseDeployer(comptroller.address)],
-        ["unpauseDeployer(address)", () => m().unpauseDeployer(comptroller.address)],
-        ["setProposalBuilder(address)", () => m().setProposalBuilder(builder.address)],
-        ["setBondManager(address)", () => m().setBondManager(bondManager.address)],
-        ["setHubYieldGroup(address,address)", () => m().setHubYieldGroup(loanAsset.address, yieldGroup.address)],
-        [
-          "setSupportedOracles(address[3])",
-          () => m().setSupportedOracles([other.address, other.address, other.address]),
-        ],
-        ["setWindDownPeriod(uint256)", () => m().setWindDownPeriod(1)],
-        ["setMaxResidualPoolDebtUsd(uint256)", () => m().setMaxResidualPoolDebtUsd(1)],
-        ["sweepToken(address,address,uint256)", () => m().sweepToken(bondToken.address, other.address, 1)],
-      ];
-      for (const [signature, call] of calls) {
-        await expectUnauthorized(signature, call);
-      }
-    });
+    const m = () => manager.connect(other);
+    const calls: [string, () => Promise<unknown>][] = [
+      [
+        "setOracleFeeds(uint256,address,OracleFeed[3],uint256)",
+        () => m().setOracleFeeds(1, collateralAsset.address, mainFeedOnly(), 0),
+      ],
+      [
+        "setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)",
+        () => m().setDeviationBoundedOracleParams(1, collateralAsset.address, 0, 0, 0),
+      ],
+      ["buildRequestProposal(uint256,string)", () => m().buildRequestProposal(1, DESCRIPTION)],
+      ["settleRequest(uint256)", () => m().settleRequest(1)],
+      ["rejectRequest(uint256)", () => m().rejectRequest(1)],
+      ["seizeBond(address,uint256,address)", () => m().seizeBond(comptroller.address, 1, other.address)],
+      ["releaseBond(address)", () => m().releaseBond(comptroller.address)],
+      [
+        "buildExitProposal(address,uint256[],string)",
+        () => m().buildExitProposal(comptroller.address, [], DESCRIPTION),
+      ],
+      ["startWindDown(address)", () => m().startWindDown(comptroller.address)],
+      ["buildForceCloseProposal(address,string)", () => m().buildForceCloseProposal(comptroller.address, DESCRIPTION)],
+      ["closePool(address)", () => m().closePool(comptroller.address)],
+      ["rejectExit(address)", () => m().rejectExit(comptroller.address)],
+      ["handoverPoolToGovernance(address)", () => m().handoverPoolToGovernance(comptroller.address)],
+      ["pauseDeployer(address)", () => m().pauseDeployer(comptroller.address)],
+      ["unpauseDeployer(address)", () => m().unpauseDeployer(comptroller.address)],
+      ["setProposalBuilder(address)", () => m().setProposalBuilder(builder.address)],
+      ["setBondManager(address)", () => m().setBondManager(bondManager.address)],
+      ["setHubYieldGroup(address,address)", () => m().setHubYieldGroup(loanAsset.address, yieldGroup.address)],
+      ["setSupportedOracles(address[3])", () => m().setSupportedOracles([other.address, other.address, other.address])],
+      ["setWindDownPeriod(uint256)", () => m().setWindDownPeriod(1)],
+      ["setMaxResidualPoolDebtUsd(uint256)", () => m().setMaxResidualPoolDebtUsd(1)],
+      ["sweepToken(address,address,uint256)", () => m().sweepToken(bondToken.address, other.address, 1)],
+    ];
+
+    for (const [signature, call] of calls) {
+      it(`needs the ACM role for ${signature}`, () => expectUnauthorized(signature, call));
+    }
   });
 
   describe("requestPool", () => {
@@ -462,9 +519,17 @@ describe("SpokePoolManager", () => {
     });
 
     it("stores a pool with only collateral markets or only loan markets", async () => {
-      expect(await requestPool([collateralMarket()], [])).to.equal(1);
-      await manager.connect(deployer).cancelRequest(1);
-      expect(await requestPool([], [loanMarket()])).to.equal(2);
+      const collateralOnlyId = await requestPool([collateralMarket()], []);
+      const collateralOnly = await manager.getRequest(collateralOnlyId);
+      expectCollateralMarkets(collateralOnly.collateralMarkets, [collateralMarket()]);
+      expect(collateralOnly.loanMarkets.length).to.equal(0);
+      await manager.connect(deployer).cancelRequest(collateralOnlyId);
+
+      const loanOnly = await manager.getRequest(await requestPool([], [loanMarket()]));
+      expect(loanOnly.collateralMarkets.length).to.equal(0);
+      expect(loanOnly.loanMarkets.map(m => [m.asset, m.interestRateModel])).to.deep.equal([
+        [loanAsset.address, irm.address],
+      ]);
     });
 
     it("reverts while the caller has an active pool", async () => {
@@ -484,7 +549,7 @@ describe("SpokePoolManager", () => {
     });
 
     it("reverts on a disabled or unset tier", async () => {
-      await policyRegistry.setTier(1, { ...tier(e18("1000"), LOAN_CAP), enabled: false });
+      await policyRegistry.setTier(1, { ...tier(BOND, LOAN_CAP), enabled: false });
       for (const tierId of [1, 9]) {
         await expect(requestPool(undefined, undefined, poolOf({ tierId })))
           .to.be.revertedWithCustomError(manager, "TierDisabled")
@@ -511,7 +576,7 @@ describe("SpokePoolManager", () => {
       setPrice(bondToken.address, e18("0.999"));
       await expect(requestPool())
         .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
-        .withArgs(e18("999"), e18("1000"));
+        .withArgs(e18("999"), BOND);
     });
   });
 
@@ -520,14 +585,15 @@ describe("SpokePoolManager", () => {
 
     it("stores a markets request on the pool's tier, escrowing nothing", async () => {
       const markets = [collateralMarket({ asset: bondToken.address })];
+      const requestId = (await manager.requestCount()).add(1);
       const tx = manager.connect(deployer).requestNewMarkets(comptroller.address, markets, []);
 
       await expect(tx)
         .to.emit(manager, "RequestSubmitted")
-        .withArgs(2, RequestType.NewMarkets, deployer.address, comptroller.address);
+        .withArgs(requestId, RequestType.NewMarkets, deployer.address, comptroller.address);
       await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
 
-      const request = await manager.getRequest(2);
+      const request = await manager.getRequest(requestId);
       expectFields(request, {
         requestType: RequestType.NewMarkets,
         status: RequestStatus.Pending,
@@ -541,40 +607,28 @@ describe("SpokePoolManager", () => {
       expect(request.loanMarkets.length).to.equal(0);
     });
 
-    it("reverts for anyone but the pool's deployer", async () => {
-      await expect(manager.connect(other).requestNewMarkets(comptroller.address, [collateralMarket()], []))
-        .to.be.revertedWithCustomError(manager, "NotDeployer")
-        .withArgs(other.address);
-    });
-
-    it("reverts while the deployer is paused or the pool is not live", async () => {
-      await manager.pauseDeployer(comptroller.address);
-      await expect(requestNewMarkets([collateralMarket()]))
-        .to.be.revertedWithCustomError(manager, "DeployerPaused")
-        .withArgs(comptroller.address);
-
-      await manager.unpauseDeployer(comptroller.address);
-      await manager.connect(deployer).requestExit(comptroller.address);
-      await expect(requestNewMarkets([collateralMarket()]))
-        .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
-        .withArgs(comptroller.address);
+    it("reverts for anyone but an active deployer of a live pool", async () => {
+      await expectActiveDeployerOnly(signer =>
+        manager.connect(signer).requestNewMarkets(comptroller.address, [collateralMarket()], []),
+      );
     });
 
     it("reverts while the deployer has an open request", async () => {
-      await requestNewMarkets([collateralMarket()]);
+      const requestId = await requestNewMarkets([collateralMarket()]);
       await expect(requestNewMarkets([collateralMarket({ asset: bondToken.address })]))
         .to.be.revertedWithCustomError(manager, "OpenRequestExists")
-        .withArgs(2);
+        .withArgs(requestId);
     });
 
     it("reverts when the bond no longer pays for the tier, as after a seizure or loss", async () => {
       setBond(e18("999"));
       await expect(requestNewMarkets([collateralMarket()]))
         .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
-        .withArgs(e18("999"), e18("1000"));
+        .withArgs(e18("999"), BOND);
 
       setBond(BOND);
-      expect(await requestNewMarkets([collateralMarket()])).to.equal(2);
+      const requestId = await requestNewMarkets([collateralMarket()]);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
     });
   });
 
@@ -584,13 +638,14 @@ describe("SpokePoolManager", () => {
     it("stores a tier request once the bond pays for the target tier", async () => {
       await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
         .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
-        .withArgs(BOND, e18("2000"));
+        .withArgs(BOND, TIER2_BOND);
 
-      setBond(e18("2000"));
+      setBond(TIER2_BOND);
+      const requestId = (await manager.requestCount()).add(1);
       await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
         .to.emit(manager, "RequestSubmitted")
-        .withArgs(2, RequestType.TierUpgrade, deployer.address, comptroller.address);
-      const request = await manager.getRequest(2);
+        .withArgs(requestId, RequestType.TierUpgrade, deployer.address, comptroller.address);
+      const request = await manager.getRequest(requestId);
       expectFields(request, {
         requestType: RequestType.TierUpgrade,
         status: RequestStatus.Pending,
@@ -606,33 +661,24 @@ describe("SpokePoolManager", () => {
       await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 1))
         .to.be.revertedWithCustomError(manager, "InvalidTierUpgrade")
         .withArgs(1, 1);
-      await policyRegistry.setTier(2, tier(e18("2000"), e18("100")));
+      // Tier 2 offering the loan asset at a lower supply cap than tier 1
+      await policyRegistry.setTier(2, tier(TIER2_BOND, LOAN_CAP.sub(1)));
       await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
         .to.be.revertedWithCustomError(manager, "InvalidTierUpgrade")
         .withArgs(1, 2);
     });
 
     it("reverts for anyone but an active deployer of a live pool", async () => {
-      await expect(manager.connect(other).requestTierUpgrade(comptroller.address, 2))
-        .to.be.revertedWithCustomError(manager, "NotDeployer")
-        .withArgs(other.address);
-      await manager.pauseDeployer(comptroller.address);
-      await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
-        .to.be.revertedWithCustomError(manager, "DeployerPaused")
-        .withArgs(comptroller.address);
-      await manager.unpauseDeployer(comptroller.address);
-      await manager.connect(deployer).requestExit(comptroller.address);
-      await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
-        .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
-        .withArgs(comptroller.address);
+      setBond(TIER2_BOND);
+      await expectActiveDeployerOnly(signer => manager.connect(signer).requestTierUpgrade(comptroller.address, 2));
     });
 
     it("reverts while the deployer has an open request", async () => {
-      setBond(e18("2000"));
-      await requestNewMarkets([collateralMarket()]);
+      setBond(TIER2_BOND);
+      const requestId = await requestNewMarkets([collateralMarket()]);
       await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
         .to.be.revertedWithCustomError(manager, "OpenRequestExists")
-        .withArgs(2);
+        .withArgs(requestId);
     });
   });
 
@@ -648,11 +694,20 @@ describe("SpokePoolManager", () => {
 
     it("cancels a pending markets request, which escrowed nothing", async () => {
       await activatePool();
-      await requestNewMarkets([collateralMarket()]);
-      const tx = manager.connect(deployer).cancelRequest(2);
-      await expect(tx).to.emit(manager, "RequestCanceled").withArgs(2);
+      const requestId = await requestNewMarkets([collateralMarket()]);
+      const tx = manager.connect(deployer).cancelRequest(requestId);
+      await expect(tx).to.emit(manager, "RequestCanceled").withArgs(requestId);
       await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [0, 0]);
-      expect((await manager.getRequest(2)).status).to.equal(RequestStatus.Canceled);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Canceled);
+    });
+
+    it("cancels a pending tier request without refunding a bond, as it escrowed none", async () => {
+      await activatePool();
+      const requestId = await requestTierUpgrade();
+      const tx = manager.connect(deployer).cancelRequest(requestId);
+      await expect(tx).to.emit(manager, "RequestCanceled").withArgs(requestId);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Canceled);
     });
 
     it("reverts for anyone but the request's deployer", async () => {
@@ -726,27 +781,49 @@ describe("SpokePoolManager", () => {
 
     it("checks an unpriced asset's new feeds and its supply cap at their price", async () => {
       unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, 1e8);
+      await setAnswer(mainFeed, feedAnswer("1"));
       await requestPool();
 
       await expect(manager.setOracleFeeds(1, collateralAsset.address, [noFeed(), noFeed(), noFeed()], 0))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
 
-      // 1,000 units at $1,000.01 is above the tier's $1,000,000
-      const pricier = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
-      pricier.decimals.returns(8);
-      await setAnswer(pricier, 1000_01000000);
+      // The request's 1,000 units at the new main feed's $1,000.01 are above the tier's $1,000,000
+      await setAnswer(pivotFeed, feedAnswer("1000.01"));
       await expect(
         manager.setOracleFeeds(
           1,
           collateralAsset.address,
-          [feedOn(chainlinkOracle.address, pricier.address), noFeed(), noFeed()],
+          [feedOn(chainlinkOracle.address, pivotFeed.address), noFeed(), noFeed()],
           0,
         ),
       )
         .to.be.revertedWithCustomError(manager, "ExceedsTierLimit")
         .withArgs(collateralAsset.address);
+    });
+
+    it("replaces a markets request's feeds, which then price its seed at build", async () => {
+      await activatePool();
+      unpriced(bondToken.address);
+      await setAnswer(mainFeed, feedAnswer("1"));
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+
+      await setAnswer(pivotFeed, feedAnswer("2"));
+      await manager.setOracleFeeds(
+        requestId,
+        bondToken.address,
+        [feedOn(chainlinkOracle.address, pivotFeed.address), noFeed(), noFeed()],
+        0,
+      );
+
+      // $10 at the new main feed's $2
+      const seed = SEED.div(2);
+      await expect(build(requestId, [vTokenC.address])).to.changeTokenBalances(
+        bondToken,
+        [deployer, manager],
+        [seed.mul(-1), seed],
+      );
+      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(seed);
     });
 
     it("reverts on an asset that is not one of the request's collateral markets", async () => {
@@ -815,6 +892,7 @@ describe("SpokePoolManager", () => {
       await expect(requestNewMarkets()).to.be.revertedWithCustomError(manager, "InvalidArrayLength");
     });
 
+    // The market count is checked before the collateral count and each asset, so the markets need not be distinct
     it("cap a pool's markets at the builder's maximum, counting its listed ones", async () => {
       await expect(requestPool([], Array(MAX_POOL_MARKETS + 1).fill(loanMarket())))
         .to.be.revertedWithCustomError(manager, "TooManyMarkets")
@@ -822,8 +900,6 @@ describe("SpokePoolManager", () => {
 
       await activatePool();
       comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address, vTokenC.address, other.address]);
-      comptroller.isSupplyAllowlistEnabled.whenCalledWith(vTokenC.address).returns(true);
-      comptroller.isSupplyAllowlistEnabled.whenCalledWith(other.address).returns(true);
       await expect(requestNewMarkets([collateralMarket()], [loanMarket()]))
         .to.be.revertedWithCustomError(manager, "TooManyMarkets")
         .withArgs(MAX_POOL_MARKETS + 1, MAX_POOL_MARKETS);
@@ -840,7 +916,8 @@ describe("SpokePoolManager", () => {
       await expect(requestNewMarkets(collateralOf(bondToken, loanAsset, extra)))
         .to.be.revertedWithCustomError(manager, "TooManyMarkets")
         .withArgs(4, LIMITS.maxCollateralMarkets);
-      expect(await requestNewMarkets(collateralOf(bondToken, extra))).to.equal(2);
+      const requestId = await requestNewMarkets(collateralOf(bondToken, extra));
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
     });
 
     it("reject an asset listed twice, across both kinds, or already in the pool", async () => {
@@ -904,14 +981,14 @@ describe("SpokePoolManager", () => {
   describe("oracle feeds of an unpriced collateral asset", () => {
     beforeEach(async () => {
       unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, 2e8);
+      await setAnswer(mainFeed, feedAnswer("2"));
     });
 
     const requestWith = (feeds: Feed[]) => requestPool([collateralMarket({ feeds })], []);
 
     it("price the asset with the main feed, scaled to the asset's decimals", async () => {
-      // 600 units at $2,000 is above the tier's $1,000,000, 500 units is exactly it
-      await setAnswer(mainFeed, 2000e8);
+      // 500 units at $2,000 is exactly the tier's $1,000,000, a wei more is above it
+      await setAnswer(mainFeed, feedAnswer("2000"));
       await expect(requestPool([collateralMarket({ supplyCap: e18("500.000000000000000001") })], []))
         .to.be.revertedWithCustomError(manager, "ExceedsTierLimit")
         .withArgs(collateralAsset.address);
@@ -1004,14 +1081,14 @@ describe("SpokePoolManager", () => {
 
     it("reject a main feed older than the staleness limit", async () => {
       const updatedAt = (await time.latest()) + 10;
-      mainFeed.latestRoundData.returns([1, 2e8, 0, updatedAt, 1]);
+      mainFeed.latestRoundData.returns([1, feedAnswer("2"), 0, updatedAt, 1]);
       await time.setNextBlockTimestamp(updatedAt + MAX_STALE_PERIOD + 1);
       await expect(manager.connect(deployer).requestPool(...poolOf(), [collateralMarket()], [], NO_ESTIMATE))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
 
       const latest = await time.latest();
-      mainFeed.latestRoundData.returns([1, 2e8, 0, latest + 1 - MAX_STALE_PERIOD, 1]);
+      mainFeed.latestRoundData.returns([1, feedAnswer("2"), 0, latest + 1 - MAX_STALE_PERIOD, 1]);
       await time.setNextBlockTimestamp(latest + 1);
       expect(await requestWith(mainFeedOnly())).to.equal(1);
     });
@@ -1058,30 +1135,40 @@ describe("SpokePoolManager", () => {
     });
 
     it("prices an unpriced collateral asset's seed with its main feed", async () => {
+      const usdcUnits = (amount: string) => parseUnits(amount, 6);
       const usdc = await new MockToken__factory(owner).deploy("USD Coin", "USDC", 6);
-      await usdc.connect(deployer).faucet(1e9);
+      await usdc.connect(deployer).faucet(usdcUnits("1000"));
       await usdc.connect(deployer).approve(manager.address, constants.MaxUint256);
       unpriced(usdc.address);
-      await setAnswer(mainFeed, 1e8);
-      await requestPool([collateralMarket({ asset: usdc.address, supplyCap: 1e10 })], []);
+      await setAnswer(mainFeed, feedAnswer("1"));
+      const requestId = await requestPool(
+        [collateralMarket({ asset: usdc.address, supplyCap: usdcUnits("10000") })],
+        [],
+      );
 
-      await expect(build(1)).to.changeTokenBalances(usdc, [deployer, manager], [-10e6, 10e6]);
-      expect(await manager.requestSeeds(1, usdc.address)).to.equal(10e6);
+      const seed = usdcUnits("10");
+      await expect(build(requestId)).to.changeTokenBalances(usdc, [deployer, manager], [seed.mul(-1), seed]);
+      expect(await manager.requestSeeds(requestId, usdc.address)).to.equal(seed);
     });
 
     it("reverts when a seed does not fit its market's supply cap", async () => {
-      await requestPool([collateralMarket({ supplyCap: SEED.sub(1) })], []);
-      await expect(build(1))
+      const collateralRequestId = await requestPool([collateralMarket({ supplyCap: SEED.sub(1) })], []);
+      await expect(build(collateralRequestId))
         .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
         .withArgs(collateralAsset.address);
-      await manager.connect(deployer).cancelRequest(1);
+      await manager.connect(deployer).cancelRequest(collateralRequestId);
 
-      await requestPool([], [loanMarket()]);
-      await policyRegistry.setTier(1, tier(e18("1000"), SEED.sub(1)));
-      await expect(build(2)).to.be.revertedWithCustomError(manager, "InvalidMarketParams").withArgs(loanAsset.address);
+      const loanRequestId = await requestPool([], [loanMarket()]);
+      await policyRegistry.setTier(1, tier(BOND, SEED.sub(1)));
+      await expect(build(loanRequestId))
+        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
+        .withArgs(loanAsset.address);
 
-      await policyRegistry.setTier(1, tier(e18("1000"), SEED));
-      await expect(build(2)).to.emit(manager, "RequestBuilt");
+      await policyRegistry.setTier(1, tier(BOND, SEED));
+      await expect(build(loanRequestId))
+        .to.emit(manager, "RequestBuilt")
+        .withArgs(loanRequestId, [vTokenA.address, vTokenB.address]);
+      expect(await manager.requestSeeds(loanRequestId, loanAsset.address)).to.equal(SEED);
     });
 
     it("converts a loan market's USD cap to the asset at the build-time price", async () => {
@@ -1122,9 +1209,9 @@ describe("SpokePoolManager", () => {
 
     it("checks an unpriced asset's main feed again", async () => {
       unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, 1e8);
+      await setAnswer(mainFeed, feedAnswer("1"));
       await requestPool();
-      await setAnswer(mainFeed, 1e8, MAX_STALE_PERIOD + 1);
+      await setAnswer(mainFeed, feedAnswer("1"), MAX_STALE_PERIOD + 1);
       await expect(build(1))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
@@ -1134,7 +1221,7 @@ describe("SpokePoolManager", () => {
       await requestPool();
       await policyRegistry.setBondAssetFactor(bondToken.address, 0);
       setPrice(bondToken.address, e18("0.5"));
-      await policyRegistry.setTier(1, { ...tier(e18("1000"), LOAN_CAP), enabled: false });
+      await policyRegistry.setTier(1, { ...tier(BOND, LOAN_CAP), enabled: false });
 
       await build(1);
       expect((await manager.getRequest(1)).status).to.equal(RequestStatus.Built);
@@ -1142,39 +1229,57 @@ describe("SpokePoolManager", () => {
 
     it("pulls a markets request's seeds and needs a live pool", async () => {
       await activatePool();
-      await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
       await buildExit();
-      await expect(build(2, [vTokenC.address]))
+      await expect(build(requestId, [vTokenC.address]))
         .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
         .withArgs(comptroller.address);
 
       await manager.rejectExit(comptroller.address);
-      await expect(build(2, [vTokenC.address])).to.changeTokenBalances(
-        bondToken,
-        [deployer, manager],
-        [SEED.mul(-1), SEED],
-      );
-      expect(await manager.requestSeeds(2, bondToken.address)).to.equal(SEED);
+      const tx = build(requestId, [vTokenC.address]);
+      await expect(tx).to.emit(manager, "RequestBuilt").withArgs(requestId, [vTokenC.address]);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED.mul(-1), SEED]);
+      expectFields(await manager.getRequest(requestId), {
+        status: RequestStatus.Built,
+        comptroller: comptroller.address,
+      });
+      expect(await manager.requestProposals(requestId)).to.equal(PROPOSAL);
+      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
+    });
+
+    it("pulls a markets request's loan market seed", async () => {
+      await activatePool();
+      await policyRegistry.setLoanAssetConfig(bondToken.address, {
+        factor: e18("1"),
+        interestRateModels: [irm.address],
+      });
+      const requestId = await requestNewMarkets([], [loanMarket({ asset: bondToken.address })]);
+      expect((await manager.getRequest(requestId)).loanMarkets.map(m => [m.asset, m.interestRateModel])).to.deep.equal([
+        [bondToken.address, irm.address],
+      ]);
+
+      const tx = build(requestId, [vTokenC.address]);
+      await expect(tx).to.emit(manager, "RequestBuilt").withArgs(requestId, [vTokenC.address]);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED.mul(-1), SEED]);
+      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
     });
 
     it("builds a tier request without markets, seeds or upgrade and bond checks", async () => {
       await activatePool();
-      setBond(e18("2000"));
-      await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
+      const requestId = await requestTierUpgrade();
       setBond(BOND);
       setPrice(bondToken.address, e18("0.5"));
-      await policyRegistry.setTier(2, { ...tier(e18("2000"), e18("600000")), enabled: false });
+      await policyRegistry.setTier(2, { ...tier(TIER2_BOND, TIER2_LOAN_CAP), enabled: false });
 
-      await expect(build(2, [])).to.emit(manager, "RequestBuilt").withArgs(2, []);
-      expect((await manager.getRequest(2)).status).to.equal(RequestStatus.Built);
+      await expect(build(requestId, [])).to.emit(manager, "RequestBuilt").withArgs(requestId, []);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Built);
     });
 
     it("needs a live pool for a tier request", async () => {
       await activatePool();
-      setBond(e18("2000"));
-      await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
+      const requestId = await requestTierUpgrade();
       await buildExit();
-      await expect(build(2, []))
+      await expect(build(requestId, []))
         .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
         .withArgs(comptroller.address);
     });
@@ -1228,31 +1333,34 @@ describe("SpokePoolManager", () => {
       expect(await manager.activePools(deployer.address)).to.equal(comptroller.address);
     });
 
-    it("sends a markets request's seeds to the caller", async () => {
+    it("sends a markets request's seeds to the caller, leaving the pool and its bond as they are", async () => {
       await activatePool();
-      await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
-      await build(2, [vTokenC.address]);
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      await build(requestId, [vTokenC.address]);
+      bondManager.createBond.reset();
 
-      const tx = settle(2);
-      await expect(tx).to.emit(manager, "RequestSettled").withArgs(2, comptroller.address);
+      const tx = manager.connect(timelock).settleRequest(requestId, NO_ESTIMATE);
+      await expect(tx).to.emit(manager, "RequestSettled").withArgs(requestId, comptroller.address);
       await expect(tx).to.not.emit(manager, "PoolActivated");
+      await expect(tx).to.not.emit(manager, "PoolTierUpgraded");
       await expect(tx).to.changeTokenBalances(bondToken, [manager, timelock], [SEED.mul(-1), SEED]);
-      expect((await manager.getRequest(2)).status).to.equal(RequestStatus.Settled);
+      expect(bondManager.createBond).to.not.have.been.called;
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Settled);
+      expectFields(await manager.getPool(comptroller.address), { status: PoolStatus.Live, tierId: 1 });
     });
 
     it("moves a tier request's pool to its tier", async () => {
       await activatePool();
-      setBond(e18("2000"));
-      await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
-      await build(2, []);
+      const requestId = await requestTierUpgrade();
+      await build(requestId, []);
 
-      await expect(settle(2))
+      await expect(settle(requestId))
         .to.emit(manager, "PoolTierUpgraded")
         .withArgs(comptroller.address, 1, 2)
         .and.to.emit(manager, "RequestSettled")
-        .withArgs(2, comptroller.address);
+        .withArgs(requestId, comptroller.address);
       expect((await manager.getPool(comptroller.address)).tierId).to.equal(2);
-      expect((await manager.getRequest(2)).status).to.equal(RequestStatus.Settled);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Settled);
     });
 
     it("reverts unless the request is built", async () => {
@@ -1271,12 +1379,24 @@ describe("SpokePoolManager", () => {
       await expect(settle(requestId)).to.be.revertedWithCustomError(manager, "InvalidRequestStatus").withArgs(1);
     });
 
-    it("needs a live pool for a markets or tier request", async () => {
+    it("needs a live pool for a markets request", async () => {
       await activatePool();
-      await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
-      await build(2, [vTokenC.address]);
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      await build(requestId, [vTokenC.address]);
       await buildExit();
-      await expect(settle(2)).to.be.revertedWithCustomError(manager, "InvalidPoolStatus").withArgs(comptroller.address);
+      await expect(settle(requestId))
+        .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+        .withArgs(comptroller.address);
+    });
+
+    it("needs a live pool for a tier request", async () => {
+      await activatePool();
+      const requestId = await requestTierUpgrade();
+      await build(requestId, []);
+      await buildExit();
+      await expect(settle(requestId))
+        .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+        .withArgs(comptroller.address);
     });
   });
 
@@ -1302,24 +1422,45 @@ describe("SpokePoolManager", () => {
       await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [SEED, SEED.mul(-1)]);
     });
 
+    it("rejects a pending markets request, which escrowed nothing", async () => {
+      await activatePool();
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+
+      const tx = manager.rejectRequest(requestId);
+      await expect(tx).to.emit(manager, "RequestRejected").withArgs(requestId);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Rejected);
+    });
+
     it("refunds a built markets request's seeds, and its VIP then fails to settle", async () => {
       await activatePool();
-      await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
-      await build(2, [vTokenC.address]);
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      await build(requestId, [vTokenC.address]);
 
-      const tx = manager.rejectRequest(2);
-      await expect(tx).to.emit(manager, "RequestRejected").withArgs(2);
+      const tx = manager.rejectRequest(requestId);
+      await expect(tx).to.emit(manager, "RequestRejected").withArgs(requestId);
       await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED, SEED.mul(-1)]);
-      await expect(settle(2)).to.be.revertedWithCustomError(manager, "InvalidRequestStatus").withArgs(2);
+      expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Rejected);
+      await expect(settle(requestId))
+        .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
+        .withArgs(requestId);
     });
 
-    it("rejects a tier request, which escrowed nothing", async () => {
-      await activatePool();
-      setBond(e18("2000"));
-      await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
-      await build(2, []);
-      await expect(manager.rejectRequest(2)).to.emit(manager, "RequestRejected").withArgs(2);
-    });
+    for (const built of [false, true]) {
+      it(`rejects a ${built ? "built" : "pending"} tier request, which escrowed nothing`, async () => {
+        await activatePool();
+        const requestId = await requestTierUpgrade();
+        if (built) {
+          await build(requestId, []);
+        }
+
+        const tx = manager.rejectRequest(requestId);
+        await expect(tx).to.emit(manager, "RequestRejected").withArgs(requestId);
+        await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
+        expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Rejected);
+        expect((await manager.getPool(comptroller.address)).tierId).to.equal(1);
+      });
+    }
 
     it("reverts on an unknown, settled, canceled or rejected request", async () => {
       await expect(manager.rejectRequest(1)).to.be.revertedWithCustomError(manager, "InvalidRequestStatus").withArgs(1);
@@ -1357,24 +1498,19 @@ describe("SpokePoolManager", () => {
       const set = (signer: SignerWithAddress, cf: BigNumberish, lt: BigNumberish, vToken = vTokenA.address) =>
         manager.connect(signer).setCollateralFactor(comptroller.address, vToken, cf, lt, NO_ESTIMATE);
 
+      const factorsPublished = (cf: BigNumberish, lt: BigNumberish) =>
+        publishedWith("collateralFactors", vTokenA.address, defaultAbiCoder.encode(["uint256", "uint256"], [cf, lt]));
+
       it("publishes the collateral factor and liquidation threshold", async () => {
         await set(deployer, e18("0.45"), e18("0.62"));
-        publishedWith(
-          "collateralFactors",
-          vTokenA.address,
-          defaultAbiCoder.encode(["uint256", "uint256"], [e18("0.45"), e18("0.62")]),
-        );
+        factorsPublished(e18("0.45"), e18("0.62"));
       });
 
-      it("stops once the deployer asks to exit, and works again after Venus rejects the exit", async () => {
+      it("works again after Venus rejects the deployer's exit", async () => {
         await manager.connect(deployer).requestExit(comptroller.address);
-        await expect(set(deployer, e18("0.3"), e18("0.6")))
-          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
-          .withArgs(comptroller.address);
-
         await manager.rejectExit(comptroller.address);
         await set(deployer, e18("0.3"), e18("0.6"));
-        expect(riskOracle.publishRiskParameterUpdate).to.have.been.calledOnce;
+        factorsPublished(e18("0.3"), e18("0.6"));
       });
 
       it("reverts when the factor is above the threshold or the threshold goes down", async () => {
@@ -1393,7 +1529,7 @@ describe("SpokePoolManager", () => {
           .to.be.revertedWithCustomError(manager, "RedundantUpdate")
           .withArgs(vTokenA.address);
         await set(deployer, e18("0.4"), e18("0.61"));
-        expect(riskOracle.publishRiskParameterUpdate).to.have.been.calledOnce;
+        factorsPublished(e18("0.4"), e18("0.61"));
       });
 
       it("reverts above the tier's limits", async () => {
@@ -1408,16 +1544,24 @@ describe("SpokePoolManager", () => {
       });
 
       it("reverts when the bond's coverage is below the tier's minimum, with the asset's factor", async () => {
-        bondAccount.currentBondAmount.returns(e18("799"));
+        const underCovered = MIN_COVERED_BOND.sub(e18("1"));
+        setBond(underCovered);
         await expect(set(deployer, e18("0.45"), e18("0.6")))
           .to.be.revertedWithCustomError(manager, "CoverageTooLow")
-          .withArgs(e18("0.799"), e18("0.8"));
+          .withArgs(coverageOf(underCovered), LIMITS.minCoverageRatio);
 
-        bondAccount.currentBondAmount.returns(BOND);
+        // A factor of 2 doubles the required bond, halving the coverage
+        setBond(BOND);
         await policyRegistry.setBondAssetFactor(bondToken.address, e18("2"));
         await expect(set(deployer, e18("0.45"), e18("0.6")))
           .to.be.revertedWithCustomError(manager, "CoverageTooLow")
-          .withArgs(e18("0.5"), e18("0.8"));
+          .withArgs(e18("0.5"), LIMITS.minCoverageRatio);
+      });
+
+      it("publishes with the bond's coverage exactly at the tier's minimum", async () => {
+        setBond(MIN_COVERED_BOND);
+        await set(deployer, e18("0.45"), e18("0.6"));
+        factorsPublished(e18("0.45"), e18("0.6"));
       });
 
       it("reverts only while the latest update can still be applied", async () => {
@@ -1454,6 +1598,7 @@ describe("SpokePoolManager", () => {
           .withArgs(vTokenA.address);
         await time.setNextBlockTimestamp(publishedAt + UPDATE_EXPIRATION_TIME + 1);
         await set(deployer, e18("0.45"), e18("0.62"));
+        factorsPublished(e18("0.45"), e18("0.62"));
       });
 
       it("reverts on an unlisted or loan market", async () => {
@@ -1466,14 +1611,8 @@ describe("SpokePoolManager", () => {
           .withArgs(vTokenA.address);
       });
 
-      it("reverts for anyone but an active deployer", async () => {
-        await expect(set(other, e18("0.4"), e18("0.6")))
-          .to.be.revertedWithCustomError(manager, "NotDeployer")
-          .withArgs(other.address);
-        await manager.pauseDeployer(comptroller.address);
-        await expect(set(deployer, e18("0.4"), e18("0.6")))
-          .to.be.revertedWithCustomError(manager, "DeployerPaused")
-          .withArgs(comptroller.address);
+      it("reverts for anyone but an active deployer of a live pool", async () => {
+        await expectActiveDeployerOnly(signer => set(signer, e18("0.45"), e18("0.62")));
       });
     });
 
@@ -1481,17 +1620,24 @@ describe("SpokePoolManager", () => {
       const set = (cap: BigNumberish, signer = deployer, vToken = vTokenA.address) =>
         manager.connect(signer).setCollateralSupplyCap(comptroller.address, vToken, cap, NO_ESTIMATE);
 
+      const capPublished = (cap: BigNumberish) =>
+        publishedWith("supplyCap", vTokenA.address, defaultAbiCoder.encode(["uint256"], [cap]));
+
       it("publishes the supply cap", async () => {
         await set(e18("2000"));
-        publishedWith("supplyCap", vTokenA.address, defaultAbiCoder.encode(["uint256"], [e18("2000")]));
+        capPublished(e18("2000"));
       });
 
       it("reverts when the cap is worth more than the tier allows", async () => {
-        oracle.getUnderlyingPrice.whenCalledWith(vTokenA.address).returns(e18("2"));
-        await expect(set(e18("500001")))
+        const price = e18("2");
+        oracle.getUnderlyingPrice.whenCalledWith(vTokenA.address).returns(price);
+        // The units worth exactly the tier's maximum at $2
+        const maxCap = LIMITS.maxCollateralSupplyCapUsd.mul(e18("1")).div(price);
+        await expect(set(maxCap.add(1)))
           .to.be.revertedWithCustomError(manager, "ExceedsTierLimit")
           .withArgs(vTokenA.address);
-        await set(e18("500000"));
+        await set(maxCap);
+        capPublished(maxCap);
       });
 
       it("reverts when the cap equals the applied one", async () => {
@@ -1502,10 +1648,11 @@ describe("SpokePoolManager", () => {
       });
 
       it("reverts when the bond's coverage is below the tier's minimum", async () => {
-        bondAccount.currentBondAmount.returns(e18("799"));
+        const underCovered = MIN_COVERED_BOND.sub(e18("1"));
+        setBond(underCovered);
         await expect(set(e18("1")))
           .to.be.revertedWithCustomError(manager, "CoverageTooLow")
-          .withArgs(e18("0.799"), e18("0.8"));
+          .withArgs(coverageOf(underCovered), LIMITS.minCoverageRatio);
       });
 
       it("reverts while the latest update can still be applied", async () => {
@@ -1526,12 +1673,7 @@ describe("SpokePoolManager", () => {
       });
 
       it("reverts for anyone but an active deployer of a live pool", async () => {
-        await expect(set(1, other)).to.be.revertedWithCustomError(manager, "NotDeployer").withArgs(other.address);
-        await manager.pauseDeployer(comptroller.address);
-        await expect(set(1)).to.be.revertedWithCustomError(manager, "DeployerPaused").withArgs(comptroller.address);
-        await manager.unpauseDeployer(comptroller.address);
-        await manager.connect(deployer).requestExit(comptroller.address);
-        await expect(set(1)).to.be.revertedWithCustomError(manager, "InvalidPoolStatus").withArgs(comptroller.address);
+        await expectActiveDeployerOnly(signer => set(1, signer));
       });
     });
 
@@ -1540,7 +1682,7 @@ describe("SpokePoolManager", () => {
         manager.connect(signer).pauseCollateralSupply(comptroller.address, vToken, NO_ESTIMATE);
 
       it("publishes a supply pause without checking coverage or pending updates", async () => {
-        bondAccount.currentBondAmount.returns(0);
+        setBond(0);
         latestUpdate(1, UpdateStatus.None, await time.latest());
         await pause();
         publishedWith("supplyPause", vTokenA.address, "0x");
@@ -1557,12 +1699,7 @@ describe("SpokePoolManager", () => {
       });
 
       it("reverts for anyone but an active deployer of a live pool", async () => {
-        await expect(pause(other)).to.be.revertedWithCustomError(manager, "NotDeployer").withArgs(other.address);
-        await manager.pauseDeployer(comptroller.address);
-        await expect(pause()).to.be.revertedWithCustomError(manager, "DeployerPaused").withArgs(comptroller.address);
-        await manager.unpauseDeployer(comptroller.address);
-        await manager.connect(deployer).requestExit(comptroller.address);
-        await expect(pause()).to.be.revertedWithCustomError(manager, "InvalidPoolStatus").withArgs(comptroller.address);
+        await expectActiveDeployerOnly(signer => pause(signer));
       });
     });
   });
@@ -1573,21 +1710,7 @@ describe("SpokePoolManager", () => {
     describe("withdrawBondExcess", () => {
       it("withdraws the bond's excess", async () => {
         await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
-        expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, e18("1000"));
-      });
-
-      it("reverts while the deployer is paused", async () => {
-        await manager.pauseDeployer(comptroller.address);
-        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
-          .to.be.revertedWithCustomError(manager, "DeployerPaused")
-          .withArgs(comptroller.address);
-      });
-
-      it("reverts once the pool is not live", async () => {
-        await manager.connect(deployer).requestExit(comptroller.address);
-        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
-          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
-          .withArgs(comptroller.address);
+        expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, BOND);
       });
 
       it("keeps the tier's required bond, at the current price and rounded up, in the bond", async () => {
@@ -1598,18 +1721,22 @@ describe("SpokePoolManager", () => {
 
         setPrice(bondToken.address, e18("7"));
         await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
-        expect(bondManager.withdrawExcess).to.have.been.calledWith(
-          comptroller.address,
-          e18("1500").mul(e18("1")).div(e18("7")).add(1),
-        );
+        expect(bondManager.withdrawExcess).to.have.callCount(2);
+        const [pool, floor] = bondManager.withdrawExcess.getCall(1).args;
+        expect(pool).to.equal(comptroller.address);
+        // $1,500 at $7, rounded up
+        expect(floor).to.equal(e18("1500").mul(e18("1")).div(e18("7")).add(1));
       });
 
-      it("reverts for anyone but the pool's deployer", async () => {
-        for (const pool of [comptroller.address, other.address]) {
-          await expect(manager.connect(other).withdrawBondExcess(pool))
-            .to.be.revertedWithCustomError(manager, "NotDeployer")
-            .withArgs(other.address);
-        }
+      it("reverts once the bond asset has no factor", async () => {
+        await policyRegistry.setBondAssetFactor(bondToken.address, 0);
+        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
+          .to.be.revertedWithCustomError(policyRegistry, "BondAssetNotAllowed")
+          .withArgs(bondToken.address);
+      });
+
+      it("reverts for anyone but an active deployer of a live pool", async () => {
+        await expectActiveDeployerOnly(signer => manager.connect(signer).withdrawBondExcess(comptroller.address));
       });
     });
 
@@ -1620,6 +1747,15 @@ describe("SpokePoolManager", () => {
 
         bondManager.getCurrentBondAmount.returns(e18("900"));
         expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(0);
+      });
+
+      it("uses withdrawBondExcess's floor", async () => {
+        await policyRegistry.setBondAssetFactor(bondToken.address, e18("1.5"));
+        setPrice(bondToken.address, e18("7"));
+        bondManager.getCurrentBondAmount.returns(e18("1200"));
+        expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(
+          e18("1200").sub(e18("1500").mul(e18("1")).div(e18("7")).add(1)),
+        );
       });
     });
 
@@ -1696,6 +1832,38 @@ describe("SpokePoolManager", () => {
       expect((await manager.getPool(comptroller.address)).deployerPaused).to.equal(false);
     });
 
+    const endPool: [string, () => Promise<unknown>][] = [
+      [
+        "closed",
+        async () => {
+          await startWindDown();
+          await manager.closePool(comptroller.address);
+        },
+      ],
+      [
+        "handed-over",
+        async () => {
+          await buildExit();
+          await manager.handoverPoolToGovernance(comptroller.address);
+        },
+      ],
+    ];
+
+    for (const [status, end] of endPool) {
+      it(`pauses and unpauses the deployer of a ${status} pool too`, async () => {
+        await activatePool();
+        await end();
+        await expect(manager.pauseDeployer(comptroller.address))
+          .to.emit(manager, "DeployerPausedUpdated")
+          .withArgs(comptroller.address, true);
+        expect((await manager.getPool(comptroller.address)).deployerPaused).to.equal(true);
+        await expect(manager.unpauseDeployer(comptroller.address))
+          .to.emit(manager, "DeployerPausedUpdated")
+          .withArgs(comptroller.address, false);
+        expect((await manager.getPool(comptroller.address)).deployerPaused).to.equal(false);
+      });
+    }
+
     it("reverts for an unknown pool", async () => {
       for (const call of [() => manager.pauseDeployer(other.address), () => manager.unpauseDeployer(other.address)]) {
         await expect(call()).to.be.revertedWithCustomError(manager, "InvalidPoolStatus").withArgs(other.address);
@@ -1712,42 +1880,32 @@ describe("SpokePoolManager", () => {
           .to.emit(manager, "ExitRequested")
           .withArgs(comptroller.address);
         expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.ExitRequested);
-        await expect(manager.connect(deployer).requestExit(comptroller.address))
-          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
-          .withArgs(comptroller.address);
       });
 
-      it("reverts for anyone but an active deployer", async () => {
-        await expect(manager.connect(other).requestExit(comptroller.address))
-          .to.be.revertedWithCustomError(manager, "NotDeployer")
-          .withArgs(other.address);
-        await manager.pauseDeployer(comptroller.address);
-        await expect(manager.connect(deployer).requestExit(comptroller.address))
-          .to.be.revertedWithCustomError(manager, "DeployerPaused")
-          .withArgs(comptroller.address);
+      it("reverts for anyone but an active deployer of a live pool, so a second time too", async () => {
+        await expectActiveDeployerOnly(signer => manager.connect(signer).requestExit(comptroller.address));
       });
 
       it("waits for the deployer's pending request to close", async () => {
-        await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+        const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
         await expect(manager.connect(deployer).requestExit(comptroller.address))
           .to.be.revertedWithCustomError(manager, "OpenRequestExists")
-          .withArgs(2);
+          .withArgs(requestId);
 
-        await manager.connect(deployer).cancelRequest(2);
+        await manager.connect(deployer).cancelRequest(requestId);
         await expect(manager.connect(deployer).requestExit(comptroller.address))
           .to.emit(manager, "ExitRequested")
           .withArgs(comptroller.address);
       });
 
       it("waits for the deployer's built request to close", async () => {
-        setBond(e18("2000"));
-        await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
-        await build(2, []);
+        const requestId = await requestTierUpgrade();
+        await build(requestId, []);
         await expect(manager.connect(deployer).requestExit(comptroller.address))
           .to.be.revertedWithCustomError(manager, "OpenRequestExists")
-          .withArgs(2);
+          .withArgs(requestId);
 
-        await manager.rejectRequest(2);
+        await manager.rejectRequest(requestId);
         await expect(manager.connect(deployer).requestExit(comptroller.address))
           .to.emit(manager, "ExitRequested")
           .withArgs(comptroller.address);
@@ -1756,12 +1914,14 @@ describe("SpokePoolManager", () => {
 
     describe("buildExitProposal", () => {
       it("builds an exit from a live pool, stores its VIP and emits ExitBuilt", async () => {
-        await expect(manager.buildExitProposal(comptroller.address, [e18("0.7"), 0], DESCRIPTION, NO_ESTIMATE))
+        await expect(
+          manager.buildExitProposal(comptroller.address, EXIT_LIQUIDATION_THRESHOLDS, DESCRIPTION, NO_ESTIMATE),
+        )
           .to.emit(manager, "ExitBuilt")
           .withArgs(comptroller.address);
         expect(builder.buildExitProposal).to.have.been.calledOnceWith(
           comptroller.address,
-          [e18("0.7"), 0],
+          EXIT_LIQUIDATION_THRESHOLDS,
           DESCRIPTION,
         );
         expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.ExitProposed);
@@ -1782,7 +1942,7 @@ describe("SpokePoolManager", () => {
         expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.ExitProposed);
       });
 
-      it("reverts on an unknown, winding-down, closed or handed-over pool", async () => {
+      it("reverts on an unknown, winding-down or closed pool", async () => {
         await expect(manager.buildExitProposal(other.address, [], DESCRIPTION))
           .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
           .withArgs(other.address);
@@ -1791,6 +1951,14 @@ describe("SpokePoolManager", () => {
           .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
           .withArgs(comptroller.address);
         await manager.closePool(comptroller.address);
+        await expect(buildExit())
+          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+          .withArgs(comptroller.address);
+      });
+
+      it("reverts on a handed-over pool", async () => {
+        await manager.connect(deployer).requestExit(comptroller.address);
+        await manager.handoverPoolToGovernance(comptroller.address);
         await expect(buildExit())
           .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
           .withArgs(comptroller.address);
@@ -1831,9 +1999,6 @@ describe("SpokePoolManager", () => {
         await check();
         await manager.connect(deployer).requestExit(comptroller.address);
         await check();
-        await buildExit();
-        await manager.rejectExit(comptroller.address);
-        await check();
       });
     });
 
@@ -1866,31 +2031,45 @@ describe("SpokePoolManager", () => {
           .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
           .withArgs(comptroller.address);
       });
+
+      it("reverts with the builder's error", async () => {
+        await time.increase(WIND_DOWN_PERIOD);
+        builder.buildForceCloseProposal.reverts("builder failed");
+        await expect(manager.buildForceCloseProposal(comptroller.address, DESCRIPTION)).to.be.revertedWith(
+          "builder failed",
+        );
+      });
     });
 
     describe("closePool", () => {
-      it("accrues the pool's interest and closes it once its borrows and bad debt are low enough", async () => {
+      /// vTokenA's 3 borrowed plus 1 of bad debt at $2; vTokenB owes nothing
+      const RESIDUAL_DEBT_USD = e18("8");
+
+      /// Starts the wind-down of a pool owing `RESIDUAL_DEBT_USD`, and sets the debt it may close with
+      const windDownWithDebt = async (maxResidualPoolDebtUsd: BigNumberish) => {
         await startWindDown();
         vTokenA.totalBorrowsCurrent.returns(e18("3"));
         vTokenA.badDebt.returns(e18("1"));
-        vTokenB.totalBorrowsCurrent.returns(0);
-        vTokenB.badDebt.returns(0);
         oracle.getUnderlyingPrice.whenCalledWith(vTokenA.address).returns(e18("2"));
-        await manager.setMaxResidualPoolDebtUsd(e18("7.99"));
+        await manager.setMaxResidualPoolDebtUsd(maxResidualPoolDebtUsd);
+      };
+
+      it("reverts while the pool's borrows and bad debt are worth more than the maximum", async () => {
+        await windDownWithDebt(RESIDUAL_DEBT_USD.sub(1));
         await expect(manager.closePool(comptroller.address))
           .to.be.revertedWithCustomError(manager, "ResidualDebtExceeded")
-          .withArgs(e18("8"));
+          .withArgs(RESIDUAL_DEBT_USD);
+      });
 
-        await manager.setMaxResidualPoolDebtUsd(e18("8"));
-        oracle.getUnderlyingPrice.reset();
-        oracle.getUnderlyingPrice.returns(e18("1"));
-        oracle.getUnderlyingPrice.whenCalledWith(vTokenA.address).returns(e18("2"));
+      it("accrues each market's interest and closes the pool once its debt is at most the maximum", async () => {
+        await windDownWithDebt(RESIDUAL_DEBT_USD);
         await expect(manager.closePool(comptroller.address, NO_ESTIMATE))
           .to.emit(manager, "PoolClosed")
           .withArgs(comptroller.address);
-        expect(vTokenA.totalBorrowsCurrent).to.have.been.called;
-        expect(vTokenB.totalBorrowsCurrent).to.have.been.called;
-        expect(oracle.getUnderlyingPrice).to.not.have.been.calledWith(vTokenB.address);
+        expect(vTokenA.totalBorrowsCurrent).to.have.been.calledOnce;
+        expect(vTokenB.totalBorrowsCurrent).to.have.been.calledOnce;
+        // Only a market with debt is priced
+        expect(oracle.getUnderlyingPrice).to.have.been.calledOnceWith(vTokenA.address);
         expect(bondManager.release).to.not.have.been.called;
         expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.Closed);
         expect(await manager.activePools(deployer.address)).to.equal(constants.AddressZero);
@@ -1899,7 +2078,8 @@ describe("SpokePoolManager", () => {
       it("lets the deployer request a new pool after the close", async () => {
         await startWindDown();
         await manager.closePool(comptroller.address);
-        expect(await requestPool()).to.equal(2);
+        const requestId = await requestPool();
+        expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
       });
 
       it("reverts unless the pool is winding down", async () => {
@@ -1907,6 +2087,8 @@ describe("SpokePoolManager", () => {
           expect(manager.closePool(comptroller.address))
             .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
             .withArgs(comptroller.address);
+        await check();
+        await manager.connect(deployer).requestExit(comptroller.address);
         await check();
         await buildExit();
         await check();
@@ -2034,7 +2216,7 @@ describe("SpokePoolManager", () => {
 
     it("setSupportedOracles decides which oracles a new request's feeds may use", async () => {
       unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, 1e8);
+      await setAnswer(mainFeed, feedAnswer("1"));
       await manager.setSupportedOracles([redstoneOracle.address, binanceOracle.address, constants.AddressZero]);
       await expect(requestPool())
         .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
@@ -2072,34 +2254,6 @@ describe("SpokePoolManager", () => {
         manager,
         "ZeroAddressNotAllowed",
       );
-    });
-  });
-
-  describe("request lifecycle", () => {
-    it("takes a pool request Pending, Built, Settled", async () => {
-      const status = async () => (await manager.getRequest(1)).status;
-      expect(await status()).to.equal(RequestStatus.None);
-      await requestPool();
-      expect(await status()).to.equal(RequestStatus.Pending);
-      await build(1);
-      expect(await status()).to.equal(RequestStatus.Built);
-      await settle(1);
-      expect(await status()).to.equal(RequestStatus.Settled);
-    });
-
-    it("escrows the bond at request and the seeds at build, then moves them out at settle", async () => {
-      const balances = async () =>
-        (await Promise.all([bondToken, collateralAsset, loanAsset].map(token => token.balanceOf(manager.address)))).map(
-          String,
-        );
-      await requestPool();
-      expect(await balances()).to.deep.equal([BOND, 0, 0].map(String));
-      await build(1);
-      expect(await balances()).to.deep.equal([BOND, SEED, SEED].map(String));
-      await settle(1);
-      // The fake bond manager pulls nothing; the bond is approved to it
-      expect(await balances()).to.deep.equal([BOND, 0, 0].map(String));
-      expect(await bondToken.allowance(manager.address, bondManager.address)).to.equal(BOND);
     });
   });
 
