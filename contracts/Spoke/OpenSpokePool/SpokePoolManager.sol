@@ -303,6 +303,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function withdrawBondExcess(address comptroller) external nonReentrant {
         Pool storage pool = _ensureCallerHasLivePool(comptroller);
+        // An open request was checked against the current bond, so none is withdrawn until it closes
+        _ensureNoOpenRequest(msg.sender);
         uint256 requiredBondAmount = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
         bondManager.withdrawExcess(comptroller, requiredBondAmount);
     }

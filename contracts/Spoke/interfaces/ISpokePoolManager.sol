@@ -706,6 +706,7 @@ interface ISpokePoolManager {
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
+     * @custom:error OpenRequestExists is thrown while the deployer's latest request is still open
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
