@@ -2285,6 +2285,13 @@ export const globalConfig: NetworkConfig = {
         decimals: 18,
         tokenAddress: "0x585BDE7C54ABB5cCD7791F923D6c2187635f3952",
       },
+      {
+        isMock: false,
+        name: "BPN Credit Token",
+        symbol: "BPNC",
+        decimals: 18,
+        tokenAddress: "0x6d7C501cF2603d8A3d9aE10Fee8809fd4EA9D689",
+      },
     ],
     poolConfig: [
       {

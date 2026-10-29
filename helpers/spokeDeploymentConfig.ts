@@ -47,8 +47,8 @@ export type SpokePoolConfig = Omit<PoolConfig, "vtokens" | PoolListingParameter>
 // may supply and who may liquidate, not who may borrow; it does not take more risk per market, so there is no reason
 // for these to differ from the isolated stablecoin markets.
 //
-// On `bscmainnet` they are the listing parameters of the "bStock index" pool. The "bStock mainstream" pool sets only
-// what deployment needs, and its listing VIP sets the rest.
+// On `bscmainnet` they are the listing parameters of the "bStock index" pool. The "bStock mainstream" and "BPN Loan"
+// pools set only what deployment needs, and their listing VIPs set the rest.
 
 // Receives the seed vTokens `addMarket` mints, so the seed can never be redeemed.
 const SEED_RECEIVER = "0x000000000000000000000000000000000000dEaD";
@@ -97,13 +97,17 @@ const COLLATERAL_RATE_MODEL = {
   kink_: "0",
 };
 
-const bStockMainstreamMarket = (asset: string, rateModel: typeof LIQUIDITY_RATE_MODEL): SpokeVTokenConfig => ({
-  name: `Venus ${asset} (${BSTOCK_MAINSTREAM_NAME})`,
-  asset,
-  symbol: `v${asset}_${BSTOCK_MAINSTREAM_ID}`,
-  ...rateModel,
-  reserveFactor: convertToUnit("0.1", 18),
-});
+const spokeMarket =
+  (poolId: string, poolName: string) =>
+  (asset: string, rateModel: typeof LIQUIDITY_RATE_MODEL): SpokeVTokenConfig => ({
+    name: `Venus ${asset} (${poolName})`,
+    asset,
+    symbol: `v${asset}_${poolId}`,
+    ...rateModel,
+    reserveFactor: convertToUnit("0.1", 18),
+  });
+
+const bStockMainstreamMarket = spokeMarket(BSTOCK_MAINSTREAM_ID, BSTOCK_MAINSTREAM_NAME);
 
 const BSTOCK_MAINSTREAM: SpokePoolConfig = {
   id: BSTOCK_MAINSTREAM_ID,
@@ -135,6 +139,33 @@ const BSTOCK_MAINSTREAM: SpokePoolConfig = {
       "TSMB",
       "COINB",
     ].map(asset => bStockMainstreamMarket(asset, COLLATERAL_RATE_MODEL)),
+  ],
+};
+
+// The third `bscmainnet` pool, named the same way, and listed by VIP-678.
+const BPN_LOAN_ID = "BPNLoan";
+const BPN_LOAN_NAME = "BPN Loan";
+
+// A flat 6% APY at any utilization: the base is 6% compounded daily, `(1.06^(1/365) - 1) * 365`, with no slope, no
+// jump and the kink at 100%.
+const FLAT_6_PERCENT_RATE_MODEL = {
+  rateModel: InterestRateModels.JumpRate.toString(),
+  baseRatePerYear: "58273559420325816",
+  multiplierPerYear: "0",
+  jumpMultiplierPerYear: "0",
+  kink_: convertToUnit("1", 18),
+};
+
+const bpnLoanMarket = spokeMarket(BPN_LOAN_ID, BPN_LOAN_NAME);
+
+const BPN_LOAN: SpokePoolConfig = {
+  id: BPN_LOAN_ID,
+  name: BPN_LOAN_NAME,
+  vtokens: [
+    // Collateral side: supplied only by its allowlist and not borrowable, so it takes the zero-rate model.
+    bpnLoanMarket("BPNC", COLLATERAL_RATE_MODEL),
+    // Liquidity side: supplied only by each Hub's Spoke source, borrowable, and never collateral.
+    ...["USDT", "USDC", "U"].map(asset => bpnLoanMarket(asset, FLAT_6_PERCENT_RATE_MODEL)),
   ],
 };
 
@@ -344,6 +375,7 @@ export const spokePoolConfig: Record<string, SpokePoolConfig[]> = {
       ],
     },
     BSTOCK_MAINSTREAM,
+    BPN_LOAN,
   ],
 };
 
