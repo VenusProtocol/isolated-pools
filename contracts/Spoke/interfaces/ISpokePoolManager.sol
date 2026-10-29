@@ -410,9 +410,9 @@ interface ISpokePoolManager {
     error InvalidRequestStatus(uint256 requestId);
 
     /**
-     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, a set feed
-     *   has no staleness limit, two of its feeds share an oracle, it has a fallback feed without a pivot feed, or a
-     *   bound deviation of 1e18 or above
+     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, it or its
+     *   main feed has more than 18 decimals, a set feed has no staleness limit, two of its feeds share an oracle, it
+     *   has a fallback feed without a pivot feed, or a bound deviation of 1e18 or above
      * @param asset The asset
      */
     error InvalidOracleFeed(address asset);

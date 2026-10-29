@@ -388,8 +388,14 @@ library SpokePoolValidationLib {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
 
-        // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals
-        return uint256(answer) * 10 ** (36 - feed.decimals() - IERC20MetadataUpgradeable(asset).decimals());
+        // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals. It scales each separately,
+        // so it cannot price a feed or an asset with more than 18
+        uint8 feedDecimals = feed.decimals();
+        uint8 assetDecimals = IERC20MetadataUpgradeable(asset).decimals();
+        if (feedDecimals > 18 || assetDecimals > 18) {
+            revert ISpokePoolManager.InvalidOracleFeed(asset);
+        }
+        return uint256(answer) * 10 ** (36 - feedDecimals - assetDecimals);
     }
 
     /**
