@@ -23,6 +23,8 @@ Resolves #<!-- issue id -->
   - Low: tests, tooling, docs, deploy scripts for testnets only.
   - Medium: contract change behind a new deployment or a governance step, no change to live accounting.
   - High: changes live accounting, liquidation, access control or storage layout of a deployed contract.
+  Any change to `Comptroller` or `VToken`, or to their spoke forks, is High however it ships: they are beacon proxies,
+  so the next beacon upgrade puts it live in every pool behind that beacon at once.
 -->
 
 ## How to revert

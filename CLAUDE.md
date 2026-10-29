@@ -8,7 +8,8 @@ Review rules live in [REVIEW.md](REVIEW.md).
 Venus **Isolated Pools** contracts: lending pools, each with its own `Comptroller`, markets (`VToken`), price oracle
 and risk fund wiring, plus the **hub-funded spoke pool** fork (`contracts/Spoke/SpokeComptroller.sol`). Outside BNB
 Chain, the Core pool of every Venus network runs on these contracts. The non-Core isolated pools on BNB Chain, Ethereum
-and Arbitrum are retired and exit-only, but their markets stay live for repay, redeem and liquidation.
+and Arbitrum are retired: supply and borrow are closed in every market. Most of their markets stay open for repay, redeem
+and liquidation; some are fully paused.
 
 ## Stack
 
@@ -29,7 +30,8 @@ and Arbitrum are retired and exit-only, but their markets stay live for repay, r
 ## Commands
 
 ```bash
-yarn                    # install (runs patch-package and husky install)
+yarn                    # install (runs patch-package)
+npx husky install       # once per checkout: Yarn 3 skips `prepare`, so this enables the pre-commit hook
 yarn compile            # Hardhat + zkSync builds
 yarn test               # Hardhat unit tests
 yarn test:foundry       # Foundry tests
