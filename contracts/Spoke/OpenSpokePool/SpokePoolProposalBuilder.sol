@@ -464,9 +464,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
     /**
      * @dev Adds the collateral assets' oracle configs, one batch per oracle. Each asset the ResilientOracle does not
-     *   price yet gets its set feeds, each on its own oracle, its BoundValidator bounds when a pivot feed is set, its
-     *   ResilientOracle config with each set feed's oracle enabled, and its DeviationBoundedOracle config unless that
-     *   oracle has it. An asset the ResilientOracle prices gets none, so a VIP of its own changes its price config
+     *   price yet gets its set feeds, each on its own oracle, its BoundValidator bounds when a pivot feed is set, and its
+     *   ResilientOracle config with each set feed's oracle enabled. An asset the ResilientOracle prices gets none of
+     *   these, so a VIP of its own changes its price config. Each asset gets its DeviationBoundedOracle config unless
+     *   that oracle has it
      */
     function _addOracleConfigs(
         Proposal memory proposal,
@@ -485,7 +486,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         }
         _addBoundConfigs(proposal, requestId, markets, unpriced, resilientOracle.boundValidator());
         _addResilientOracleConfigs(proposal, markets, unpriced);
-        _addDeviationBoundedOracleConfigs(proposal, requestId, markets, unpriced);
+        _addDeviationBoundedOracleConfigs(proposal, requestId, markets);
     }
 
     /**
@@ -608,14 +609,13 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /**
-     * @dev Adds the DeviationBoundedOracle's batch of configs for the unpriced assets it does not have yet, if any:
-     *   the Venus team's config for the request, else the registry's while Venus enables it
+     * @dev Adds the DeviationBoundedOracle's batch of configs for the assets it does not have yet, priced or not, if
+     *   any: the Venus team's config for the request, else the registry's while Venus enables it
      */
     function _addDeviationBoundedOracleConfigs(
         Proposal memory proposal,
         uint256 requestId,
-        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
-        bool[] memory unpriced
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets
     ) private view {
         uint256 marketCount = markets.length;
         IDeviationBoundedOracle.TokenConfigInput[] memory configs = new IDeviationBoundedOracle.TokenConfigInput[](
@@ -624,9 +624,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 count;
         for (uint256 i; i < marketCount; ++i) {
             address asset = markets[i].asset;
-            if (!unpriced[i]) {
-                continue;
-            }
             (, , , , , , address initializedAsset, , , ) = DEVIATION_BOUNDED_ORACLE.assetProtectionConfig(asset);
             if (initializedAsset != address(0)) {
                 continue;
