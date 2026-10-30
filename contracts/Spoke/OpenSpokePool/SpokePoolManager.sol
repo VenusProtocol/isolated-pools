@@ -309,6 +309,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         Pool storage pool = _ensureCallerHasLivePool(comptroller);
         // An open request was checked against the current bond, so none is withdrawn until it closes
         _ensureNoOpenRequest(msg.sender);
+        // Bad debt may take the whole bond, excess included, until it is recovered
+        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
         uint256 requiredBondAmount = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
         bondManager.withdrawExcess(comptroller, requiredBondAmount);
     }

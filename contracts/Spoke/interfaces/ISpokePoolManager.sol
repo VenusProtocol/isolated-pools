@@ -469,6 +469,12 @@ interface ISpokePoolManager {
      */
     error ResidualDebtExceeded(uint256 debtUsd);
 
+    /**
+     * @notice Thrown when a market of the pool holds bad debt, which the bond, excess included, may repay
+     * @param vToken The market
+     */
+    error BadDebtExists(address vToken);
+
     /// @notice Thrown when the bond manager is already set
     error BondManagerAlreadySet();
 
@@ -709,6 +715,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error OpenRequestExists is thrown while the deployer's latest request is still open
+     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
