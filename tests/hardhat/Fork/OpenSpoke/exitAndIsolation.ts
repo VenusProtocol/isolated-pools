@@ -684,7 +684,13 @@ if (FORK) {
           collateralMarkets: [collateralMarket(secondCollateral)],
           loanMarkets: [usdtLoanMarket(f)],
         });
+        // Both requests' seeds are escrowed from the request
+        const collateralSeed = seedFor(priceMantissa("2"));
+        const usdtSeed = seedFor(priceMantissa("1"));
         expect(await f.xvs.balanceOf(f.manager.address)).to.equal(TIER_ONE_XVS_BOND.mul(2));
+        expect(await f.usdt.balanceOf(f.manager.address)).to.equal(usdtSeed.mul(2));
+        expect(await firstCollateral.token.balanceOf(f.manager.address)).to.equal(collateralSeed);
+        expect(await secondCollateral.token.balanceOf(f.manager.address)).to.equal(collateralSeed);
         const secondDeployerTokens = [f.xvs, f.usdt, secondCollateral.token as unknown as IERC20];
         const secondDeployerBalances = () =>
           Promise.all(secondDeployerTokens.map(token => token.balanceOf(f.secondDeployer.address)));
@@ -692,8 +698,6 @@ if (FORK) {
 
         await buildRequest(f, secondRequest);
         const { payload: firstPayload } = await buildRequest(f, firstRequest);
-        const collateralSeed = seedFor(priceMantissa("2"));
-        const usdtSeed = seedFor(priceMantissa("1"));
         expect(await f.usdt.balanceOf(f.manager.address)).to.equal(usdtSeed.mul(2));
         expect(await firstCollateral.token.balanceOf(f.manager.address)).to.equal(collateralSeed);
         expect(await secondCollateral.token.balanceOf(f.manager.address)).to.equal(collateralSeed);
@@ -718,8 +722,8 @@ if (FORK) {
         }
         expect(await secondDeployerBalances()).to.deep.equal([
           secondDeployerAfterRequest[0].add(TIER_ONE_XVS_BOND),
-          secondDeployerAfterRequest[1],
-          secondDeployerAfterRequest[2],
+          secondDeployerAfterRequest[1].add(usdtSeed),
+          secondDeployerAfterRequest[2].add(collateralSeed),
         ]);
       });
 

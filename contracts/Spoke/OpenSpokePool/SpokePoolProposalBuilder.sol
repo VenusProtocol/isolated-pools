@@ -28,8 +28,8 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * @notice Builds `SpokePoolManager`'s VIPs as ABI-encoded GovernorBravo `propose` calls on the Normal route. A
  * request's VIP settles it: for a pool or markets request the builder deploys the contracts before the vote and the
  * VIP lists them; for a tier request the VIP sets the pool's loan market caps to the new tier's. An exit's VIPs wind
- * the pool down. The manager checks a request's markets and pulls its seeds before it calls the builder, which reads
- * the seeds from `SPOKE_POOL_MANAGER.requestSeeds`
+ * the pool down. The manager pulls a request's seeds at the request and checks its markets again before it calls the
+ * builder, which reads the seeds from `SPOKE_POOL_MANAGER.requestSeeds`
  * @dev A loan market is one whose supply allowlist is on, as its listing VIP enables it for the Hub.
  * The VIPs grant no roles. The onboarding VIP gives wildcard ACM grants once: to the pool registry on
  * `setCloseFactor`, `setLiquidationIncentive`, `setMinLiquidatableCollateral`, `setCollateralFactor`,
@@ -78,8 +78,8 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     uint256 internal constant POOL_CREATION_ACTIONS = 3;
 
     /**
-     * @dev Most oracle actions of a request's VIP, each a batch over its new collateral assets: one per supported
-     *   oracle, the BoundValidator, the ResilientOracle and the DeviationBoundedOracle
+     * @dev Most oracle actions of a request's VIP, each a batch over its new collateral assets: one per oracle its
+     *   feeds are on, three of them, the BoundValidator, the ResilientOracle and the DeviationBoundedOracle
      */
     uint256 internal constant ORACLE_CONFIG_ACTIONS = 6;
 
@@ -480,49 +480,34 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             unpriced[i] = resilientOracle.getTokenConfig(markets[i].asset).asset == address(0);
         }
 
-        for (uint256 i; i < 3; ++i) {
-            _addFeedConfigs(proposal, markets, unpriced, SPOKE_POOL_MANAGER.supportedOracles(i));
-        }
-        _addBoundConfigs(proposal, requestId, markets, unpriced, resilientOracle.boundValidator());
-        _addResilientOracleConfigs(proposal, markets, unpriced);
-        _addDeviationBoundedOracleConfigs(proposal, requestId, markets, unpriced);
-    }
-
-    /**
-     * @dev Adds `oracle`'s batch of the unpriced assets' feeds on it, if any. The manager checked each set feed is on a
-     *   supported oracle and that an asset's feeds are on distinct oracles
-     */
-    function _addFeedConfigs(
-        Proposal memory proposal,
-        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
-        bool[] memory unpriced,
-        address oracle
-    ) private view {
-        uint256 marketCount = markets.length;
-        FeedConfig[] memory configs = new FeedConfig[](marketCount);
-        uint256 count;
+        // One batch per oracle the unpriced assets' feeds are on, in the order they first appear
+        address[] memory oracles = new address[](marketCount * 3);
+        uint256 oracleCount;
         for (uint256 i; i < marketCount; ++i) {
             if (!unpriced[i]) {
                 continue;
             }
-
             for (uint256 j; j < 3; ++j) {
-                ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
-                if (feed.feed != address(0) && feed.oracle == oracle) {
-                    configs[count] = FeedConfig(markets[i].asset, feed.feed, feed.maxStalePeriod);
-                    ++count;
-                    break;
+                address oracle = markets[i].feeds[j].oracle;
+                if (oracle == address(0)) {
+                    continue;
+                }
+                uint256 k;
+                while (k < oracleCount && oracles[k] != oracle) {
+                    ++k;
+                }
+                if (k == oracleCount) {
+                    oracles[oracleCount] = oracle;
+                    ++oracleCount;
                 }
             }
         }
-
-        if (count != 0) {
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                mstore(configs, count)
-            }
-            _addAction(proposal, oracle, "setTokenConfigs((address,address,uint256)[])", abi.encode(configs));
+        for (uint256 i; i < oracleCount; ++i) {
+            _addFeedConfigs(proposal, markets, unpriced, oracles[i]);
         }
+        _addBoundConfigs(proposal, requestId, markets, unpriced, resilientOracle.boundValidator());
+        _addResilientOracleConfigs(proposal, markets, unpriced);
+        _addDeviationBoundedOracleConfigs(proposal, requestId, markets, unpriced);
     }
 
     /**
@@ -803,6 +788,43 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     function _loanSupplyCap(uint256 tierId, address asset) private view returns (uint256) {
         uint256 supplyCapUsd = POLICY_REGISTRY.getLoanSupplyCapUsd(tierId, asset);
         return (supplyCapUsd * EXP_SCALE) / SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getPrice(asset);
+    }
+
+    /**
+     * @dev Adds `oracle`'s batch of the unpriced assets' feeds on it, if any. The manager checked each set feed is on a
+     *   supported oracle and that an asset's feeds are on distinct oracles
+     */
+    function _addFeedConfigs(
+        Proposal memory proposal,
+        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
+        bool[] memory unpriced,
+        address oracle
+    ) private pure {
+        uint256 marketCount = markets.length;
+        FeedConfig[] memory configs = new FeedConfig[](marketCount);
+        uint256 count;
+        for (uint256 i; i < marketCount; ++i) {
+            if (!unpriced[i]) {
+                continue;
+            }
+
+            for (uint256 j; j < 3; ++j) {
+                ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
+                if (feed.feed != address(0) && feed.oracle == oracle) {
+                    configs[count] = FeedConfig(markets[i].asset, feed.feed, feed.maxStalePeriod);
+                    ++count;
+                    break;
+                }
+            }
+        }
+
+        if (count != 0) {
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                mstore(configs, count)
+            }
+            _addAction(proposal, oracle, "setTokenConfigs((address,address,uint256)[])", abi.encode(configs));
+        }
     }
 
     /// @dev Returns empty VIP actions with room for `capacity` of them

@@ -97,11 +97,16 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         return SpokePoolValidationLib.computeSeeds(_contracts(), request);
     }
 
-    function checkSupplyCapUsd(ISpokePoolManager.CollateralMarketRequestParams memory market) external view {
-        SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), TIER, market);
+    function validateOracles(ISpokePoolManager.CollateralMarketRequestParams memory market) external view {
+        uint256 price = SpokePoolValidationLib.validateOracles(_contracts(), market);
+        SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), TIER, market, price);
     }
 
     /// @notice The library reads the manager's supported oracles from the caller, which is this contract
+    function isSupportedOracle(address oracle) external pure returns (bool) {
+        return oracle >= supportedOracles(0) && oracle <= supportedOracles(2);
+    }
+
     function supportedOracles(uint256 index) public pure returns (address) {
         return address(uint160(0x5000 + index));
     }
@@ -262,7 +267,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         if (wholeTokens * usdPerToken > maxCapUsd) {
             vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.ExceedsTierLimit.selector, asset));
         }
-        this.checkSupplyCapUsd(_collateralMarket(asset, wholeTokens * 10 ** decimals));
+        this.validateOracles(_collateralMarket(asset, wholeTokens * 10 ** decimals));
     }
 
     /// @notice A cap priced by its main feed passes exactly when its USD worth fits the tier, for any asset and feed
@@ -293,6 +298,6 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         if (wholeTokens * answer * 10 ** (18 - feedDecimals) > maxCapUsd) {
             vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.ExceedsTierLimit.selector, asset));
         }
-        this.checkSupplyCapUsd(market);
+        this.validateOracles(market);
     }
 }

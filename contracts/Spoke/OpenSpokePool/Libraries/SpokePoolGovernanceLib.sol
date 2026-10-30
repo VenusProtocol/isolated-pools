@@ -233,6 +233,19 @@ library SpokePoolGovernanceLib {
         _publishUpdate(contracts, SUPPLY_PAUSE_UPDATE, vToken, "");
     }
 
+    /**
+     * @notice Returns how much a pool's bond is worth at current prices
+     * @param contracts The manager's contracts
+     * @param comptroller The pool's comptroller
+     * @return bondUsd What the bond holds, net of a loss and a Hub's exit fee, in USD scaled by 1e18
+     */
+    function getBondValue(
+        ISpokePoolManager.Contracts memory contracts,
+        address comptroller
+    ) external view returns (uint256 bondUsd) {
+        (, bondUsd) = _bondValue(contracts, comptroller);
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // Private functions
     // ──────────────────────────────────────────────────────────────────────
@@ -293,14 +306,20 @@ library SpokePoolGovernanceLib {
         uint256 tierId,
         uint256 minCoverageRatio
     ) private view {
-        IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
-        address bondAsset = address(bondAccount.asset());
+        (address bondAsset, uint256 bondUsd) = _bondValue(contracts, comptroller);
         uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
-
-        // What the bond holds, net of a loss and a Hub's exit fee
-        uint256 bondUsd = (bondAccount.currentBondAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
         if (bondUsd * EXP_SCALE < requiredBondUsd * minCoverageRatio) {
             revert ISpokePoolManager.CoverageTooLow((bondUsd * EXP_SCALE) / requiredBondUsd, minCoverageRatio);
         }
+    }
+
+    /// @dev Returns a pool's bond asset and what its bond holds, net of a loss and a Hub's exit fee, in USD
+    function _bondValue(
+        ISpokePoolManager.Contracts memory contracts,
+        address comptroller
+    ) private view returns (address bondAsset, uint256 bondUsd) {
+        IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
+        bondAsset = address(bondAccount.asset());
+        bondUsd = (bondAccount.currentBondAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
     }
 }

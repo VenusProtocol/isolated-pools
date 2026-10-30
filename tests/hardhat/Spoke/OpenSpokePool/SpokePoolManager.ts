@@ -475,7 +475,7 @@ describe("SpokePoolManager", () => {
       ["setProposalBuilder(address)", () => m().setProposalBuilder(builder.address)],
       ["setBondManager(address)", () => m().setBondManager(bondManager.address)],
       ["setHubYieldGroup(address,address)", () => m().setHubYieldGroup(loanAsset.address, yieldGroup.address)],
-      ["setSupportedOracles(address[3])", () => m().setSupportedOracles([other.address, other.address, other.address])],
+      ["setSupportedOracles(address[])", () => m().setSupportedOracles([other.address])],
       ["setWindDownPeriod(uint256)", () => m().setWindDownPeriod(1)],
       ["setMaxResidualPoolDebtUsd(uint256)", () => m().setMaxResidualPoolDebtUsd(1)],
       ["sweepToken(address,address,uint256)", () => m().sweepToken(bondToken.address, other.address, 1)],
@@ -487,7 +487,7 @@ describe("SpokePoolManager", () => {
   });
 
   describe("requestPool", () => {
-    it("stores the request, escrows only the bond and emits RequestSubmitted", async () => {
+    it("stores the request, escrows the bond and each market's $10 seed and emits RequestSubmitted", async () => {
       const collateralMarkets = [collateralMarket()];
       const loanMarkets = [loanMarket()];
       const tx = manager.connect(deployer).requestPool(...poolOf(), collateralMarkets, loanMarkets);
@@ -496,8 +496,8 @@ describe("SpokePoolManager", () => {
         .to.emit(manager, "RequestSubmitted")
         .withArgs(1, RequestType.Pool, deployer.address, constants.AddressZero);
       await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [BOND.mul(-1), BOND]);
-      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [0, 0]);
-      await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [0, 0]);
+      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [SEED.mul(-1), SEED]);
+      await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [SEED.mul(-1), SEED]);
 
       const request = await manager.getRequest(1);
       expectFields(request, {
@@ -515,8 +515,70 @@ describe("SpokePoolManager", () => {
       ]);
       expect(await manager.requestCount()).to.equal(1);
       expect(await manager.latestRequestIds(deployer.address)).to.equal(1);
-      expect(await manager.requestSeeds(1, collateralAsset.address)).to.equal(0);
-      expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(0);
+      expect(await manager.requestSeeds(1, collateralAsset.address)).to.equal(SEED);
+      expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(SEED);
+    });
+
+    it("sizes a seed at the request-time price, rounded up", async () => {
+      setPrice(collateralAsset.address, e18("3"));
+      setPrice(loanAsset.address, e18("0.5"));
+      await requestPool();
+      expect(await manager.requestSeeds(1, collateralAsset.address)).to.equal(BigNumber.from("3333333333333333334"));
+      expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(e18("20"));
+    });
+
+    it("prices an unpriced collateral asset's seed with its main feed", async () => {
+      const usdcUnits = (amount: string) => parseUnits(amount, 6);
+      const usdc = await new MockToken__factory(owner).deploy("USD Coin", "USDC", 6);
+      await usdc.connect(deployer).faucet(usdcUnits("1000"));
+      await usdc.connect(deployer).approve(manager.address, constants.MaxUint256);
+      unpriced(usdc.address);
+      await setAnswer(mainFeed, feedAnswer("1"));
+
+      const seed = usdcUnits("10");
+      await expect(
+        manager
+          .connect(deployer)
+          .requestPool(...poolOf(), [collateralMarket({ asset: usdc.address, supplyCap: usdcUnits("10000") })], []),
+      ).to.changeTokenBalances(usdc, [deployer, manager], [seed.mul(-1), seed]);
+      expect(await manager.requestSeeds(1, usdc.address)).to.equal(seed);
+    });
+
+    it("reverts when a seed does not fit its market's supply cap", async () => {
+      await expect(requestPool([collateralMarket({ supplyCap: SEED.sub(1) })], []))
+        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
+        .withArgs(collateralAsset.address);
+
+      await policyRegistry.setTier(1, tier(BOND, SEED.sub(1)));
+      await expect(requestPool([], [loanMarket()]))
+        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
+        .withArgs(loanAsset.address);
+
+      await policyRegistry.setTier(1, tier(BOND, SEED));
+      const requestId = await requestPool([], [loanMarket()]);
+      expect(await manager.requestSeeds(requestId, loanAsset.address)).to.equal(SEED);
+    });
+
+    it("converts a loan market's USD cap to the asset at the request-time price", async () => {
+      // At $2 the seed is 5 units: a $9.99 cap is 4.995 units, a $10 cap exactly 5
+      setPrice(loanAsset.address, e18("2"));
+      await policyRegistry.setTier(1, tier(e18("1000"), e18("9.99")));
+      await expect(requestPool([], [loanMarket()]))
+        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
+        .withArgs(loanAsset.address);
+
+      await policyRegistry.setTier(1, tier(e18("1000"), e18("10")));
+      expect(await requestPool([], [loanMarket()])).to.equal(1);
+    });
+
+    it("reverts when a seed transfer delivers a different amount", async () => {
+      const feeToken = await new FeeToken__factory(owner).deploy(0, "Fee", 18, "FEE", 100, owner.address);
+      await feeToken.allocateTo(deployer.address, e18("10000"));
+      await feeToken.connect(deployer).approve(manager.address, constants.MaxUint256);
+
+      await expect(requestPool([collateralMarket({ asset: feeToken.address })], []))
+        .to.be.revertedWithCustomError(manager, "TransferAmountMismatch")
+        .withArgs(feeToken.address);
     });
 
     it("stores a pool with only collateral markets or only loan markets", async () => {
@@ -591,7 +653,7 @@ describe("SpokePoolManager", () => {
   describe("requestNewMarkets", () => {
     beforeEach(activatePool);
 
-    it("stores a markets request on the pool's tier, escrowing nothing", async () => {
+    it("stores a markets request on the pool's tier, escrowing each market's seed", async () => {
       const markets = [collateralMarket({ asset: bondToken.address })];
       const requestId = (await manager.requestCount()).add(1);
       const tx = manager.connect(deployer).requestNewMarkets(comptroller.address, markets, []);
@@ -599,7 +661,8 @@ describe("SpokePoolManager", () => {
       await expect(tx)
         .to.emit(manager, "RequestSubmitted")
         .withArgs(requestId, RequestType.NewMarkets, deployer.address, comptroller.address);
-      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED.mul(-1), SEED]);
+      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
 
       const request = await manager.getRequest(requestId);
       expectFields(request, {
@@ -613,6 +676,23 @@ describe("SpokePoolManager", () => {
       });
       expectCollateralMarkets(request.collateralMarkets, markets);
       expect(request.loanMarkets.length).to.equal(0);
+    });
+
+    it("escrows a loan market's seed", async () => {
+      await policyRegistry.setLoanAssetConfig(bondToken.address, {
+        factor: e18("1"),
+        interestRateModels: [irm.address],
+      });
+      const requestId = (await manager.requestCount()).add(1);
+      await expect(
+        manager
+          .connect(deployer)
+          .requestNewMarkets(comptroller.address, [], [loanMarket({ asset: bondToken.address })]),
+      ).to.changeTokenBalances(bondToken, [deployer, manager], [SEED.mul(-1), SEED]);
+      expect((await manager.getRequest(requestId)).loanMarkets.map(m => [m.asset, m.interestRateModel])).to.deep.equal([
+        [bondToken.address, irm.address],
+      ]);
+      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
     });
 
     it("reverts for anyone but an active deployer of a live pool", async () => {
@@ -691,22 +771,27 @@ describe("SpokePoolManager", () => {
   });
 
   describe("cancelRequest", () => {
-    it("refunds a pending pool request's bond and emits RequestCanceled", async () => {
+    it("refunds a pending pool request's bond and seeds and emits RequestCanceled", async () => {
       await requestPool();
       const tx = manager.connect(deployer).cancelRequest(1);
 
       await expect(tx).to.emit(manager, "RequestCanceled").withArgs(1);
       await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [BOND, BOND.mul(-1)]);
+      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [SEED, SEED.mul(-1)]);
+      await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [SEED, SEED.mul(-1)]);
       expect((await manager.getRequest(1)).status).to.equal(RequestStatus.Canceled);
+      expect(await manager.requestSeeds(1, collateralAsset.address)).to.equal(0);
+      expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(0);
     });
 
-    it("cancels a pending markets request, which escrowed nothing", async () => {
+    it("refunds a pending markets request's seeds", async () => {
       await activatePool();
       const requestId = await requestNewMarkets([collateralMarket()]);
       const tx = manager.connect(deployer).cancelRequest(requestId);
       await expect(tx).to.emit(manager, "RequestCanceled").withArgs(requestId);
-      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [0, 0]);
+      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [SEED, SEED.mul(-1)]);
       expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Canceled);
+      expect(await manager.requestSeeds(requestId, collateralAsset.address)).to.equal(0);
     });
 
     it("cancels a pending tier request without refunding a bond, as it escrowed none", async () => {
@@ -810,28 +895,25 @@ describe("SpokePoolManager", () => {
         .withArgs(collateralAsset.address);
     });
 
-    it("replaces a markets request's feeds, which then price its seed at build", async () => {
+    it("keeps the seed pulled at the request, priced off the replaced feed", async () => {
       await activatePool();
       unpriced(bondToken.address);
       await setAnswer(mainFeed, feedAnswer("1"));
       const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
 
       await setAnswer(pivotFeed, feedAnswer("2"));
-      await manager.setOracleFeeds(
-        requestId,
-        bondToken.address,
-        [feedOn(chainlinkOracle.address, pivotFeed.address), noFeed(), noFeed()],
-        0,
-      );
+      await expect(
+        manager.setOracleFeeds(
+          requestId,
+          bondToken.address,
+          [feedOn(chainlinkOracle.address, pivotFeed.address), noFeed(), noFeed()],
+          0,
+        ),
+      ).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
 
-      // $10 at the new main feed's $2
-      const seed = SEED.div(2);
-      await expect(build(requestId, [vTokenC.address])).to.changeTokenBalances(
-        bondToken,
-        [deployer, manager],
-        [seed.mul(-1), seed],
-      );
-      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(seed);
+      // Still $10 at the replaced feed's $1, and the build pulls nothing more
+      await expect(build(requestId, [vTokenC.address])).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
+      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
     });
 
     it("reverts on an asset that is not one of the request's collateral markets", async () => {
@@ -923,6 +1005,8 @@ describe("SpokePoolManager", () => {
 
     it("cap a pool's collateral markets at its tier's, counting its listed ones but not its loan markets", async () => {
       const extra = await new MockToken__factory(owner).deploy("Extra", "EXT", 18);
+      await extra.connect(deployer).faucet(e18("100"));
+      await extra.connect(deployer).approve(manager.address, constants.MaxUint256);
       await expect(requestPool(collateralOf(collateralAsset, bondToken, loanAsset, extra), []))
         .to.be.revertedWithCustomError(manager, "TooManyMarkets")
         .withArgs(4, LIMITS.maxCollateralMarkets);
@@ -1037,9 +1121,14 @@ describe("SpokePoolManager", () => {
       }
     });
 
-    it("ignore a slot whose feed is unset, even when its oracle repeats", async () => {
-      const [main] = allFeeds();
-      expect(await requestWith([main, feedOn(chainlinkOracle.address, constants.AddressZero), noFeed()])).to.equal(1);
+    it("reject a slot with an oracle but no feed, or a feed but no oracle", async () => {
+      const [main, pivot] = allFeeds();
+      await expect(requestWith([main, feedOn(redstoneOracle.address, constants.AddressZero), noFeed()]))
+        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+        .withArgs(collateralAsset.address);
+      await expect(requestWith([main, { ...pivot, oracle: constants.AddressZero }, noFeed()]))
+        .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
+        .withArgs(constants.AddressZero);
     });
 
     it("reject a missing main feed", async () => {
@@ -1086,10 +1175,9 @@ describe("SpokePoolManager", () => {
       }
     });
 
-    it("reject a feed on a zero or unsupported oracle", async () => {
+    it("reject a feed on an unsupported oracle", async () => {
       const [main, pivot] = allFeeds();
       const cases: [Feed[], string][] = [
-        [[{ ...main, oracle: constants.AddressZero }, noFeed(), noFeed()], constants.AddressZero],
         [[{ ...main, oracle: other.address }, noFeed(), noFeed()], other.address],
         [[main, { ...pivot, oracle: other.address }, noFeed()], other.address],
       ];
@@ -1139,14 +1227,14 @@ describe("SpokePoolManager", () => {
   });
 
   describe("buildRequestProposal", () => {
-    it("pulls each market's $10 seed, stores the build and emits RequestBuilt", async () => {
+    it("stores the build and emits RequestBuilt, keeping the seeds pulled at the request", async () => {
       await requestPool();
       builder.buildRequestProposal.returns([comptroller.address, [vTokenA.address, vTokenB.address], PROPOSAL]);
       const tx = manager.buildRequestProposal(1, DESCRIPTION, NO_ESTIMATE);
 
       await expect(tx).to.emit(manager, "RequestBuilt").withArgs(1, [vTokenA.address, vTokenB.address]);
-      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [SEED.mul(-1), SEED]);
-      await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [SEED.mul(-1), SEED]);
+      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [0, 0]);
+      await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [0, 0]);
       expect(builder.buildRequestProposal).to.have.been.calledOnceWith(1, DESCRIPTION);
 
       expectFields(await manager.getRequest(1), { status: RequestStatus.Built, comptroller: comptroller.address });
@@ -1155,72 +1243,13 @@ describe("SpokePoolManager", () => {
       expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(SEED);
     });
 
-    it("sizes a seed at the build-time price, rounded up", async () => {
+    it("does not price the seeds again when prices move before the build", async () => {
       await requestPool();
-      setPrice(collateralAsset.address, e18("3"));
-      setPrice(loanAsset.address, e18("0.5"));
-      await build(1);
-      expect(await manager.requestSeeds(1, collateralAsset.address)).to.equal(BigNumber.from("3333333333333333334"));
-      expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(e18("20"));
-    });
-
-    it("prices an unpriced collateral asset's seed with its main feed", async () => {
-      const usdcUnits = (amount: string) => parseUnits(amount, 6);
-      const usdc = await new MockToken__factory(owner).deploy("USD Coin", "USDC", 6);
-      await usdc.connect(deployer).faucet(usdcUnits("1000"));
-      await usdc.connect(deployer).approve(manager.address, constants.MaxUint256);
-      unpriced(usdc.address);
-      await setAnswer(mainFeed, feedAnswer("1"));
-      const requestId = await requestPool(
-        [collateralMarket({ asset: usdc.address, supplyCap: usdcUnits("10000") })],
-        [],
-      );
-
-      const seed = usdcUnits("10");
-      await expect(build(requestId)).to.changeTokenBalances(usdc, [deployer, manager], [seed.mul(-1), seed]);
-      expect(await manager.requestSeeds(requestId, usdc.address)).to.equal(seed);
-    });
-
-    it("reverts when a seed does not fit its market's supply cap", async () => {
-      const collateralRequestId = await requestPool([collateralMarket({ supplyCap: SEED.sub(1) })], []);
-      await expect(build(collateralRequestId))
-        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
-        .withArgs(collateralAsset.address);
-      await manager.connect(deployer).cancelRequest(collateralRequestId);
-
-      const loanRequestId = await requestPool([], [loanMarket()]);
-      await policyRegistry.setTier(1, tier(BOND, SEED.sub(1)));
-      await expect(build(loanRequestId))
-        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
-        .withArgs(loanAsset.address);
-
-      await policyRegistry.setTier(1, tier(BOND, SEED));
-      await expect(build(loanRequestId))
-        .to.emit(manager, "RequestBuilt")
-        .withArgs(loanRequestId, [vTokenA.address, vTokenB.address]);
-      expect(await manager.requestSeeds(loanRequestId, loanAsset.address)).to.equal(SEED);
-    });
-
-    it("converts a loan market's USD cap to the asset at the build-time price", async () => {
-      await requestPool([], [loanMarket()]);
-      // At $2 the seed is 5 units: a $9.99 cap is 4.995 units, a $10 cap exactly 5
-      setPrice(loanAsset.address, e18("2"));
-      await policyRegistry.setTier(1, tier(e18("1000"), e18("9.99")));
-      await expect(build(1)).to.be.revertedWithCustomError(manager, "InvalidMarketParams").withArgs(loanAsset.address);
-
-      await policyRegistry.setTier(1, tier(e18("1000"), e18("10")));
-      await expect(build(1)).to.emit(manager, "RequestBuilt");
-    });
-
-    it("reverts when a seed transfer delivers a different amount", async () => {
-      const feeToken = await new FeeToken__factory(owner).deploy(0, "Fee", 18, "FEE", 100, owner.address);
-      await feeToken.allocateTo(deployer.address, e18("10000"));
-      await feeToken.connect(deployer).approve(manager.address, constants.MaxUint256);
-      await requestPool([collateralMarket({ asset: feeToken.address })], []);
-
-      await expect(build(1))
-        .to.be.revertedWithCustomError(manager, "TransferAmountMismatch")
-        .withArgs(feeToken.address);
+      setPrice(collateralAsset.address, e18("0.5"));
+      setPrice(loanAsset.address, e18("3"));
+      await expect(build(1)).to.changeTokenBalances(collateralAsset, [deployer, manager], [0, 0]);
+      expect(await manager.requestSeeds(1, collateralAsset.address)).to.equal(SEED);
+      expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(SEED);
     });
 
     it("checks the markets against the current policy again, rejecting a delisted loan asset", async () => {
@@ -1278,7 +1307,7 @@ describe("SpokePoolManager", () => {
         .withArgs(BOND.sub(1), BOND);
     });
 
-    it("pulls a markets request's seeds and needs a live pool", async () => {
+    it("builds a markets request, keeping its seeds, and needs a live pool", async () => {
       await activatePool();
       const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
       await buildExit();
@@ -1289,29 +1318,12 @@ describe("SpokePoolManager", () => {
       await manager.rejectExit(comptroller.address);
       const tx = build(requestId, [vTokenC.address]);
       await expect(tx).to.emit(manager, "RequestBuilt").withArgs(requestId, [vTokenC.address]);
-      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED.mul(-1), SEED]);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
       expectFields(await manager.getRequest(requestId), {
         status: RequestStatus.Built,
         comptroller: comptroller.address,
       });
       expect(await manager.requestProposals(requestId)).to.equal(PROPOSAL);
-      expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
-    });
-
-    it("pulls a markets request's loan market seed", async () => {
-      await activatePool();
-      await policyRegistry.setLoanAssetConfig(bondToken.address, {
-        factor: e18("1"),
-        interestRateModels: [irm.address],
-      });
-      const requestId = await requestNewMarkets([], [loanMarket({ asset: bondToken.address })]);
-      expect((await manager.getRequest(requestId)).loanMarkets.map(m => [m.asset, m.interestRateModel])).to.deep.equal([
-        [bondToken.address, irm.address],
-      ]);
-
-      const tx = build(requestId, [vTokenC.address]);
-      await expect(tx).to.emit(manager, "RequestBuilt").withArgs(requestId, [vTokenC.address]);
-      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED.mul(-1), SEED]);
       expect(await manager.requestSeeds(requestId, bondToken.address)).to.equal(SEED);
     });
 
@@ -1456,13 +1468,14 @@ describe("SpokePoolManager", () => {
   });
 
   describe("rejectRequest", () => {
-    it("refunds a pending pool request's bond", async () => {
+    it("refunds a pending pool request's bond and seeds", async () => {
       await requestPool();
       const tx = manager.rejectRequest(1);
 
       await expect(tx).to.emit(manager, "RequestRejected").withArgs(1);
       await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [BOND, BOND.mul(-1)]);
-      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [0, 0]);
+      await expect(tx).to.changeTokenBalances(collateralAsset, [deployer, manager], [SEED, SEED.mul(-1)]);
+      await expect(tx).to.changeTokenBalances(loanAsset, [deployer, manager], [SEED, SEED.mul(-1)]);
       expect((await manager.getRequest(1)).status).to.equal(RequestStatus.Rejected);
     });
 
@@ -1479,13 +1492,13 @@ describe("SpokePoolManager", () => {
       expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(0);
     });
 
-    it("rejects a pending markets request, which escrowed nothing", async () => {
+    it("refunds a pending markets request's seeds", async () => {
       await activatePool();
       const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
 
       const tx = manager.rejectRequest(requestId);
       await expect(tx).to.emit(manager, "RequestRejected").withArgs(requestId);
-      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
+      await expect(tx).to.changeTokenBalances(bondToken, [deployer, manager], [SEED, SEED.mul(-1)]);
       expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Rejected);
     });
 
@@ -1853,6 +1866,20 @@ describe("SpokePoolManager", () => {
         expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(
           e18("1200").sub(e18("1500").mul(e18("1")).div(e18("7")).add(1)),
         );
+      });
+    });
+
+    describe("getBondValue", () => {
+      it("values what the bond holds at the ResilientOracle's price of its asset", async () => {
+        setBond(e18("1200"));
+        setPrice(bondToken.address, e18("2.5"));
+        expect(await manager.getBondValue(comptroller.address)).to.equal(e18("3000"));
+      });
+
+      it("ignores the tier and the bond asset's factor", async () => {
+        setBond(e18("100"));
+        await policyRegistry.setBondAssetFactor(bondToken.address, e18("1.5"));
+        expect(await manager.getBondValue(comptroller.address)).to.equal(e18("100"));
       });
     });
 
@@ -2301,20 +2328,35 @@ describe("SpokePoolManager", () => {
       );
     });
 
-    it("setSupportedOracles replaces the supported oracles", async () => {
-      const oracles: [string, string, string] = [other.address, constants.AddressZero, chainlinkOracle.address];
+    it("setSupportedOracles replaces the supported oracles with any number of them", async () => {
+      const oracles = [other.address, chainlinkOracle.address, redstoneOracle.address, binanceOracle.address];
       await expect(manager.setSupportedOracles(oracles))
         .to.emit(manager, "SupportedOraclesUpdated")
         .withArgs([chainlinkOracle.address, redstoneOracle.address, binanceOracle.address], oracles);
-      for (const [i, supported] of oracles.entries()) {
-        expect(await manager.supportedOracles(i)).to.equal(supported);
+      expect(await manager.getSupportedOracles()).to.deep.equal(oracles);
+
+      for (const oracle of oracles) {
+        expect(await manager.isSupportedOracle(oracle)).to.equal(true);
       }
+
+      await manager.setSupportedOracles([redstoneOracle.address]);
+      expect(await manager.getSupportedOracles()).to.deep.equal([redstoneOracle.address]);
+      expect(await manager.isSupportedOracle(redstoneOracle.address)).to.equal(true);
+      for (const removed of [other.address, chainlinkOracle.address, binanceOracle.address]) {
+        expect(await manager.isSupportedOracle(removed)).to.equal(false);
+      }
+    });
+
+    it("setSupportedOracles rejects a zero oracle", async () => {
+      await expect(
+        manager.setSupportedOracles([chainlinkOracle.address, constants.AddressZero]),
+      ).to.be.revertedWithCustomError(manager, "ZeroAddressNotAllowed");
     });
 
     it("setSupportedOracles decides which oracles a new request's feeds may use", async () => {
       unpriced(collateralAsset.address);
       await setAnswer(mainFeed, feedAnswer("1"));
-      await manager.setSupportedOracles([redstoneOracle.address, binanceOracle.address, constants.AddressZero]);
+      await manager.setSupportedOracles([redstoneOracle.address, binanceOracle.address]);
       await expect(requestPool())
         .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
         .withArgs(chainlinkOracle.address);

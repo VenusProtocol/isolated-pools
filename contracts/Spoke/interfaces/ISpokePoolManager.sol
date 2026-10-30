@@ -281,7 +281,7 @@ interface ISpokePoolManager {
      * @param oldOracles The previous oracles
      * @param newOracles The new oracles
      */
-    event SupportedOraclesUpdated(address[3] oldOracles, address[3] newOracles);
+    event SupportedOraclesUpdated(address[] oldOracles, address[] newOracles);
 
     /**
      * @notice Emitted when the wind-down period is changed
@@ -479,8 +479,8 @@ interface ISpokePoolManager {
     error BondManagerAlreadySet();
 
     /**
-     * @notice Requests a new pool of a tier, pulling the bond; each market's seed worth $10 is pulled at the build.
-     *   The bond and any pulled seeds are refunded on reject or cancel
+     * @notice Requests a new pool of a tier, pulling the bond and each market's seed, worth $10 at current prices. The
+     *   seeds are not priced again later. The bond and seeds are refunded on reject or cancel
      * @param tierId The requested tier
      * @param bondAsset The bond's asset
      * @param bondAmount The bond's amount
@@ -494,6 +494,8 @@ interface ISpokePoolManager {
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
+     * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
+     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
      * @custom:access Not restricted
      */
     function requestPool(
@@ -505,7 +507,8 @@ interface ISpokePoolManager {
     ) external returns (uint256 requestId);
 
     /**
-     * @notice Requests new markets in the caller's pool; each one's seed worth $10 is pulled at the build
+     * @notice Requests new markets in the caller's pool, pulling each one's seed, worth $10 at current prices. The
+     *   seeds are not priced again later, and are refunded on reject or cancel
      * @param comptroller The pool's comptroller
      * @param collateralMarkets The new collateral markets
      * @param loanMarkets The new loan markets
@@ -518,6 +521,8 @@ interface ISpokePoolManager {
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
+     * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
+     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
      * @custom:access Only the pool's deployer
      */
     function requestNewMarkets(
@@ -545,7 +550,7 @@ interface ISpokePoolManager {
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);
 
     /**
-     * @notice Cancels the caller's request before it is built, refunding a pool request's bond
+     * @notice Cancels the caller's request before it is built, refunding its seeds and a pool request's bond
      * @param requestId The request
      * @custom:event Emits RequestCanceled
      * @custom:error NotDeployer is thrown when the caller is not the request's deployer
@@ -556,7 +561,8 @@ interface ISpokePoolManager {
 
     /**
      * @notice Replaces a pending request's collateral market oracle feeds and BoundValidator deviation without the
-     *   deployer's approval; a built request is final, and changing it takes a new request
+     *   deployer's approval; a built request is final, and changing it takes a new request. The seed pulled at the
+     *   request keeps its price, so a request whose seed was priced off a bad feed is rejected rather than fixed here
      * @param requestId The request
      * @param asset The collateral market's asset
      * @param feeds The new feeds: main, pivot, fallback, each on its own supported oracle; a zero feed for no pivot or
@@ -604,7 +610,7 @@ interface ISpokePoolManager {
     /**
      * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. It checks the bond
      *   against the request's tier again at current prices. For a pool or markets request it also checks the markets
-     *   again, then pulls each seed from the deployer, worth $10 at current prices
+     *   again, but keeps the seeds pulled at the request
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
@@ -612,8 +618,6 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
      * @custom:error The `SpokePoolValidationLib.validateNewBond` errors for a pool request, else the `validateBond` ones
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
-     * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
-     * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
      * @custom:error The builder's `buildRequestProposal` errors
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
@@ -886,14 +890,15 @@ interface ISpokePoolManager {
 
     /**
      * @notice Sets the oracles a new collateral asset's feeds may be set on, such as Venus's Chainlink, RedStone and
-     *   Atlas oracles; a zero entry leaves that slot empty. Each must be ChainlinkOracle-compatible, with its
-     *   `setTokenConfigs` batch, and the Normal Timelock must be allowed to call its `setTokenConfig`. A removed oracle
-     *   fails the build of a request whose unpriced asset has a feed on it
+     *   Atlas oracles, any number of them. Each must be ChainlinkOracle-compatible, with its `setTokenConfigs` batch,
+     *   and the Normal Timelock must be allowed to call its `setTokenConfig`. A removed oracle fails the build of a
+     *   request whose unpriced asset has a feed on it
      * @param oracles The oracles
      * @custom:event Emits SupportedOraclesUpdated
+     * @custom:error ZeroAddressNotAllowed is thrown when an oracle is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function setSupportedOracles(address[3] calldata oracles) external;
+    function setSupportedOracles(address[] calldata oracles) external;
 
     /**
      * @notice Sets the wind-down period
@@ -948,6 +953,14 @@ interface ISpokePoolManager {
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      */
     function getExcessBondAmount(address comptroller) external view returns (uint256);
+
+    /**
+     * @notice Returns how much a pool's bond is worth at current prices. It is read before the Hub accrues its fees, so
+     *   it may differ slightly from what the bond pays out
+     * @param comptroller The pool's comptroller
+     * @return What the bond holds, net of a loss and a Hub's exit fee, in USD scaled by 1e18
+     */
+    function getBondValue(address comptroller) external view returns (uint256);
 
     /**
      * @notice Returns the oracle bonds, seeds, caps and debts are priced with
@@ -1016,12 +1029,17 @@ interface ISpokePoolManager {
     function hubYieldGroups(address asset) external view returns (address);
 
     /**
-     * @notice Returns one of the three oracles a new collateral asset's feeds may be set on, such as Venus's Chainlink,
-     *   RedStone and Atlas oracles
-     * @param index The slot, from 0 to 2
-     * @return The oracle; zero for an empty slot
+     * @notice Returns every oracle a new collateral asset's feeds may be set on
+     * @return The oracles
      */
-    function supportedOracles(uint256 index) external view returns (address);
+    function getSupportedOracles() external view returns (address[] memory);
+
+    /**
+     * @notice Returns whether a new collateral asset's feeds may be set on an oracle
+     * @param oracle The oracle
+     * @return Whether it is a supported oracle
+     */
+    function isSupportedOracle(address oracle) external view returns (bool);
 
     /**
      * @notice Returns a deployer's latest request
@@ -1038,10 +1056,10 @@ interface ISpokePoolManager {
     function activePools(address deployer) external view returns (address);
 
     /**
-     * @notice Returns a request's escrowed seed for a new market, pulled at the build
+     * @notice Returns a request's escrowed seed for a new market, pulled at the request
      * @param requestId The request
      * @param asset The market's asset
-     * @return The seed, in the asset; zero before the build and once the seed is released
+     * @return The seed, in the asset; zero once the seed is released
      */
     function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
 

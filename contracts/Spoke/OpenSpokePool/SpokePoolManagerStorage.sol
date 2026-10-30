@@ -51,8 +51,11 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     /// @inheritdoc ISpokePoolManager
     mapping(address comptroller => bytes payload) public exitProposals;
 
+    /// @dev The oracles a new collateral asset's feeds may be set on; read them with `getSupportedOracles`
+    address[] internal supportedOracles;
+
     /// @inheritdoc ISpokePoolManager
-    address[3] public supportedOracles;
+    mapping(address oracle => bool supported) public isSupportedOracle;
 
     /// @inheritdoc ISpokePoolManager
     mapping(uint256 requestId => mapping(address asset => OracleOverrides overrides)) public requestOracleOverrides;
@@ -62,5 +65,5 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[34] private __gap;
+    uint256[35] private __gap;
 }

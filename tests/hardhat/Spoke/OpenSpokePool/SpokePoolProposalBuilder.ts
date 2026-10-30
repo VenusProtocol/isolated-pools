@@ -431,9 +431,6 @@ describe("SpokePoolProposalBuilder", () => {
     for (const asset of tokenDecimals.keys()) {
       manager.requestSeeds.whenCalledWith(REQUEST_ID, asset).returns(seedOf(asset));
     }
-    for (const [i, supported] of [chainlinkOracle, redstoneOracle, binanceOracle].entries()) {
-      manager.supportedOracles.whenCalledWith(i).returns(supported.address);
-    }
   };
 
   const deployFixture = async () => {
@@ -732,8 +729,7 @@ describe("SpokePoolProposalBuilder", () => {
           ]);
         });
 
-        it("skips an unset supported oracle and an oracle no new feed is on", async () => {
-          manager.supportedOracles.whenCalledWith(0).returns(constants.AddressZero);
+        it("skips an oracle no new feed is on", async () => {
           const market = collateralMarket(colA, [feedOn(redstoneOracle.address, mainFeed.address), noFeed(), noFeed()]);
           const [, vTokens, proposal] = await buildRequest(marketsRequest([market]));
           expectActions(proposal, [

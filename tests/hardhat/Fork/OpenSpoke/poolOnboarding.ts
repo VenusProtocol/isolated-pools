@@ -314,7 +314,9 @@ if (FORK) {
       });
 
       for (const [index, decimals] of [6, 8, 18].entries()) {
-        it(`${4 + index}. pulls a $10 seed of a ${decimals}-decimal asset and burns its vTokens`, async () => {
+        it(`${
+          4 + index
+        }. pulls a $10 seed of a ${decimals}-decimal asset at the request and burns its vTokens`, async () => {
           const collateral = await newCollateralToken(f, `D${decimals}`, "3", decimals);
           const request = {
             collateralMarkets: [
@@ -323,18 +325,22 @@ if (FORK) {
             loanMarkets: [usdtLoanMarket(f)],
           };
           const requestId = await requestPool(f, f.deployer, request);
-          const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
-          const usdtBefore = await f.usdt.balanceOf(f.deployer.address);
-          const { payload, vTokens } = await buildRequest(f, requestId);
 
           const collateralSeed = seedFor(priceMantissa("3", decimals));
           const usdtSeed = seedFor(priceMantissa("1"));
           expect(await f.manager.requestSeeds(requestId, collateral.token.address)).to.equal(collateralSeed);
           expect(await f.manager.requestSeeds(requestId, bscmainnet.USDT)).to.equal(usdtSeed);
-          expect(collateralBefore.sub(await collateral.token.balanceOf(f.deployer.address))).to.equal(collateralSeed);
-          expect(usdtBefore.sub(await f.usdt.balanceOf(f.deployer.address))).to.equal(usdtSeed);
+          expect(await collateral.token.balanceOf(f.manager.address)).to.equal(collateralSeed);
+          expect(await f.usdt.balanceOf(f.manager.address)).to.equal(usdtSeed);
           expect(usdValue(collateralSeed, priceMantissa("3", decimals))).to.be.gte(e18("10"));
           expect(usdValue(collateralSeed.sub(1), priceMantissa("3", decimals))).to.be.lt(e18("10"));
+
+          // The build pulls nothing more
+          const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
+          const usdtBefore = await f.usdt.balanceOf(f.deployer.address);
+          const { payload, vTokens } = await buildRequest(f, requestId);
+          expect(await collateral.token.balanceOf(f.deployer.address)).to.equal(collateralBefore);
+          expect(await f.usdt.balanceOf(f.deployer.address)).to.equal(usdtBefore);
 
           const timelockCollateralBefore = await collateral.token.balanceOf(bscmainnet.NORMAL_TIMELOCK);
           await executeVip(f, payload);
@@ -770,13 +776,15 @@ if (FORK) {
         const requestId = await requestPool(f, f.deployer, request);
         const xvsBefore = await f.xvs.balanceOf(f.deployer.address);
         const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
+        const collateralSeed = await f.manager.requestSeeds(requestId, collateral.token.address);
+        expect(collateralSeed).to.equal(seedFor(priceMantissa("2")));
 
         await expect(f.manager.connect(f.deployer).cancelRequest(requestId))
           .to.emit(f.manager, "RequestCanceled")
           .withArgs(requestId);
 
         expect((await f.xvs.balanceOf(f.deployer.address)).sub(xvsBefore)).to.equal(TIER_ONE_XVS_BOND);
-        expect(await collateral.token.balanceOf(f.deployer.address)).to.equal(collateralBefore);
+        expect((await collateral.token.balanceOf(f.deployer.address)).sub(collateralBefore)).to.equal(collateralSeed);
         expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Canceled);
         await expectManagerHoldsNothing(f, [collateral.token.address]);
 
@@ -811,16 +819,17 @@ if (FORK) {
         const xvsBefore = await f.xvs.balanceOf(f.deployer.address);
         const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
         const usdtBefore = await f.usdt.balanceOf(f.deployer.address);
+        const collateralSeed = await f.manager.requestSeeds(requestId, collateral.token.address);
+        const usdtSeed = await f.manager.requestSeeds(requestId, bscmainnet.USDT);
         const { payload, comptroller } = await buildRequest(f, requestId);
-        expect(await f.manager.requestSeeds(requestId, collateral.token.address)).to.be.gt(0);
 
         await expect(f.manager.connect(f.team).rejectRequest(requestId))
           .to.emit(f.manager, "RequestRejected")
           .withArgs(requestId);
 
         expect((await f.xvs.balanceOf(f.deployer.address)).sub(xvsBefore)).to.equal(TIER_ONE_XVS_BOND);
-        expect(await collateral.token.balanceOf(f.deployer.address)).to.equal(collateralBefore);
-        expect(await f.usdt.balanceOf(f.deployer.address)).to.equal(usdtBefore);
+        expect((await collateral.token.balanceOf(f.deployer.address)).sub(collateralBefore)).to.equal(collateralSeed);
+        expect((await f.usdt.balanceOf(f.deployer.address)).sub(usdtBefore)).to.equal(usdtSeed);
         await expectManagerHoldsNothing(f, [collateral.token.address]);
 
         await expectVipToFail(payload, {
@@ -878,6 +887,8 @@ if (FORK) {
         const xvsBefore = await f.xvs.balanceOf(f.deployer.address);
         const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
         const usdtBefore = await f.usdt.balanceOf(f.deployer.address);
+        const collateralSeed = await f.manager.requestSeeds(requestId, collateral.token.address);
+        const usdtSeed = await f.manager.requestSeeds(requestId, bscmainnet.USDT);
 
         // 100,000 tokens at $11 is $1.1M, over tier one's $1M
         await setPrice(collateral.feed, "11");
@@ -886,9 +897,10 @@ if (FORK) {
           .withArgs(collateral.token.address);
         await f.manager.connect(f.team).rejectRequest(requestId);
 
+        // The bond and the seeds pulled at the request come back
         expect((await f.xvs.balanceOf(f.deployer.address)).sub(xvsBefore)).to.equal(TIER_ONE_XVS_BOND);
-        expect(await collateral.token.balanceOf(f.deployer.address)).to.equal(collateralBefore);
-        expect(await f.usdt.balanceOf(f.deployer.address)).to.equal(usdtBefore);
+        expect((await collateral.token.balanceOf(f.deployer.address)).sub(collateralBefore)).to.equal(collateralSeed);
+        expect((await f.usdt.balanceOf(f.deployer.address)).sub(usdtBefore)).to.equal(usdtSeed);
         await expectManagerHoldsNothing(f, [collateral.token.address]);
       });
 
@@ -931,7 +943,8 @@ if (FORK) {
           .to.be.revertedWithCustomError(f.manager, "InvalidOracleFeed")
           .withArgs(asset);
 
-        const replacement = await deployMockFeed(f, "2");
+        // A replacement at another price leaves the seed pulled at the request's $2
+        const replacement = await deployMockFeed(f, "4");
         const feeds = mainFeed(bscmainnet.CHAINLINK_ORACLE, replacement.address);
         await expect(f.manager.connect(f.team).setOracleFeeds(requestId, asset, feeds, 0)).to.emit(
           f.manager,
@@ -941,13 +954,17 @@ if (FORK) {
         expect(storedFeeds.map(feed => [feed.oracle, feed.feed])).to.deep.equal(
           feeds.map(feed => [feed.oracle, feed.feed]),
         );
-        const { payload } = await buildRequest(f, requestId);
+        const seed = seedFor(priceMantissa("2"));
+        expect(await f.manager.requestSeeds(requestId, asset)).to.equal(seed);
+        const { payload, vTokens } = await buildRequest(f, requestId);
+        expect(await f.manager.requestSeeds(requestId, asset)).to.equal(seed);
 
         await expect(f.manager.connect(f.team).setOracleFeeds(requestId, asset, feeds, 0))
           .to.be.revertedWithCustomError(f.manager, "InvalidRequestStatus")
           .withArgs(requestId);
         await executeVip(f, payload);
         expect((await f.chainlinkOracle.tokenConfigs(asset)).feed).to.equal(replacement.address);
+        expect(await (await ethers.getContractAt("VToken", vTokens[0])).getCash()).to.equal(seed);
       });
 
       it("30. uses the team's oracle overrides over the registry's", async () => {
@@ -1024,7 +1041,7 @@ if (FORK) {
 
         await f.manager
           .connect(f.timelock)
-          .setSupportedOracles([bscmainnet.CHAINLINK_ORACLE, bscmainnet.REDSTONE_ORACLE, ZERO]);
+          .setSupportedOracles([bscmainnet.CHAINLINK_ORACLE, bscmainnet.REDSTONE_ORACLE]);
         await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Dropped oracle"))
           .to.be.revertedWithCustomError(f.manager, "UnsupportedOracle")
           .withArgs(f.thirdOracle.address);
@@ -1057,22 +1074,27 @@ if (FORK) {
         await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleFeed").withArgs(asset);
       });
 
-      it("33. refuses to build once the seed allowance is revoked", async () => {
+      it("33. refuses a request without the seed allowance, but builds one after it is revoked", async () => {
         const collateral = await newCollateralToken(f, "RVK", "2");
-        const requestId = await requestPool(f, f.deployer, {
-          collateralMarkets: [collateralMarket(collateral)],
-          loanMarkets: [usdtLoanMarket(f)],
-        });
-        const xvsBefore = await f.xvs.balanceOf(f.deployer.address);
+        const request = { collateralMarkets: [collateralMarket(collateral)], loanMarkets: [usdtLoanMarket(f)] };
+        await fundDeployer(f, f.deployer, request);
+        const submit = () =>
+          f.manager
+            .connect(f.deployer)
+            .requestPool(TIER_ONE, XVS, TIER_ONE_XVS_BOND, request.collateralMarkets, request.loanMarkets);
 
         await collateral.token.connect(f.deployer).approve(f.manager.address, 0);
-        await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "No allowance")).to.be.revertedWith(
-          "ERC20: insufficient allowance",
-        );
-        await f.manager.connect(f.team).rejectRequest(requestId);
-
-        expect((await f.xvs.balanceOf(f.deployer.address)).sub(xvsBefore)).to.equal(TIER_ONE_XVS_BOND);
+        await expect(submit()).to.be.revertedWith("ERC20: insufficient allowance");
         await expectManagerHoldsNothing(f, [collateral.token.address]);
+
+        // The seeds are pulled at the request, so the build no longer needs the allowance
+        await collateral.token.connect(f.deployer).approve(f.manager.address, ethers.constants.MaxUint256);
+        await submit();
+        const requestId = (await f.manager.requestCount()).toNumber();
+        await collateral.token.connect(f.deployer).approve(f.manager.address, 0);
+        const { payload, comptroller } = await buildRequest(f, requestId);
+        await executeVip(f, payload);
+        expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.Live);
       });
 
       it("34. builds a pending request with a replaced builder", async () => {
@@ -1201,11 +1223,12 @@ if (FORK) {
 
       it("40. refuses a market whose seed exceeds its supply cap", async () => {
         const collateral = await newCollateralToken(f, "SED", "2");
-        const requestId = await requestPool(f, f.deployer, {
-          collateralMarkets: [collateralMarket(collateral, { supplyCap: e18("1") })],
-          loanMarkets: [usdtLoanMarket(f)],
-        });
-        await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Seed over cap"))
+        await expect(
+          requestPool(f, f.deployer, {
+            collateralMarkets: [collateralMarket(collateral, { supplyCap: e18("1") })],
+            loanMarkets: [usdtLoanMarket(f)],
+          }),
+        )
           .to.be.revertedWithCustomError(f.manager, "InvalidMarketParams")
           .withArgs(collateral.token.address);
       });
@@ -1454,8 +1477,9 @@ if (FORK) {
           const late = await newCollateralToken(f, "LTE", "2");
           const marketsRequestId = await requestMarkets(f, comptroller, [collateralMarket(late)]);
           const lateBefore = await late.token.balanceOf(f.deployer.address);
+          const lateSeed = await f.manager.requestSeeds(marketsRequestId, late.token.address);
           const { payload } = await buildRequest(f, marketsRequestId);
-          expect(await late.token.balanceOf(f.manager.address)).to.be.gt(0);
+          expect(await late.token.balanceOf(f.manager.address)).to.equal(lateSeed);
 
           await f.manager.connect(f.team).buildExitProposal(comptroller, EXIT_LIQUIDATION_THRESHOLDS, "Exit");
           await expectVipToFail(payload, {
@@ -1470,7 +1494,7 @@ if (FORK) {
           await expect(f.manager.connect(f.team).rejectRequest(marketsRequestId))
             .to.emit(f.manager, "RequestRejected")
             .withArgs(marketsRequestId);
-          expect(await late.token.balanceOf(f.deployer.address)).to.equal(lateBefore);
+          expect(await late.token.balanceOf(f.deployer.address)).to.equal(lateBefore.add(lateSeed));
           await expectManagerHoldsNothing(f, [late.token.address]);
         });
 
@@ -1574,6 +1598,7 @@ if (FORK) {
           for (const symbol of ["XA", "XB", "XC"]) {
             markets.push(collateralMarket(await newCollateralToken(f, symbol, "2")));
           }
+          await approveSeeds(f, f.deployer, { collateralMarkets: markets, loanMarkets: [] });
           const deployer = f.manager.connect(f.deployer);
 
           expect(await deployer.callStatic.requestNewMarkets(comptroller, markets.slice(0, 2), [])).to.equal(

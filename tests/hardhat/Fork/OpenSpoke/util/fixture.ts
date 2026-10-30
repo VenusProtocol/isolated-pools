@@ -301,7 +301,7 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
     "setProposalBuilder(address)",
     "setBondManager(address)",
     "setHubYieldGroup(address,address)",
-    "setSupportedOracles(address[3])",
+    "setSupportedOracles(address[])",
     "setWindDownPeriod(uint256)",
     "setMaxResidualPoolDebtUsd(uint256)",
     "sweepToken(address,address,uint256)",

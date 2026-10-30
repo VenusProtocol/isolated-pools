@@ -51,6 +51,7 @@ import {
   ZERO,
   advanceTime,
   applyLatestUpdate,
+  approveSeeds,
   assertInvariants,
   borrow,
   buildRequest,
@@ -648,26 +649,27 @@ if (FORK) {
           expect(await loanVToken.badDebt()).to.equal(0);
         });
 
-        it("13. refuses a fee-on-transfer collateral and refunds the bond", async () => {
+        it("13. refuses a fee-on-transfer collateral at the request, keeping the bond", async () => {
           const feeToken = (await (
             await ethers.getContractFactory("FeeToken", f.admin)
           ).deploy(0, "Fee Token", 18, "FEE", 100, f.admin.address)) as FeeToken;
           await feeToken.allocateTo(f.attacker.address, e18("1000"));
-          const requestId = await requestPool(f, f.attacker, {
-            collateralMarkets: [collateralMarket(await asCollateral(feeToken))],
-            loanMarkets: [usdtLoanMarket(f)],
-          });
-          const xvsBefore = await f.xvs.balanceOf(f.attacker.address);
+          const requestCount = await f.manager.requestCount();
 
-          await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Fee token"))
+          await expect(
+            requestPool(f, f.attacker, {
+              collateralMarkets: [collateralMarket(await asCollateral(feeToken))],
+              loanMarkets: [usdtLoanMarket(f)],
+            }),
+          )
             .to.be.revertedWithCustomError(f.manager, "TransferAmountMismatch")
             .withArgs(feeToken.address);
-          await f.manager.connect(f.team).rejectRequest(requestId);
-          expect((await f.xvs.balanceOf(f.attacker.address)).sub(xvsBefore)).to.equal(TIER_ONE_XVS_BOND);
+          expect(await f.manager.requestCount()).to.equal(requestCount);
           expect(await f.xvs.balanceOf(f.manager.address)).to.equal(0);
+          expect(await feeToken.balanceOf(f.manager.address)).to.equal(0);
         });
 
-        it("14. seeds a rebasing collateral at its build amount", async () => {
+        it("14. seeds a rebasing collateral at its request amount", async () => {
           const rebasingToken = (await (
             await ethers.getContractFactory("ERC20Harness", f.admin)
           ).deploy(0, "REB Token", 18, "REB")) as ERC20Harness;
@@ -1018,6 +1020,7 @@ if (FORK) {
           const topUp = xvsBondFor(e18("120000")).sub(TIER_ONE_XVS_BOND);
           await fundXvs(f.xvs, f.deployer.address, topUp);
           await asDeployer.topUpBond(comptroller, topUp);
+          await approveSeeds(f, f.deployer, { collateralMarkets: [collateralMarket(added)], loanMarkets: [] });
           // $200,000 at $2, over the lowered $150,000
           await expect(asDeployer.requestNewMarkets(comptroller, [collateralMarket(added)], []))
             .to.be.revertedWithCustomError(f.manager, "ExceedsTierLimit")
@@ -1190,6 +1193,7 @@ if (FORK) {
         it("30. leaves a paused deployer only cancel and top-up", async () => {
           const asDeployer = f.manager.connect(f.deployer);
           const newCollateral = await newCollateralToken(f, "ADD", "3");
+          await approveSeeds(f, f.deployer, { collateralMarkets: [collateralMarket(newCollateral)], loanMarkets: [] });
           await asDeployer.requestNewMarkets(comptroller, [collateralMarket(newCollateral)], []);
           const requestId = await f.manager.requestCount();
 
@@ -1501,7 +1505,7 @@ if (FORK) {
             manager => manager.callStatic.setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address),
           ],
           [
-            "setSupportedOracles(address[3])",
+            "setSupportedOracles(address[])",
             [f.timelock],
             manager =>
               manager.callStatic.setSupportedOracles([
@@ -1558,8 +1562,10 @@ if (FORK) {
           });
         }
 
-        await fundXvs(f.xvs, f.outsider.address, TIER_ONE_XVS_BOND);
-        await f.xvs.connect(f.outsider).approve(f.manager.address, TIER_ONE_XVS_BOND);
+        await fundDeployer(f, f.outsider, {
+          collateralMarkets: [collateralMarket(pool.collateral)],
+          loanMarkets: [usdtLoanMarket(f)],
+        });
         const nextRequestId = await f.manager
           .connect(f.outsider)
           .callStatic.requestPool(

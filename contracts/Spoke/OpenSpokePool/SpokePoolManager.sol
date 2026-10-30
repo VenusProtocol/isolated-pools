@@ -24,8 +24,8 @@ import { SpokePoolManagerStorage } from "./SpokePoolManagerStorage.sol";
 /**
  * @title SpokePoolManager
  * @author Venus
- * @notice Entry point of open spoke pools. A deployer requests a pool of a tier, escrowing a bond; the Venus team
- * builds the request's VIP through the proposal builder, pulling each new market's seed from the deployer, and the
+ * @notice Entry point of open spoke pools. A deployer requests a pool of a tier, escrowing a bond and each new
+ * market's seed; the Venus team builds the request's VIP through the proposal builder, and the
  * VIP's `settleRequest` starts the pool and moves the bond to the bond manager. The deployer tunes the pool's
  * collateral markets through the RiskOracle, within its tier's current terms
  * @dev Needs to be a RiskOracle authorized sender. Two linked libraries keep it under the EIP-170 size limit:
@@ -110,6 +110,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         // Checked once stored: the library reads the markets from the request, which is cheaper than encoding them
         SpokePoolValidationLib.validateMarkets(contracts, request);
         IERC20Upgradeable(bondAsset).safeTransferFrom(msg.sender, address(this), bondAmount);
+        _pullSeeds(contracts, request, requestSeeds[requestId]);
 
         emit RequestSubmitted(requestId, RequestType.Pool, msg.sender, address(0));
     }
@@ -119,7 +120,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         address comptroller,
         CollateralMarketRequestParams[] calldata collateralMarkets,
         LoanMarketRequestParams[] calldata loanMarkets
-    ) external returns (uint256 requestId) {
+    ) external nonReentrant returns (uint256 requestId) {
         uint256 tierId = _ensureCallerHasLivePool(comptroller).tierId;
 
         Contracts memory contracts = _contracts();
@@ -130,6 +131,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _pushRequestMarkets(request, collateralMarkets, loanMarkets);
         // Checked once stored: the library reads the markets from the request, which is cheaper than encoding them
         SpokePoolValidationLib.validateMarkets(contracts, request);
+        _pullSeeds(contracts, request, requestSeeds[requestId]);
 
         emit RequestSubmitted(requestId, RequestType.NewMarkets, msg.sender, comptroller);
     }
@@ -181,7 +183,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             market.feeds[i] = feeds[i];
         }
         requestOracleOverrides[requestId][asset].boundDeviation = boundDeviation;
-        SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), request.tierId, market);
+        Contracts memory contracts = _contracts();
+        uint256 price = SpokePoolValidationLib.validateOracles(contracts, market);
+        SpokePoolValidationLib.checkSupplyCapUsd(contracts, request.tierId, market, price);
 
         emit OracleFeedsUpdated(requestId, asset, feeds, boundDeviation);
     }
@@ -219,9 +223,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
             SpokePoolValidationLib.validateBond(contracts, request.comptroller, request.tierId);
         }
+        // The seeds pulled at the request stay as they are, even if their assets' prices moved
         if (requestType != RequestType.TierUpgrade) {
             SpokePoolValidationLib.validateMarkets(contracts, request);
-            _pullSeeds(contracts, request, requestSeeds[requestId]);
         }
 
         SpokePoolGovernanceLib.buildRequestProposal(proposalBuilder, request, requestProposals, requestId, description);
@@ -490,8 +494,18 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setSupportedOracles(address[3] calldata oracles) external {
-        _checkAccessAllowed("setSupportedOracles(address[3])");
+    function setSupportedOracles(address[] calldata oracles) external {
+        _checkAccessAllowed("setSupportedOracles(address[])");
+
+        uint256 oldCount = supportedOracles.length;
+        for (uint256 i; i < oldCount; ++i) {
+            isSupportedOracle[supportedOracles[i]] = false;
+        }
+        uint256 count = oracles.length;
+        for (uint256 i; i < count; ++i) {
+            ensureNonzeroAddress(oracles[i]);
+            isSupportedOracle[oracles[i]] = true;
+        }
 
         emit SupportedOraclesUpdated(supportedOracles, oracles);
         supportedOracles = oracles;
@@ -538,10 +552,20 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
+    function getSupportedOracles() external view returns (address[] memory) {
+        return supportedOracles;
+    }
+
+    /// @inheritdoc ISpokePoolManager
     function getExcessBondAmount(address comptroller) external view returns (uint256) {
         uint256 bond = bondManager.getCurrentBondAmount(comptroller);
         uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), pools[comptroller].tierId, comptroller);
         return bond > floor ? bond - floor : 0;
+    }
+
+    /// @inheritdoc ISpokePoolManager
+    function getBondValue(address comptroller) external view returns (uint256) {
+        return SpokePoolGovernanceLib.getBondValue(_contracts(), comptroller);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -657,7 +681,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Sends the seed escrowed in `asset` to `to` and clears it; a request not built yet has none
+    /// @dev Sends the seed escrowed in `asset` to `to` and clears it; one already released is zero
     function _releaseSeed(mapping(address asset => uint256 seed) storage seeds, address asset, address to) private {
         uint256 seed = seeds[asset];
         if (seed != 0) {

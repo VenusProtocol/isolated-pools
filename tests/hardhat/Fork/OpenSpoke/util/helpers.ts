@@ -439,8 +439,8 @@ export const waiveInvariants = () => {
 
 type Request = Awaited<ReturnType<OpenSpokeFixture["manager"]["getRequest"]>>;
 
-/// Adds what an open request escrows in the manager to `escrow`: a pool request's bond and, once built, each
-/// market's seed
+/// Adds what an open request escrows in the manager to `escrow`: a pool request's bond and each market's
+/// seed
 async function addRequestEscrow(
   f: OpenSpokeFixture,
   escrow: Map<string, BigNumber>,
@@ -450,10 +450,8 @@ async function addRequestEscrow(
   const add = (asset: string, amount: BigNumber) =>
     escrow.set(asset, (escrow.get(asset) ?? BigNumber.from(0)).add(amount));
   if (request.requestType === 0) add(request.bondAsset, request.bondAmount);
-  if (request.status === RequestStatus.Built) {
-    for (const market of [...request.collateralMarkets, ...request.loanMarkets]) {
-      add(market.asset, await f.manager.requestSeeds(requestId, market.asset));
-    }
+  for (const market of [...request.collateralMarkets, ...request.loanMarkets]) {
+    add(market.asset, await f.manager.requestSeeds(requestId, market.asset));
   }
 }
 
@@ -470,7 +468,7 @@ async function expectActivePool(f: OpenSpokeFixture, request: Request) {
 }
 
 /// Checks what must hold after any sequence of actions: the manager holds exactly the escrow of open requests (pool
-/// bonds while pending or built, seeds once built), and a deployer's active pool is the one pool of theirs still
+/// bonds and seeds while pending or built), and a deployer's active pool is the one pool of theirs still
 /// running. Called from each suite's `afterEach` for passing tests
 export async function assertInvariants(f: OpenSpokeFixture) {
   if (invariantsWaived) {
