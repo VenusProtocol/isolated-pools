@@ -1041,7 +1041,7 @@ interface ISpokePoolManager {
      * @notice Returns a request's escrowed seed for a new market, pulled at the build
      * @param requestId The request
      * @param asset The market's asset
-     * @return The seed, in the asset; zero before the build; kept after the seed is released
+     * @return The seed, in the asset; zero before the build and once the seed is released
      */
     function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
 

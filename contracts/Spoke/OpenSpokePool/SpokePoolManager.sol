@@ -655,10 +655,11 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Sends the seed escrowed in `asset` to `to`; a request not built yet has none
+    /// @dev Sends the seed escrowed in `asset` to `to` and clears it; a request not built yet has none
     function _releaseSeed(mapping(address asset => uint256 seed) storage seeds, address asset, address to) private {
         uint256 seed = seeds[asset];
         if (seed != 0) {
+            delete seeds[asset];
             IERC20Upgradeable(asset).safeTransfer(to, seed);
         }
     }
