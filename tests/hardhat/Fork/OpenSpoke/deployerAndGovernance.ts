@@ -1027,21 +1027,24 @@ if (FORK) {
           ).to.emit(f.manager, "RequestSubmitted");
         });
 
-        it("24. freezes factors whose threshold is above a lowered tier maximum", async () => {
+        it("24. keeps the factor changeable while its threshold stays above a lowered tier maximum", async () => {
           await updateTier(f, TIER_ONE, {
             limits: { maxCollateralFactor: e18("0.5"), maxLiquidationThreshold: e18("0.55") },
           });
           const asDeployer = f.manager.connect(f.deployer);
 
-          await expect(asDeployer.setCollateralFactor(comptroller, collateralVToken, e18("0.45"), e18("0.6")))
+          await expect(asDeployer.setCollateralFactor(comptroller, collateralVToken, e18("0.45"), e18("0.65")))
             .to.be.revertedWithCustomError(f.manager, "ExceedsTierLimit")
             .withArgs(collateralVToken);
           await expect(asDeployer.setCollateralFactor(comptroller, collateralVToken, e18("0.45"), e18("0.55")))
             .to.be.revertedWithCustomError(f.manager, "InvalidCollateralFactors")
             .withArgs(collateralVToken);
 
-          await pool.comptroller.connect(f.guardian).setCollateralFactor(collateralVToken, e18("0.5"), e18("0.55"));
-          await asDeployer.setCollateralFactor(comptroller, collateralVToken, e18("0.45"), e18("0.55"));
+          await asDeployer.setCollateralFactor(comptroller, collateralVToken, e18("0.45"), e18("0.6"));
+          await applyLatestUpdate(f, UpdateType.collateralFactors, collateralVToken);
+          const market = await pool.comptroller.markets(collateralVToken);
+          expect(market.collateralFactorMantissa).to.equal(e18("0.45"));
+          expect(market.liquidationThresholdMantissa).to.equal(e18("0.6"));
         });
 
         // Accepted: the steward applies what the manager published and does not read the tier

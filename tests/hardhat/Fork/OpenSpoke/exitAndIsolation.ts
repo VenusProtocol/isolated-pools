@@ -365,20 +365,25 @@ if (FORK) {
       });
 
       // Known gap: exit and close never touch the Hub, so the YieldGroup keeps the loan market as an open resource
-      it("7. pauses the loan market's Hub resource on exit and removes it on close", async () => {
+      it("7. leaves the loan market's Hub resource to the operator on exit and close", async () => {
         const { comptroller, loanVToken } = pool;
-        await exitPool(f, comptroller);
         const yieldGroupConfigs = new ethers.Contract(
           f.yieldGroup.address,
           ["function resourceConfig(address) view returns (bool registered, bool paused, address adapter)"],
           f.admin,
         );
-        expect((await yieldGroupConfigs.resourceConfig(loanVToken.address)).paused).to.equal(true);
+        const expectUntouched = async () => {
+          const config = await yieldGroupConfigs.resourceConfig(loanVToken.address);
+          expect([config.registered, config.paused]).to.deep.equal([true, false]);
+          expect(await f.yieldGroup.resources()).to.include(loanVToken.address);
+        };
 
+        await exitPool(f, comptroller);
+        await expectUntouched();
         const shares = await f.hub.balanceOf(f.hubDepositor.address);
         await f.hub.connect(f.hubDepositor).redeem(shares, f.hubDepositor.address, f.hubDepositor.address);
         await f.manager.connect(f.team).closePool(comptroller.address);
-        expect(await f.yieldGroup.resources()).to.not.include(loanVToken.address);
+        await expectUntouched();
       });
 
       it("8. lets the Hub withdraw from an exited pool while other pools keep working", async () => {

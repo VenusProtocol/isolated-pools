@@ -604,6 +604,14 @@ describe("SpokePoolProposalBuilder", () => {
         ]);
       });
 
+      it("rejects a loan market whose asset has no Hub YieldGroup", async () => {
+        manager.hubYieldGroups.whenCalledWith(usdt.address).returns(constants.AddressZero);
+        await expect(buildRequest(request({ loanMarkets: [loanMarket()] }))).to.be.revertedWithCustomError(
+          builder,
+          "ZeroAddressNotAllowed",
+        );
+      });
+
       it("lists each market with its own seed from the manager, burning the vTokens it mints at its decimals' exchange rate", async () => {
         const markets = [collateralMarket(colA), collateralMarket(usdc), collateralMarket(wbtc)];
         const seeds = [
@@ -965,9 +973,22 @@ describe("SpokePoolProposalBuilder", () => {
         expectActions(proposal, [settlement()]);
       });
 
-      it("rejects a pool with a market of an asset no longer lent", async () => {
+      it("keeps the caps of a market whose asset is no longer lent, moving the other loan markets to the new tier", async () => {
+        const usdcCap = parseUnits("200", 6);
+        const usdcVToken = fakeVToken(usdc.address);
+        comptroller.getAllMarkets.returns([loanVToken.address, collateralVToken.address, usdcVToken.address]);
+        makeLoanMarket(comptroller, usdcVToken.address);
+        yieldGroup.resourceCap.whenCalledWith(usdcVToken.address).returns(parseUnits("300", 6));
+        await listLoanAsset(usdc);
+        resilientOracle.getPrice.whenCalledWith(usdc.address).returns(parseUnits("5000", 30));
         await policyRegistry.setLoanAssetConfig(usdt.address, { factor: 0, interestRateModels: [] });
-        await expect(buildTier()).to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed").withArgs(usdt.address);
+
+        const [, , proposal] = await buildTier();
+        expectActions(proposal, [
+          settlement(),
+          hubCapAction("lowerResourceCap(address,uint256)", usdcCap, usdcVToken.address),
+          ...capActions(comptroller.address, [usdcVToken.address], [usdcCap]),
+        ]);
       });
     });
   });

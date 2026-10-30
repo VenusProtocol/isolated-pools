@@ -437,6 +437,38 @@ export const waiveInvariants = () => {
   invariantsWaived = true;
 };
 
+type Request = Awaited<ReturnType<OpenSpokeFixture["manager"]["getRequest"]>>;
+
+/// Adds what an open request escrows in the manager to `escrow`: a pool request's bond and, once built, each
+/// market's seed
+async function addRequestEscrow(
+  f: OpenSpokeFixture,
+  escrow: Map<string, BigNumber>,
+  requestId: number,
+  request: Request,
+) {
+  const add = (asset: string, amount: BigNumber) =>
+    escrow.set(asset, (escrow.get(asset) ?? BigNumber.from(0)).add(amount));
+  if (request.requestType === 0) add(request.bondAsset, request.bondAmount);
+  if (request.status === RequestStatus.Built) {
+    for (const market of [...request.collateralMarkets, ...request.loanMarkets]) {
+      add(market.asset, await f.manager.requestSeeds(requestId, market.asset));
+    }
+  }
+}
+
+/// Checks a settled pool request's pool is its deployer's active pool exactly while it still runs
+async function expectActivePool(f: OpenSpokeFixture, request: Request) {
+  const runningStatuses = [PoolStatus.Live, PoolStatus.ExitRequested, PoolStatus.ExitProposed, PoolStatus.WindingDown];
+  const pool = await f.manager.getPool(request.comptroller);
+  const activePool = await f.manager.activePools(request.deployer);
+  if (runningStatuses.includes(pool.status)) {
+    expect(activePool, `active pool of ${request.deployer}`).to.equal(request.comptroller);
+  } else {
+    expect(activePool, `active pool of ${request.deployer}`).to.not.equal(request.comptroller);
+  }
+}
+
 /// Checks what must hold after any sequence of actions: the manager holds exactly the escrow of open requests (pool
 /// bonds while pending or built, seeds once built), and a deployer's active pool is the one pool of theirs still
 /// running. Called from each suite's `afterEach` for passing tests
@@ -449,30 +481,13 @@ export async function assertInvariants(f: OpenSpokeFixture) {
     [XVS, BigNumber.from(0)],
     [bscmainnet.USDT, BigNumber.from(0)],
   ]);
-  const add = (asset: string, amount: BigNumber) =>
-    escrow.set(asset, (escrow.get(asset) ?? BigNumber.from(0)).add(amount));
-  const runningStatuses = [PoolStatus.Live, PoolStatus.ExitRequested, PoolStatus.ExitProposed, PoolStatus.WindingDown];
   const requestCount = (await f.manager.requestCount()).toNumber();
   for (let requestId = 1; requestId <= requestCount; ++requestId) {
     const request = await f.manager.getRequest(requestId);
-    const isPoolRequest = request.requestType === 0;
     if (request.status === RequestStatus.Pending || request.status === RequestStatus.Built) {
-      if (isPoolRequest) add(request.bondAsset, request.bondAmount);
-      if (request.status === RequestStatus.Built) {
-        for (const market of [...request.collateralMarkets, ...request.loanMarkets]) {
-          add(market.asset, await f.manager.requestSeeds(requestId, market.asset));
-        }
-      }
+      await addRequestEscrow(f, escrow, requestId, request);
     }
-    if (isPoolRequest && request.status === RequestStatus.Settled) {
-      const pool = await f.manager.getPool(request.comptroller);
-      const activePool = await f.manager.activePools(request.deployer);
-      if (runningStatuses.includes(pool.status)) {
-        expect(activePool, `active pool of ${request.deployer}`).to.equal(request.comptroller);
-      } else {
-        expect(activePool, `active pool of ${request.deployer}`).to.not.equal(request.comptroller);
-      }
-    }
+    if (request.requestType === 0 && request.status === RequestStatus.Settled) await expectActivePool(f, request);
   }
   for (const [asset, amount] of escrow) {
     const token = await ethers.getContractAt("MockToken", asset);

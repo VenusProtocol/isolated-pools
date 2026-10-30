@@ -51,6 +51,8 @@ const FORK = process.env.FORK === "true";
 
 const LIQUIDITY = e18("100000");
 const USDT_BOND = e18("100000");
+// A Hub bond is valued net of the Hub's share rounding, which loses a wei, so it is posted a wei over the minimum
+const HUB_USDT_BOND = USDT_BOND.add(1);
 const HUB_VIEWS_ABI = [
   ...HUB_ABI,
   "function accrueFees()",
@@ -196,7 +198,7 @@ if (FORK) {
 
         it("2. pays a recoverer from a Liquidity Hub bond", async () => {
           await useLiquidityHubBonds(f);
-          const pool = await openUsdtBondPool(f, LIQUIDITY);
+          const pool = await openUsdtBondPool(f, LIQUIDITY, HUB_USDT_BOND);
           const badDebt = await createBadDebt(f, pool, DEFAULT);
           const hub = liquidityHub(f);
           const sharesBefore: BigNumber = await hub.balanceOf(pool.bondAccount.address);
@@ -219,7 +221,7 @@ if (FORK) {
 
         it("3. refuses recovery while the Hub is paused; governance repays instead", async () => {
           await useLiquidityHubBonds(f);
-          const pool = await openUsdtBondPool(f, LIQUIDITY);
+          const pool = await openUsdtBondPool(f, LIQUIDITY, HUB_USDT_BOND);
           const badDebt = await createBadDebt(f, pool, DEFAULT);
           const hub = await hubAsTimelock(f);
           await hub.pauseHub();
@@ -243,7 +245,7 @@ if (FORK) {
 
         it("4. pays a recoverer once the Hub unpauses", async () => {
           await useLiquidityHubBonds(f);
-          const pool = await openUsdtBondPool(f, LIQUIDITY);
+          const pool = await openUsdtBondPool(f, LIQUIDITY, HUB_USDT_BOND);
           const badDebt = await createBadDebt(f, pool, DEFAULT);
           const hub = await hubAsTimelock(f);
           await hub.pauseHub();
@@ -262,7 +264,7 @@ if (FORK) {
           const bond = e18("10000");
           await updateTier(f, TIER_ONE, { minTierBondUsd: bond });
           await useLiquidityHubBonds(f);
-          const pool = await openUsdtBondPool(f, LIQUIDITY, bond);
+          const pool = await openUsdtBondPool(f, LIQUIDITY, bond.add(1));
           const badDebt = await createBadDebt(f, pool, LARGE_DEFAULT);
           const hub = liquidityHub(f);
           const { bondAccount } = pool;
@@ -288,7 +290,7 @@ if (FORK) {
 
         it("6. pays a Hub bond from the borrowed-out market the repayment refills", async () => {
           await useLiquidityHubBonds(f);
-          const pool = await openUsdtBondPool(f, e18("50000"));
+          const pool = await openUsdtBondPool(f, e18("50000"), HUB_USDT_BOND);
           await supplyCollateral(f.borrower, pool.collateral, pool.collateralVToken, e18("60000"));
           await borrow(f.borrower, pool.loanVToken, await pool.loanVToken.getCash());
           expect(await pool.loanVToken.getCash()).to.equal(0);
@@ -571,28 +573,28 @@ if (FORK) {
           expect(await pool.loanVToken.badDebt()).to.equal(badDebtLeft);
         });
 
-        it("22. pays only the excess while bad debt is outstanding", async () => {
+        it("22. pays no excess while bad debt is outstanding, then what the recovery leaves", async () => {
           const badDebt = await createBadDebt(f, pool, DEFAULT);
           const donation = e18("1000");
           await fundXvs(f.xvs, pool.bondAccount.address, donation);
           expect(await f.manager.getExcessBondAmount(pool.comptroller.address)).to.equal(donation);
 
-          const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
           await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
-            .to.emit(f.bondManager, "ExcessWithdrawn")
-            .withArgs(pool.comptroller.address, donation);
-          expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(donation);
-          expect(await f.manager.getExcessBondAmount(pool.comptroller.address)).to.equal(0);
-          await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
-            .to.be.revertedWithCustomError(pool.bondAccount, "NoExcessBond")
-            .withArgs(TIER_ONE_XVS_BOND, TIER_ONE_XVS_BOND);
-          expect(await f.bondManager.getCurrentBondAmount(pool.comptroller.address)).to.equal(TIER_ONE_XVS_BOND);
+            .to.be.revertedWithCustomError(f.manager, "BadDebtExists")
+            .withArgs(pool.loanVToken.address);
 
           const payout = await bondPayout(pool.loanVToken, XVS, badDebt);
           const xvsBefore = await f.xvs.balanceOf(f.recoverer.address);
           await f.shortfall.connect(f.recoverer).recoverBadDebt(pool.loanVToken.address, badDebt);
           expect((await f.xvs.balanceOf(f.recoverer.address)).sub(xvsBefore)).to.equal(payout);
-          expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND.sub(payout));
+          expect(await pool.loanVToken.badDebt()).to.equal(0);
+
+          const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
+          await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+            .to.emit(f.bondManager, "ExcessWithdrawn")
+            .withArgs(pool.comptroller.address, donation.sub(payout));
+          expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(donation.sub(payout));
+          expect(await f.bondManager.getCurrentBondAmount(pool.comptroller.address)).to.equal(TIER_ONE_XVS_BOND);
         });
 
         it("23. closes a winding-down pool once recovery brings its debt under the cap", async () => {
@@ -646,18 +648,18 @@ if (FORK) {
         const hub = await hubAsTimelock(f);
         await hub.pauseHub();
         await useLiquidityHubBonds(f);
-        const { bondAccount } = await openUsdtBondPool(f);
+        const { bondAccount } = await openUsdtBondPool(f, undefined, HUB_USDT_BOND);
 
         const activationBlock = await ethers.provider.getBlockNumber();
         const refusals = await bondAccount.queryFilter(bondAccount.filters.SourceDepositRefused(), activationBlock);
-        expect(refusals.map(event => event.args?.amount)).to.deep.equal([USDT_BOND]);
-        expect(await f.usdt.balanceOf(bondAccount.address)).to.equal(USDT_BOND);
+        expect(refusals.map(event => event.args?.amount)).to.deep.equal([HUB_USDT_BOND]);
+        expect(await f.usdt.balanceOf(bondAccount.address)).to.equal(HUB_USDT_BOND);
         expect(await hub.balanceOf(bondAccount.address)).to.equal(0);
-        expect(await bondAccount.currentBondAmount()).to.equal(USDT_BOND);
+        expect(await bondAccount.currentBondAmount()).to.equal(HUB_USDT_BOND);
 
         await expect(f.bondManager.connect(f.timelock).depositInSource(bondAccount.address))
           .to.emit(bondAccount, "SourceDepositRefused")
-          .withArgs(USDT_BOND);
+          .withArgs(HUB_USDT_BOND);
 
         await hub.unpauseHub();
         await expect(f.bondManager.connect(f.timelock).depositInSource(bondAccount.address)).not.to.emit(
@@ -687,7 +689,7 @@ if (FORK) {
 
       it("26. deposits a donation to a Hub bond, then pays it as excess", async () => {
         await useLiquidityHubBonds(f);
-        const { bondAccount, comptroller } = await openUsdtBondPool(f);
+        const { bondAccount, comptroller } = await openUsdtBondPool(f, undefined, HUB_USDT_BOND);
         const hub = liquidityHub(f);
         const sharesBefore: BigNumber = await hub.balanceOf(bondAccount.address);
         const donation = e18("1000");
@@ -713,7 +715,7 @@ if (FORK) {
 
       it("27. deposits a Hub bond's top-up, pays its excess and releases the rest", async () => {
         await useLiquidityHubBonds(f);
-        const pool = await openUsdtBondPool(f, LIQUIDITY);
+        const pool = await openUsdtBondPool(f, LIQUIDITY, HUB_USDT_BOND);
         const { bondAccount, comptroller } = pool;
         const hub = liquidityHub(f);
         const topUp = e18("1000");
@@ -845,7 +847,7 @@ if (FORK) {
 
       it("30. applies an asset config change to new bonds only", async () => {
         await useLiquidityHubBonds(f);
-        const first = await openUsdtBondPool(f);
+        const first = await openUsdtBondPool(f, undefined, HUB_USDT_BOND);
         await f.bondManager
           .connect(f.timelock)
           .setAssetConfig(bscmainnet.USDT, { sourceType: SourceType.Idle, source: ZERO });
@@ -930,7 +932,7 @@ if (FORK) {
 
       it("33. pays a Hub bond's excess only once the Hub unpauses", async () => {
         await useLiquidityHubBonds(f);
-        const { bondAccount, comptroller } = await openUsdtBondPool(f);
+        const { bondAccount, comptroller } = await openUsdtBondPool(f, undefined, HUB_USDT_BOND);
         const topUp = e18("1000");
         await fundUsdt(f.usdt, f.deployer.address, topUp);
         await f.usdt.connect(f.deployer).approve(f.manager.address, topUp);

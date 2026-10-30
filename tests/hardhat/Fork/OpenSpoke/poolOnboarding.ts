@@ -508,13 +508,20 @@ if (FORK) {
       it("15. deposits a LiquidityHub USDT bond in the Hub", async () => {
         await useLiquidityHubBonds(f);
         const collateral = await newCollateralToken(f, "LHB", "2");
-        const bondAmount = e18("100000");
-        const pool = await openPool(f, f.deployer, {
+        const minimum = e18("100000");
+        const request = {
           bondAsset: bscmainnet.USDT,
-          bondAmount,
+          bondAmount: minimum,
           collateralMarkets: [collateralMarket(collateral)],
           loanMarkets: [usdtLoanMarket(f)],
-        });
+        };
+        const previewed = await f.bondManager.previewBondAmount(bscmainnet.USDT, minimum);
+        expect(previewed).to.be.lt(minimum);
+        await expect(requestPool(f, f.deployer, request))
+          .to.be.revertedWithCustomError(f.manager, "InsufficientBondValue")
+          .withArgs(previewed, minimum);
+
+        const pool = await openPool(f, f.deployer, { ...request, bondAmount: minimum.add(1) });
         const shares = await f.hub.balanceOf(pool.bondAccount.address);
         expect(shares).to.be.gt(0);
         expect(await f.usdt.balanceOf(pool.bondAccount.address)).to.equal(0);
@@ -885,23 +892,30 @@ if (FORK) {
         await expectManagerHoldsNothing(f, [collateral.token.address]);
       });
 
-      it("28. values the bond only at request time", async () => {
+      it("28. checks the bond and tier again at build", async () => {
         const collateral = await newCollateralToken(f, "BND", "2");
         const requestId = await requestPool(f, f.deployer, {
           collateralMarkets: [collateralMarket(collateral)],
           loanMarkets: [usdtLoanMarket(f)],
         });
+        const team = f.manager.connect(f.team);
 
-        await setPrice(f.xvsFeed, "2.5");
+        // 30,000 XVS at $4 is $120,000, under tier one's $150,000
+        await setPrice(f.xvsFeed, "4");
+        await expect(team.buildRequestProposal(requestId, "Short bond"))
+          .to.be.revertedWithCustomError(f.manager, "InsufficientBondValue")
+          .withArgs(e18("120000"), e18("150000"));
+        await setPrice(f.xvsFeed, "5");
+        await updateTier(f, TIER_ONE, { enabled: false });
+        await expect(team.buildRequestProposal(requestId, "Disabled tier"))
+          .to.be.revertedWithCustomError(f.manager, "TierDisabled")
+          .withArgs(TIER_ONE);
+        expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
+
+        await updateTier(f, TIER_ONE, { enabled: true });
         const { payload, comptroller } = await buildRequest(f, requestId);
         await executeVip(f, payload);
-
         expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.Live);
-        const bondAccount = await ethers.getContractAt("IBondAccount", await f.bondManager.bondAccounts(comptroller));
-        expect(await bondAccount.currentBondAmount()).to.equal(TIER_ONE_XVS_BOND);
-        expect(usdValue(TIER_ONE_XVS_BOND, e18("2.5"))).to.be.lt(
-          await f.policyRegistry.getRequiredBondUsd(TIER_ONE, XVS),
-        );
       });
 
       it("29. lets the team fix a pending request's feed", async () => {
@@ -1096,33 +1110,23 @@ if (FORK) {
         expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.Live);
       });
 
-      it("36. fails a VIP atomically while the loan asset has no YieldGroup", async () => {
+      it("36. refuses to build while the loan asset has no YieldGroup", async () => {
         await f.manager.connect(f.timelock).setHubYieldGroup(bscmainnet.USDT, ZERO);
         const collateral = await newCollateralToken(f, "NYG", "2");
         const request = { collateralMarkets: [collateralMarket(collateral)], loanMarkets: [usdtLoanMarket(f)] };
         const requestId = await requestPool(f, f.deployer, request);
-        const xvsBefore = await f.xvs.balanceOf(f.deployer.address);
         const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
         const usdtBefore = await f.usdt.balanceOf(f.deployer.address);
-        const { payload, comptroller } = await buildRequest(f, requestId);
-        const collateralSeed = await f.manager.requestSeeds(requestId, collateral.token.address);
-        const usdtSeed = await f.manager.requestSeeds(requestId, bscmainnet.USDT);
 
-        await expectVipToFail(payload, {
-          target: comptroller,
-          signature: "setAllowedSupplier(address,address,bool)",
-          error: "ZeroAddressNotAllowed()",
-        });
-        await expectNoPartialPool(comptroller, collateral.token.address);
-        expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Built);
-        expect(await f.xvs.balanceOf(f.manager.address)).to.equal(TIER_ONE_XVS_BOND);
-        expect(await collateral.token.balanceOf(f.manager.address)).to.equal(collateralSeed);
-        expect(await f.usdt.balanceOf(f.manager.address)).to.equal(usdtSeed);
-
-        await f.manager.connect(f.team).rejectRequest(requestId);
-        expect((await f.xvs.balanceOf(f.deployer.address)).sub(xvsBefore)).to.equal(TIER_ONE_XVS_BOND);
+        await expect(
+          f.manager.connect(f.team).buildRequestProposal(requestId, "No YieldGroup"),
+        ).to.be.revertedWithCustomError(f.builder, "ZeroAddressNotAllowed");
+        expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
         expect(await collateral.token.balanceOf(f.deployer.address)).to.equal(collateralBefore);
         expect(await f.usdt.balanceOf(f.deployer.address)).to.equal(usdtBefore);
+        expect(await f.xvs.balanceOf(f.manager.address)).to.equal(TIER_ONE_XVS_BOND);
+
+        await f.manager.connect(f.team).rejectRequest(requestId);
         await expectManagerHoldsNothing(f, [collateral.token.address]);
 
         await f.manager.connect(f.timelock).setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address);
@@ -1471,7 +1475,7 @@ if (FORK) {
         });
 
         // Known gap: closePool leaves the built markets request open, so requestPool reverts OpenRequestExists
-        it("52. clears a closed pool's open request", async () => {
+        it("52. needs Venus to reject a closed pool's stranded request", async () => {
           const late = await newCollateralToken(f, "STA", "2");
           const marketsRequestId = await requestMarkets(f, comptroller, [collateralMarket(late)]);
           await buildRequest(f, marketsRequestId);
@@ -1484,6 +1488,10 @@ if (FORK) {
           };
           await fundDeployer(f, f.deployer, fresh);
 
+          await expect(submitPoolRequest(fresh))
+            .to.be.revertedWithCustomError(f.manager, "OpenRequestExists")
+            .withArgs(marketsRequestId);
+          await f.manager.connect(f.team).rejectRequest(marketsRequestId);
           const nextRequestId = (await f.manager.requestCount()).add(1);
           await expect(submitPoolRequest(fresh))
             .to.emit(f.manager, "RequestSubmitted")
@@ -1633,6 +1641,61 @@ if (FORK) {
           await updateTier(f, TIER_TWO, { enabled: true });
           await expect(deployer.requestTierUpgrade(comptroller, TIER_TWO)).to.emit(f.manager, "RequestSubmitted");
         });
+
+        it("61. checks a tier request's bond again at build", async () => {
+          await topUpToTierTwo(f, comptroller);
+          await f.manager.connect(f.deployer).requestTierUpgrade(comptroller, TIER_TWO);
+          const requestId = (await f.manager.requestCount()).toNumber();
+
+          await setPrice(f.xvsFeed, "4.99");
+          await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Short bond"))
+            .to.be.revertedWithCustomError(f.manager, "InsufficientBondValue")
+            .withArgs(e18("374250"), e18("375000"));
+
+          await setPrice(f.xvsFeed, "5");
+          const { payload } = await buildRequest(f, requestId);
+          await executeVip(f, payload);
+          expect((await f.manager.getPool(comptroller)).tierId).to.equal(TIER_TWO);
+        });
+
+        it("62. lets the deployer withdraw excess only once its request closes", async () => {
+          const donation = e18("1000");
+          await fundXvs(f.xvs, pool.bondAccount.address, donation);
+          const markets = [collateralMarket(await newCollateralToken(f, "WDX", "2"))];
+          const requestId = await requestMarkets(f, comptroller, markets);
+          const deployer = f.manager.connect(f.deployer);
+
+          await expect(deployer.withdrawBondExcess(comptroller))
+            .to.be.revertedWithCustomError(f.manager, "OpenRequestExists")
+            .withArgs(requestId);
+          const { payload } = await buildRequest(f, requestId);
+          await expect(deployer.withdrawBondExcess(comptroller))
+            .to.be.revertedWithCustomError(f.manager, "OpenRequestExists")
+            .withArgs(requestId);
+
+          await executeVip(f, payload);
+          await expect(deployer.withdrawBondExcess(comptroller))
+            .to.emit(f.bondManager, "ExcessWithdrawn")
+            .withArgs(comptroller, donation);
+        });
+
+        it("63. clears a request's seeds once settled or rejected", async () => {
+          const [settled, rejected] = [
+            await newCollateralToken(f, "STL", "2"),
+            await newCollateralToken(f, "RJT", "2"),
+          ];
+          const settledId = await requestMarkets(f, comptroller, [collateralMarket(settled)]);
+          const { payload } = await buildRequest(f, settledId);
+          expect(await f.manager.requestSeeds(settledId, settled.token.address)).to.be.gt(0);
+          await executeVip(f, payload);
+          expect(await f.manager.requestSeeds(settledId, settled.token.address)).to.equal(0);
+
+          const rejectedId = await requestMarkets(f, comptroller, [collateralMarket(rejected)]);
+          await buildRequest(f, rejectedId);
+          expect(await f.manager.requestSeeds(rejectedId, rejected.token.address)).to.be.gt(0);
+          await f.manager.connect(f.team).rejectRequest(rejectedId);
+          expect(await f.manager.requestSeeds(rejectedId, rejected.token.address)).to.equal(0);
+        });
       });
     });
 
@@ -1717,7 +1780,7 @@ if (FORK) {
         });
       }
 
-      it("61. adds a USDC loan market to a live pool", async () => {
+      it("64. adds a USDC loan market to a live pool", async () => {
         const pool = await openDefaultPool(f);
         await fundUsdcSeed();
         const requestId = await requestMarkets(
@@ -1757,7 +1820,7 @@ if (FORK) {
         await expectManagerHoldsNothing(f, [USDC]);
       });
 
-      it("62. raises both loan markets' caps on a tier upgrade", async () => {
+      it("65. raises both loan markets' caps on a tier upgrade", async () => {
         const pool = await openTwoLoanPool();
         const comptroller = pool.comptroller.address;
         const [usdtVToken, usdcVToken] = pool.loanVTokens;
@@ -1782,7 +1845,7 @@ if (FORK) {
         }
       });
 
-      it("63. changes only the Hub caps that differ from the new tier's", async () => {
+      it("66. changes only the Hub caps that differ from the new tier's", async () => {
         const pool = await openTwoLoanPool();
         const comptroller = pool.comptroller.address;
         const [usdtVToken, usdcVToken] = pool.loanVTokens;
@@ -1818,21 +1881,30 @@ if (FORK) {
         expect(await pool.comptroller.borrowCaps(usdtVToken.address)).to.equal(TIER_TWO_LOAN_CAP);
       });
 
-      it("64. refuses a tier build once a loan asset is delisted", async () => {
+      it("67. upgrades the tier but keeps a delisted loan asset's market on its caps", async () => {
         const pool = await openTwoLoanPool();
         const comptroller = pool.comptroller.address;
+        const [usdtVToken, usdcVToken] = pool.loanVTokens;
         await topUpToTierTwo(f, comptroller);
         await f.manager.connect(f.deployer).requestTierUpgrade(comptroller, TIER_TWO);
-        const requestId = await f.manager.requestCount();
+        const requestId = (await f.manager.requestCount()).toNumber();
 
         await f.policyRegistry.connect(f.timelock).setLoanAssetConfig(USDC, { factor: 0, interestRateModels: [] });
-        await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Tier"))
-          .to.be.revertedWithCustomError(f.builder, "LoanAssetNotAllowed")
-          .withArgs(USDC);
-        expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
+        const { payload } = await buildRequest(f, requestId);
+        expect(actionList(payload)).to.deep.equal([
+          [f.manager.address, "settleRequest(uint256)"],
+          [f.yieldGroup.address, "raiseResourceCap(address,uint256)"],
+          [comptroller, "setMarketSupplyCaps(address[],uint256[])"],
+          [comptroller, "setMarketBorrowCaps(address[],uint256[])"],
+        ]);
+        await executeVip(f, payload);
 
-        await f.manager.connect(f.team).rejectRequest(requestId);
-        expect((await f.manager.getPool(comptroller)).tierId).to.equal(TIER_ONE);
+        expect((await f.manager.getPool(comptroller)).tierId).to.equal(TIER_TWO);
+        expect(await pool.comptroller.supplyCaps(usdtVToken.address)).to.equal(TIER_TWO_LOAN_CAP);
+        expect(await f.yieldGroup.resourceCap(usdtVToken.address)).to.equal(TIER_TWO_LOAN_CAP);
+        expect(await pool.comptroller.supplyCaps(usdcVToken.address)).to.equal(USDC_TIER_ONE_CAP);
+        expect(await pool.comptroller.borrowCaps(usdcVToken.address)).to.equal(USDC_TIER_ONE_CAP);
+        expect(await usdcYieldGroup.resourceCap(usdcVToken.address)).to.equal(USDC_TIER_ONE_CAP);
       });
     });
   });
