@@ -232,6 +232,15 @@ interface ISpokeBondManager {
     function getCurrentBondAmount(address comptroller) external view returns (uint256);
 
     /**
+     * @notice Returns what a new bond of `amount` would hold once deposited in its asset's source, as
+     *   `getCurrentBondAmount` values it: `amount` for an idle asset, net of the Hub's rounding and exit fee for a Hub
+     * @param asset The bond asset
+     * @param amount The amount deposited
+     * @return The amount the bond would hold, in the asset
+     */
+    function previewBondAmount(address asset, uint256 amount) external view returns (uint256);
+
+    /**
      * @notice Returns the SpokePoolManager, the only caller of `createBond`, `topUp`, `withdrawExcess`, `seize` and
      *   `release`
      * @return The SpokePoolManager

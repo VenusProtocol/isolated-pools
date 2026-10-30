@@ -210,12 +210,16 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _checkAccessAllowed("buildRequestProposal(uint256,string)");
         Request storage request = _ensureRequestStatus(requestId, RequestStatus.Pending);
 
+        // The bond may have lost value or the tier changed since the request, so it is checked again
         RequestType requestType = request.requestType;
-        if (requestType != RequestType.Pool) {
+        Contracts memory contracts = _contracts();
+        if (requestType == RequestType.Pool) {
+            SpokePoolValidationLib.validateNewBond(contracts, request.tierId, request.bondAsset, request.bondAmount);
+        } else {
             _ensurePoolStatus(request.comptroller, PoolStatus.Live);
+            SpokePoolValidationLib.validateBond(contracts, request.comptroller, request.tierId);
         }
         if (requestType != RequestType.TierUpgrade) {
-            Contracts memory contracts = _contracts();
             SpokePoolValidationLib.validateMarkets(contracts, request);
             _pullSeeds(contracts, request, requestSeeds[requestId]);
         }
@@ -303,6 +307,10 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function withdrawBondExcess(address comptroller) external nonReentrant {
         Pool storage pool = _ensureCallerHasLivePool(comptroller);
+        // An open request was checked against the current bond, so none is withdrawn until it closes
+        _ensureNoOpenRequest(msg.sender);
+        // Bad debt may take the whole bond, excess included, until it is recovered
+        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
         uint256 requiredBondAmount = SpokePoolValidationLib.requiredBondAmount(_contracts(), pool.tierId, comptroller);
         bondManager.withdrawExcess(comptroller, requiredBondAmount);
     }
@@ -411,6 +419,8 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
+    /// @dev An exit VIP already proposed stays valid: cancel it in GovernorBravo, else once the pool exits again it can
+    ///   start the wind-down without pausing the markets listed since
     function rejectExit(address comptroller) external {
         _checkAccessAllowed("rejectExit(address)");
         Pool storage pool = _ensureExitingPool(comptroller);
@@ -647,10 +657,11 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Sends the seed escrowed in `asset` to `to`; a request not built yet has none
+    /// @dev Sends the seed escrowed in `asset` to `to` and clears it; a request not built yet has none
     function _releaseSeed(mapping(address asset => uint256 seed) storage seeds, address asset, address to) private {
         uint256 seed = seeds[asset];
         if (seed != 0) {
+            delete seeds[asset];
             IERC20Upgradeable(asset).safeTransfer(to, seed);
         }
     }

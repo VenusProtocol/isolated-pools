@@ -410,9 +410,9 @@ interface ISpokePoolManager {
     error InvalidRequestStatus(uint256 requestId);
 
     /**
-     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, a set feed
-     *   has no staleness limit, two of its feeds share an oracle, it has a fallback feed without a pivot feed, or a
-     *   bound deviation of 1e18 or above
+     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, it or its
+     *   main feed has more than 18 decimals, a set feed has no staleness limit, two of its feeds share an oracle, it
+     *   has a fallback feed without a pivot feed, or a bound deviation of 1e18 or above
      * @param asset The asset
      */
     error InvalidOracleFeed(address asset);
@@ -468,6 +468,12 @@ interface ISpokePoolManager {
      * @param debtUsd The borrows and bad debt, in USD
      */
     error ResidualDebtExceeded(uint256 debtUsd);
+
+    /**
+     * @notice Thrown when a market of the pool holds bad debt, which the bond, excess included, may repay
+     * @param vToken The market
+     */
+    error BadDebtExists(address vToken);
 
     /// @notice Thrown when the bond manager is already set
     error BondManagerAlreadySet();
@@ -596,14 +602,15 @@ interface ISpokePoolManager {
     ) external;
 
     /**
-     * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. For a pool or markets
-     *   request it checks the markets again at current prices, then pulls each seed from the deployer, worth $10 at
-     *   current prices. The bond was priced at request and is not priced again
+     * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. It checks the bond
+     *   against the request's tier again at current prices. For a pool or markets request it also checks the markets
+     *   again, then pulls each seed from the deployer, worth $10 at current prices
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error The `SpokePoolValidationLib.validateNewBond` errors for a pool request, else the `validateBond` ones
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
@@ -649,7 +656,8 @@ interface ISpokePoolManager {
      * @custom:error InvalidCollateralFactors is thrown when the collateral factor is above the liquidation threshold,
      *   or the liquidation threshold is below the applied one
      * @custom:error RedundantUpdate is thrown when both values equal the applied ones
-     * @custom:error ExceedsTierLimit is thrown when either value is above the tier's limits
+     * @custom:error ExceedsTierLimit is thrown when the collateral factor, or a changed liquidation threshold, is above
+     *   the tier's limits
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error CoverageTooLow is thrown when the bond covers less than the tier's minimum coverage ratio
      * @custom:access Only the pool's deployer
@@ -706,6 +714,8 @@ interface ISpokePoolManager {
      * @custom:error NotDeployer is thrown when the caller is not the pool's deployer
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
+     * @custom:error OpenRequestExists is thrown while the deployer's latest request is still open
+     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
@@ -1031,7 +1041,7 @@ interface ISpokePoolManager {
      * @notice Returns a request's escrowed seed for a new market, pulled at the build
      * @param requestId The request
      * @param asset The market's asset
-     * @return The seed, in the asset; zero before the build; kept after the seed is released
+     * @return The seed, in the asset; zero before the build and once the seed is released
      */
     function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
 

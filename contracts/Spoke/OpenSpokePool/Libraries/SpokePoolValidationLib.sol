@@ -60,12 +60,28 @@ library SpokePoolValidationLib {
         }
     }
 
+    /**
+     * @notice Checks no market of a pool holds bad debt, which a seizure of the whole bond, excess included, may repay
+     * @param comptroller The pool's comptroller
+     * @custom:error BadDebtExists is thrown when a market of the pool holds bad debt
+     */
+    function ensureNoBadDebt(address comptroller) external view {
+        VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = vTokens.length;
+        for (uint256 i; i < marketCount; ++i) {
+            if (vTokens[i].badDebt() != 0) {
+                revert ISpokePoolManager.BadDebtExists(address(vTokens[i]));
+            }
+        }
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // Request checks
     // ──────────────────────────────────────────────────────────────────────
 
     /**
-     * @notice Checks a new pool's tier is enabled, its bond asset allowed and its bond worth what the tier requires
+     * @notice Checks a new pool's tier is enabled, its bond asset allowed and its bond worth what the tier requires,
+     *   valued as it will be once deposited in its source, so the pool's later bond checks pass at once
      * @param contracts The manager's contracts
      * @param tierId The requested tier
      * @param bondAsset The bond's asset
@@ -83,7 +99,12 @@ library SpokePoolValidationLib {
             revert ISpokePoolManager.TierDisabled(tierId);
         }
 
-        _ensureRequiredBondValue(contracts, tierId, bondAsset, bondAmount);
+        _ensureRequiredBondValue(
+            contracts,
+            tierId,
+            bondAsset,
+            contracts.bondManager.previewBondAmount(bondAsset, bondAmount)
+        );
     }
 
     /**
@@ -309,17 +330,23 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @dev Returns how many markets a pool has and how many of them are collateral; zero for a new pool. A loan market
-     *   is one whose supply allowlist is on, as its listing VIP enables it for the Hub
+     * @dev Returns how many listed markets a pool has and how many of them are collateral; zero for a new pool. An
+     *   unlisted market stays in `getAllMarkets` but takes no slot. A loan market is one whose supply allowlist is on,
+     *   as its listing VIP enables it for the Hub
      */
     function _countPoolMarkets(
         address comptroller
     ) private view returns (uint256 marketCount, uint256 collateralMarketCount) {
         if (comptroller != address(0)) {
             VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
-            marketCount = vTokens.length;
-            for (uint256 i; i < marketCount; ++i) {
-                if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vTokens[i]))) {
+            uint256 allMarketCount = vTokens.length;
+            for (uint256 i; i < allMarketCount; ++i) {
+                VToken vToken = vTokens[i];
+                if (!SpokeComptroller(comptroller).isMarketListed(vToken)) {
+                    continue;
+                }
+                ++marketCount;
+                if (!SpokeComptroller(comptroller).isSupplyAllowlistEnabled(address(vToken))) {
                     ++collateralMarketCount;
                 }
             }
@@ -388,8 +415,14 @@ library SpokePoolValidationLib {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
 
-        // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals
-        return uint256(answer) * 10 ** (36 - feed.decimals() - IERC20MetadataUpgradeable(asset).decimals());
+        // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals. It scales each separately,
+        // so it cannot price a feed or an asset with more than 18
+        uint8 feedDecimals = feed.decimals();
+        uint8 assetDecimals = IERC20MetadataUpgradeable(asset).decimals();
+        if (feedDecimals > 18 || assetDecimals > 18) {
+            revert ISpokePoolManager.InvalidOracleFeed(asset);
+        }
+        return uint256(answer) * 10 ** (36 - feedDecimals - assetDecimals);
     }
 
     /**

@@ -694,6 +694,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 supplyCap
     ) private view {
         address yieldGroup = SPOKE_POOL_MANAGER.hubYieldGroups(asset);
+        ensureNonzeroAddress(yieldGroup);
         _addAction(proposal, comptroller, "setSupplyAllowlistEnabled(address,bool)", abi.encode(vToken, true));
         _addAction(
             proposal,
@@ -708,7 +709,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
 
     /**
      * @dev Returns a tier request's VIP actions: `settleRequest`, each loan market's Hub cap set to the new tier's,
-     *   then the loan markets' supply and borrow caps in one batch each
+     *   then the loan markets' supply and borrow caps in one batch each. A market of an asset no longer lent is skipped
      */
     function _buildTierProposal(
         uint256 requestId,
@@ -730,10 +731,11 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
                 continue;
             }
 
+            // An asset no longer lent keeps its market's current caps
             address asset = VToken(vToken).underlying();
             uint256 supplyCap = _loanSupplyCap(tierId, asset);
             if (supplyCap == 0) {
-                revert LoanAssetNotAllowed(asset);
+                continue;
             }
 
             loanMarkets[loanCount] = vToken;
