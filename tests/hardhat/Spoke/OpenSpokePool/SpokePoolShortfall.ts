@@ -114,8 +114,9 @@ describe("SpokePoolShortfall", () => {
       );
     });
 
-    it("stores the manager, owner and access control manager", async () => {
+    it("stores the manager, owner and access control manager, with no incentive", async () => {
       expect(await shortfall.SPOKE_POOL_MANAGER()).to.equal(manager.address);
+      expect(await shortfall.incentiveBps()).to.equal(0);
       expect(await shortfall.owner()).to.equal(owner.address);
       expect(await shortfall.accessControlManager()).to.equal(acm.address);
     });
@@ -159,6 +160,29 @@ describe("SpokePoolShortfall", () => {
       expect(vToken.badDebtRecovered).to.have.been.calledBefore(manager.seizeBond);
 
       expect(await shortfall.connect(recoverer).callStatic.recoverBadDebt(vToken.address, BAD_DEBT)).to.equal(SEIZED);
+    });
+
+    it("adds the incentive to the payout", async () => {
+      await shortfall.updateIncentiveBps(1000);
+      const tx = await shortfall.connect(recoverer).recoverBadDebt(vToken.address, BAD_DEBT, NO_ESTIMATE);
+
+      // $200 repaid plus 10% is $220, paid as 55 of the bond asset at $4
+      await expect(tx)
+        .to.emit(shortfall, "BadDebtRecovered")
+        .withArgs(comptroller.address, vToken.address, recoverer.address, BAD_DEBT, e18("55"));
+      expect(manager.seizeBond).to.have.been.calledOnceWith(comptroller.address, e18("55"), recoverer.address);
+      await expectRepaid(tx, BAD_DEBT);
+    });
+
+    it("rounds the payout with the incentive down", async () => {
+      await shortfall.updateIncentiveBps(1);
+      oracle.getPrice.whenCalledWith(bondAsset.address).returns(e18("3"));
+      await shortfall.connect(recoverer).recoverBadDebt(vToken.address, BAD_DEBT, NO_ESTIMATE);
+
+      // $200 × 1.0001 / $3, rounded down
+      const expected = BAD_DEBT.mul(e18("2")).mul(10_001).div(e18("3").mul(10_000));
+      expect(BAD_DEBT.mul(e18("2")).mul(10_001).mod(e18("3").mul(10_000))).not.to.equal(0);
+      expect(manager.seizeBond).to.have.been.calledOnceWith(comptroller.address, expected, recoverer.address);
     });
 
     it("caps the amount at the market's bad debt", async () => {
@@ -250,6 +274,22 @@ describe("SpokePoolShortfall", () => {
       await expect(shortfall.connect(recoverer).recoverBadDebt(vToken.address, BAD_DEBT)).to.be.revertedWith(
         "amount exceeds bad debt",
       );
+    });
+  });
+
+  describe("updateIncentiveBps", () => {
+    it("reverts unless the caller is allowed", async () => {
+      await expectUnauthorized(recoverer, "updateIncentiveBps(uint256)", () =>
+        shortfall.connect(recoverer).updateIncentiveBps(1000),
+      );
+    });
+
+    it("sets the incentive and emits IncentiveBpsUpdated, and can set it back to zero", async () => {
+      await expect(shortfall.updateIncentiveBps(1000)).to.emit(shortfall, "IncentiveBpsUpdated").withArgs(0, 1000);
+      expect(await shortfall.incentiveBps()).to.equal(1000);
+
+      await expect(shortfall.updateIncentiveBps(0)).to.emit(shortfall, "IncentiveBpsUpdated").withArgs(1000, 0);
+      expect(await shortfall.incentiveBps()).to.equal(0);
     });
   });
 

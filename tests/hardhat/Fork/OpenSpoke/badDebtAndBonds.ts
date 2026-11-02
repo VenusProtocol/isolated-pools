@@ -365,6 +365,24 @@ if (FORK) {
           expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND.sub(payout));
         });
 
+        it("36. pays a recoverer the incentive governance sets on top of the bad debt's worth", async () => {
+          await expect(f.shortfall.connect(f.timelock).updateIncentiveBps(1000))
+            .to.emit(f.shortfall, "IncentiveBpsUpdated")
+            .withArgs(0, 1000);
+          const badDebt = await createBadDebt(f, pool, DEFAULT);
+          const payout = (await bondPayout(pool.loanVToken, XVS, badDebt)).mul(11).div(10);
+          // At $1 USDT and $5 XVS, plus 10%
+          expect(payout).to.equal(badDebt.mul(11).div(50));
+
+          const xvsBefore = await f.xvs.balanceOf(f.recoverer.address);
+          await expect(f.shortfall.connect(f.recoverer).recoverBadDebt(pool.loanVToken.address, badDebt))
+            .to.emit(f.shortfall, "BadDebtRecovered")
+            .withArgs(pool.comptroller.address, pool.loanVToken.address, f.recoverer.address, badDebt, payout);
+          expect(await pool.loanVToken.badDebt()).to.equal(0);
+          expect((await f.xvs.balanceOf(f.recoverer.address)).sub(xvsBefore)).to.equal(payout);
+          expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND.sub(payout));
+        });
+
         it("8. caps a recovery at the bad debt", async () => {
           const badDebt = await createBadDebt(f, pool, DEFAULT);
           const payout = await bondPayout(pool.loanVToken, XVS, badDebt);

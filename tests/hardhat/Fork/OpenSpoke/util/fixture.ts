@@ -309,6 +309,7 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
 
   await give(f.shortfall.address, "recoverBadDebt(address,uint256)", f.recoverer.address);
   await give(f.shortfall.address, "repayBadDebt(address,uint256)", timelockAddress);
+  await give(f.shortfall.address, "updateIncentiveBps(uint256)", timelockAddress);
 
   for (const signature of [
     "depositInSource(address)",

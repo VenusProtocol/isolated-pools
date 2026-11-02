@@ -26,18 +26,24 @@ import { ISpokePoolShortfall } from "../interfaces/ISpokePoolShortfall.sol";
 contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, ISpokePoolShortfall {
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
+    /// @dev The basis points in one, as `incentiveBps` counts them
+    uint256 private constant MAX_BPS = 10_000;
+
     /// @inheritdoc ISpokePoolShortfall
     ISpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
     /// @dev The manager's ResilientOracle, read at deploy
     ResilientOracleInterface internal immutable RESILIENT_ORACLE;
 
+    /// @inheritdoc ISpokePoolShortfall
+    uint256 public incentiveBps;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 
     /**
      * @param spokePoolManager The manager whose pools' bonds pay recoverers
@@ -76,7 +82,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
         uint256 bondPrice = RESILIENT_ORACLE.getPrice(address(bondAccount.asset()));
 
         uint256 repaid = _repayBadDebt(vToken, amount);
-        seizedAmount = (repaid * debtPrice) / bondPrice;
+        seizedAmount = (repaid * debtPrice * (MAX_BPS + incentiveBps)) / (bondPrice * MAX_BPS);
 
         if (seizedAmount != 0) {
             SPOKE_POOL_MANAGER.seizeBond(comptroller, seizedAmount, msg.sender);
@@ -95,6 +101,14 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
         uint256 repaid = _repayBadDebt(vToken, amount);
 
         emit BadDebtRepaid(address(vToken.comptroller()), address(vToken), msg.sender, repaid);
+    }
+
+    /// @inheritdoc ISpokePoolShortfall
+    function updateIncentiveBps(uint256 incentiveBps_) external {
+        _checkAccessAllowed("updateIncentiveBps(uint256)");
+        uint256 oldIncentiveBps = incentiveBps;
+        incentiveBps = incentiveBps_;
+        emit IncentiveBpsUpdated(oldIncentiveBps, incentiveBps_);
     }
 
     // ──────────────────────────────────────────────────────────────────────

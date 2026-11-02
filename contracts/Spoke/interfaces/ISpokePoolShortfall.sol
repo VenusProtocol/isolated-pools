@@ -36,6 +36,13 @@ interface ISpokePoolShortfall {
     event BadDebtRepaid(address indexed comptroller, address indexed vToken, address indexed payer, uint256 amount);
 
     /**
+     * @notice Emitted when the recoverers' incentive is updated
+     * @param oldIncentiveBps The previous incentive, in basis points
+     * @param newIncentiveBps The new incentive, in basis points
+     */
+    event IncentiveBpsUpdated(uint256 oldIncentiveBps, uint256 newIncentiveBps);
+
+    /**
      * @notice Thrown when a market is not listed in the pool
      * @param vToken The market
      */
@@ -48,8 +55,8 @@ interface ISpokePoolShortfall {
     error TransferAmountMismatch(address token);
 
     /**
-     * @notice Repays a market's bad debt with the caller's funds, then pays the caller its worth in the pool's bond
-     *   asset at ResilientOracle prices, at once
+     * @notice Repays a market's bad debt with the caller's funds, then pays the caller its worth plus `incentiveBps` in
+     *   the pool's bond asset at ResilientOracle prices, at once
      * @param vToken The market
      * @param amount The bad debt to repay, in the market's asset, which the caller must have approved; capped at the
      *   market's bad debt
@@ -75,6 +82,20 @@ interface ISpokePoolShortfall {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function repayBadDebt(VToken vToken, uint256 amount) external;
+
+    /**
+     * @notice Sets the recoverers' incentive: the share of the repaid bad debt's worth paid on top of it from the bond
+     * @param incentiveBps_ The incentive, in basis points; zero pays the repaid worth only
+     * @custom:event Emits IncentiveBpsUpdated
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function updateIncentiveBps(uint256 incentiveBps_) external;
+
+    /**
+     * @notice Returns the recoverers' incentive, zero until governance sets it
+     * @return The incentive, in basis points
+     */
+    function incentiveBps() external view returns (uint256);
 
     /**
      * @notice Returns the manager whose pools' bonds pay recoverers
