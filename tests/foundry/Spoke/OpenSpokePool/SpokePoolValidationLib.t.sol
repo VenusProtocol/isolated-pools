@@ -11,6 +11,7 @@ import { ISpokePoolPolicyRegistry } from "../../../../contracts/Spoke/interfaces
 import { ISpokePoolProposalBuilder } from "../../../../contracts/Spoke/interfaces/ISpokePoolProposalBuilder.sol";
 import { IRiskOracle } from "../../../../contracts/Spoke/interfaces/external/IRiskOracle.sol";
 import { IRiskStewardReceiver } from "../../../../contracts/Spoke/interfaces/external/IRiskStewardReceiver.sol";
+import { IYieldGroup } from "../../../../contracts/Spoke/interfaces/external/IYieldGroup.sol";
 import { MockToken } from "../../../../contracts/test/Mocks/MockToken.sol";
 import { OpenSpokeFuzzBase } from "./OpenSpokeFuzzBase.t.sol";
 
@@ -71,6 +72,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
     address internal loanAsset = makeAddr("loanAsset");
     address internal interestRateModel = makeAddr("interestRateModel");
     address internal supportedOracle = makeAddr("supportedOracle");
+    address internal yieldGroup = makeAddr("yieldGroup");
 
     SpokePoolPolicyRegistry internal registry;
     BondManagerStub internal bondManager;
@@ -204,7 +206,11 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         _setTier(1e18, 0, loanCapUsd);
         address[] memory models = new address[](1);
         models[0] = interestRateModel;
-        registry.setLoanAssetConfig(loanAsset, ISpokePoolPolicyRegistry.LoanAssetConfig(loanFactor, models));
+        vm.mockCall(yieldGroup, abi.encodeCall(IYieldGroup.asset, ()), abi.encode(loanAsset));
+        registry.setLoanAssetConfig(
+            loanAsset,
+            ISpokePoolPolicyRegistry.LoanAssetConfig(loanFactor, models, yieldGroup)
+        );
         oracle.setPrice(collateralAsset, collateralPrice);
         oracle.setPrice(loanAsset, loanPrice);
         request.tierId = TIER;

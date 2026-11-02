@@ -2,10 +2,15 @@ import { FakeContract, smock } from "@defi-wonderland/smock";
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
-import { BigNumberish, constants } from "ethers";
+import { BigNumber, BigNumberish, constants } from "ethers";
 import { ethers } from "hardhat";
 
-import { AccessControlManager, SpokePoolPolicyRegistry, SpokePoolPolicyRegistry__factory } from "../../../../typechain";
+import {
+  AccessControlManager,
+  IYieldGroup,
+  SpokePoolPolicyRegistry,
+  SpokePoolPolicyRegistry__factory,
+} from "../../../../typechain";
 import { deployProxy, e18, resetFakes } from "./utils";
 
 const { expect } = chai;
@@ -58,8 +63,6 @@ type Tier = { enabled: boolean; minTierBondUsd: BigNumberish; limits: typeof LIM
 
 /// The tuple a getter or event returns for `tier`
 const tierTuple = (tier: Tier) => [tier.enabled, tier.minTierBondUsd, Object.values(tier.limits)];
-/// A loan asset config, in `ISpokePoolPolicyRegistry.LoanAssetConfig` field order
-const loanConfig = (factor: BigNumberish, interestRateModels: string[]) => ({ factor, interestRateModels });
 
 /// A `withArgs` predicate deep-comparing a struct event argument with `expected`
 const deepEquals = (expected: unknown) => (actual: unknown) => {
@@ -75,20 +78,40 @@ describe("SpokePoolPolicyRegistry", () => {
   let otherIrm: SignerWithAddress;
   let other: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
+  /// Each asset's YieldGroup, whose `asset()` returns it
+  let yieldGroups: Map<string, FakeContract<IYieldGroup>>;
   let registry: SpokePoolPolicyRegistry;
   let tier: Tier;
+
+  /// A loan asset config, in `ISpokePoolPolicyRegistry.LoanAssetConfig` field order: with the asset's YieldGroup when
+  /// the factor is nonzero, else with none
+  const loanConfig = (asset: string, factor: BigNumberish, interestRateModels: string[]) => ({
+    factor,
+    interestRateModels,
+    yieldGroup: BigNumber.from(factor).isZero()
+      ? constants.AddressZero
+      : yieldGroups.get(asset)?.address ?? constants.AddressZero,
+  });
+  const yieldGroupOf = (asset: SignerWithAddress) => yieldGroups.get(asset.address)!.address;
 
   const deployFixture = async () => {
     [owner, usdt, usdc, irm, otherIrm, other] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     acm.isAllowedToCall.returns(true);
+    yieldGroups = new Map();
+    for (const asset of [usdt, usdc, other]) {
+      yieldGroups.set(asset.address, await smock.fake<IYieldGroup>("IYieldGroup"));
+    }
     registry = await deployProxy(await new SpokePoolPolicyRegistry__factory(owner).deploy(), acm.address);
   };
 
   beforeEach(async () => {
     await loadFixture(deployFixture);
-    resetFakes(acm);
+    resetFakes(acm, ...yieldGroups.values());
     acm.isAllowedToCall.returns(true);
+    for (const [asset, yieldGroup] of yieldGroups) {
+      yieldGroup.asset.returns(asset);
+    }
 
     tier = { enabled: true, minTierBondUsd: MIN_TIER_BOND_USD, limits: LIMITS };
   });
@@ -118,7 +141,8 @@ describe("SpokePoolPolicyRegistry", () => {
       { signature: "setTier(uint256,Tier)", call: () => registry.connect(other).setTier(1, tier) },
       {
         signature: "setLoanAssetConfig(address,LoanAssetConfig)",
-        call: () => registry.connect(other).setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address])),
+        call: () =>
+          registry.connect(other).setLoanAssetConfig(usdt.address, loanConfig(usdt.address, ONE, [irm.address])),
       },
       {
         signature: "setLoanAssetFactor(address,uint256)",
@@ -140,6 +164,10 @@ describe("SpokePoolPolicyRegistry", () => {
       {
         signature: "setSupportedOracles(address[])",
         call: () => registry.connect(other).setSupportedOracles([other.address]),
+      },
+      {
+        signature: "setAssetSymbol(address,string)",
+        call: () => registry.connect(other).setAssetSymbol(usdt.address, "USDT"),
       },
     ];
     for (const { signature, call } of restricted) {
@@ -210,43 +238,67 @@ describe("SpokePoolPolicyRegistry", () => {
 
   describe("loan asset configs", () => {
     it("lists a loan asset with its factor and models, and emits LoanAssetConfigUpdated", async () => {
-      await expect(registry.setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address, otherIrm.address])))
+      const usdtGroup = yieldGroupOf(usdt);
+      await expect(
+        registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, ONE, [irm.address, otherIrm.address])),
+      )
         .to.emit(registry, "LoanAssetConfigUpdated")
-        .withArgs(usdt.address, deepEquals([0, []]), deepEquals([ONE, [irm.address, otherIrm.address]]));
+        .withArgs(
+          usdt.address,
+          deepEquals([0, [], constants.AddressZero]),
+          deepEquals([ONE, [irm.address, otherIrm.address], usdtGroup]),
+        );
       expect(await registry.getLoanAssets()).to.deep.equal([usdt.address]);
-      expect(await registry.getLoanAssetConfig(usdt.address)).to.deep.equal([ONE, [irm.address, otherIrm.address]]);
+      expect(await registry.getLoanAssetConfig(usdt.address)).to.deep.equal([
+        ONE,
+        [irm.address, otherIrm.address],
+        usdtGroup,
+      ]);
       expect(await registry.isAllowedInterestRateModel(usdt.address, otherIrm.address)).to.equal(true);
       expect(await registry.isAllowedInterestRateModel(usdc.address, irm.address)).to.equal(false);
     });
 
     it("updates a listed asset in place, and delists it by moving the last asset into its place", async () => {
       for (const asset of [usdt, usdc, other]) {
-        await registry.setLoanAssetConfig(asset.address, loanConfig(ONE, [irm.address]));
+        await registry.setLoanAssetConfig(asset.address, loanConfig(asset.address, ONE, [irm.address]));
       }
 
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(e18("0.5"), [otherIrm.address]));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, e18("0.5"), [otherIrm.address]));
       expect(await registry.getLoanAssets()).to.deep.equal([usdt.address, usdc.address, other.address]);
       expect(await registry.isAllowedInterestRateModel(usdt.address, irm.address)).to.equal(false);
 
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(0, []));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, 0, []));
       expect(await registry.getLoanAssets()).to.deep.equal([other.address, usdc.address]);
+      expect(await registry.getLoanAssetConfig(usdt.address)).to.deep.equal([0, [], constants.AddressZero]);
       expect(await registry.isAllowedInterestRateModel(usdt.address, otherIrm.address)).to.equal(false);
 
-      await registry.setLoanAssetConfig(usdc.address, loanConfig(0, []));
+      await registry.setLoanAssetConfig(usdc.address, loanConfig(usdc.address, 0, []));
       expect(await registry.getLoanAssets()).to.deep.equal([other.address]);
     });
 
     it("scales a tier's loan supply cap by the factor, and gives zero to an asset not lent", async () => {
       await registry.setTier(1, tier);
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(e18("0.5"), [irm.address]));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, e18("0.5"), [irm.address]));
       expect(await registry.getLoanSupplyCapUsd(1, usdt.address)).to.equal(e18("250000"));
       expect(await registry.getLoanSupplyCapUsd(1, usdc.address)).to.equal(0);
       expect(await registry.getLoanSupplyCapUsd(2, usdt.address)).to.equal(0);
     });
 
     const invalidConfigs = [
-      { name: "a factor without a model", config: () => loanConfig(ONE, []) },
-      { name: "a model without a factor", config: () => loanConfig(0, [irm.address]) },
+      { name: "a factor without a model", config: () => loanConfig(usdt.address, ONE, []) },
+      { name: "a model without a factor", config: () => loanConfig(usdt.address, 0, [irm.address]) },
+      {
+        name: "a factor without a YieldGroup",
+        config: () => ({ ...loanConfig(usdt.address, ONE, [irm.address]), yieldGroup: constants.AddressZero }),
+      },
+      {
+        name: "a YieldGroup of another asset",
+        config: () => ({ ...loanConfig(usdt.address, ONE, [irm.address]), yieldGroup: yieldGroupOf(usdc) }),
+      },
+      {
+        name: "a YieldGroup without a factor",
+        config: () => ({ ...loanConfig(usdt.address, 0, []), yieldGroup: yieldGroupOf(usdt) }),
+      },
     ];
     for (const { name, config } of invalidConfigs) {
       it(`rejects ${name}`, async () => {
@@ -266,31 +318,37 @@ describe("SpokePoolPolicyRegistry", () => {
     ];
     for (const { name, asset, models } of zeroAddressConfigs) {
       it(`rejects ${name}`, async () => {
-        await expect(registry.setLoanAssetConfig(asset(), loanConfig(ONE, models()))).to.be.revertedWithCustomError(
-          registry,
-          "ZeroAddressNotAllowed",
-        );
+        await expect(
+          registry.setLoanAssetConfig(asset(), loanConfig(asset(), ONE, models())),
+        ).to.be.revertedWithCustomError(registry, "ZeroAddressNotAllowed");
       });
     }
 
     it("rejects a model listed twice", async () => {
       await expect(
-        registry.setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address, otherIrm.address, irm.address])),
+        registry.setLoanAssetConfig(
+          usdt.address,
+          loanConfig(usdt.address, ONE, [irm.address, otherIrm.address, irm.address]),
+        ),
       )
         .to.be.revertedWithCustomError(registry, "DuplicateInterestRateModel")
         .withArgs(usdt.address, irm.address);
     });
 
     it("setLoanAssetFactor changes a listed asset's factor and keeps its models", async () => {
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address]));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, ONE, [irm.address]));
       await expect(registry.setLoanAssetFactor(usdt.address, e18("0.5")))
         .to.emit(registry, "LoanAssetConfigUpdated")
-        .withArgs(usdt.address, deepEquals([ONE, [irm.address]]), deepEquals([e18("0.5"), [irm.address]]));
+        .withArgs(
+          usdt.address,
+          deepEquals([ONE, [irm.address], yieldGroupOf(usdt)]),
+          deepEquals([e18("0.5"), [irm.address], yieldGroupOf(usdt)]),
+        );
       expect(await registry.getLoanAssets()).to.deep.equal([usdt.address]);
     });
 
     it("setLoanAssetFactor rejects a zero factor and an unlisted asset", async () => {
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address]));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, ONE, [irm.address]));
       await expect(registry.setLoanAssetFactor(usdt.address, 0))
         .to.be.revertedWithCustomError(registry, "InvalidLoanAssetConfig")
         .withArgs(usdt.address);
@@ -300,15 +358,19 @@ describe("SpokePoolPolicyRegistry", () => {
     });
 
     it("addInterestRateModel adds a model to a listed asset", async () => {
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address]));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, ONE, [irm.address]));
       await expect(registry.addInterestRateModel(usdt.address, otherIrm.address))
         .to.emit(registry, "LoanAssetConfigUpdated")
-        .withArgs(usdt.address, deepEquals([ONE, [irm.address]]), deepEquals([ONE, [irm.address, otherIrm.address]]));
+        .withArgs(
+          usdt.address,
+          deepEquals([ONE, [irm.address], yieldGroupOf(usdt)]),
+          deepEquals([ONE, [irm.address, otherIrm.address], yieldGroupOf(usdt)]),
+        );
       expect(await registry.isAllowedInterestRateModel(usdt.address, otherIrm.address)).to.equal(true);
     });
 
     it("addInterestRateModel rejects a repeated or zero model and an unlisted asset", async () => {
-      await registry.setLoanAssetConfig(usdt.address, loanConfig(ONE, [irm.address]));
+      await registry.setLoanAssetConfig(usdt.address, loanConfig(usdt.address, ONE, [irm.address]));
       await expect(registry.addInterestRateModel(usdt.address, irm.address))
         .to.be.revertedWithCustomError(registry, "DuplicateInterestRateModel")
         .withArgs(usdt.address, irm.address);
@@ -353,6 +415,32 @@ describe("SpokePoolPolicyRegistry", () => {
 
     it("rejects a zero asset", async () => {
       await expect(registry.setBondAssetFactor(constants.AddressZero, ONE)).to.be.revertedWithCustomError(
+        registry,
+        "ZeroAddressNotAllowed",
+      );
+    });
+  });
+
+  describe("setAssetSymbol", () => {
+    it("sets, overwrites and clears an asset's symbol, emitting the old and new symbol", async () => {
+      await expect(registry.setAssetSymbol(usdt.address, "USDT"))
+        .to.emit(registry, "AssetSymbolUpdated")
+        .withArgs(usdt.address, "", "USDT");
+      expect(await registry.assetSymbols(usdt.address)).to.equal("USDT");
+
+      await expect(registry.setAssetSymbol(usdt.address, "USD"))
+        .to.emit(registry, "AssetSymbolUpdated")
+        .withArgs(usdt.address, "USDT", "USD");
+      expect(await registry.assetSymbols(usdt.address)).to.equal("USD");
+
+      await expect(registry.setAssetSymbol(usdt.address, ""))
+        .to.emit(registry, "AssetSymbolUpdated")
+        .withArgs(usdt.address, "USD", "");
+      expect(await registry.assetSymbols(usdt.address)).to.equal("");
+    });
+
+    it("rejects a zero asset", async () => {
+      await expect(registry.setAssetSymbol(constants.AddressZero, "USDT")).to.be.revertedWithCustomError(
         registry,
         "ZeroAddressNotAllowed",
       );

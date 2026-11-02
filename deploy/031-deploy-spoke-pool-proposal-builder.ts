@@ -8,9 +8,8 @@ import { readBackAddress, readBackUntil, sameAddress, toAddress, verifyDeploymen
 
 const DEPLOYMENT_NAME = "SpokePoolProposalBuilder";
 
-// The constructor rejects a value whose pool-creation VIP would not fit GovernorBravo's action limit: 9 at most with
-// 100 actions, as a collateral market takes up to 10
-const MAX_POOL_MARKETS = 9;
+// The constructor rejects a value above `MAX_VIP_MARKETS`, 5: a larger pool's build would exceed BSC's per-tx gas cap
+const MAX_POOL_MARKETS = 5;
 
 const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deployments, getNamedAccounts } = hre;

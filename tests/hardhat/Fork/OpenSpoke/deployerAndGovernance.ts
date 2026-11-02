@@ -142,7 +142,7 @@ if (FORK) {
         )
           .to.be.revertedWithCustomError(f.manager, "DeployerPaused")
           .withArgs(comptroller);
-        await expect(f.manager.connect(f.attacker).withdrawBondExcess(comptroller))
+        await expect(f.manager.connect(f.attacker).withdrawExcessBond(comptroller))
           .to.be.revertedWithCustomError(f.manager, "DeployerPaused")
           .withArgs(comptroller);
         await checkpoint();
@@ -293,7 +293,7 @@ if (FORK) {
           await notDeployer(asOther.requestNewMarkets(comptroller, [], [usdtLoanMarket(f)]));
           await notDeployer(asOther.requestTierUpgrade(comptroller, TIER_TWO));
           await notDeployer(asOther.requestExit(comptroller));
-          await notDeployer(asOther.withdrawBondExcess(comptroller));
+          await notDeployer(asOther.withdrawExcessBond(comptroller));
           await notDeployer(asOther.topUpBond(comptroller, 1));
 
           const otherCollateral = await newCollateralToken(f, "OTH", "2");
@@ -776,7 +776,7 @@ if (FORK) {
             .to.be.revertedWithCustomError(pool.bondAccount, "NotBondManager")
             .withArgs(f.attacker.address);
 
-          await expect(f.manager.connect(f.attacker).withdrawBondExcess(comptroller))
+          await expect(f.manager.connect(f.attacker).withdrawExcessBond(comptroller))
             .to.be.revertedWithCustomError(f.manager, "InvalidPoolStatus")
             .withArgs(comptroller);
           expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(leftover);
@@ -811,7 +811,7 @@ if (FORK) {
           expect(await f.manager.getExcessBondAmount(comptroller)).to.equal(excess);
 
           // Only a live, unpaused pool's deployer may withdraw excess; the escape left the pool closed
-          await expect(f.manager.connect(f.attacker).withdrawBondExcess(comptroller))
+          await expect(f.manager.connect(f.attacker).withdrawExcessBond(comptroller))
             .to.be.revertedWithCustomError(f.manager, "InvalidPoolStatus")
             .withArgs(comptroller);
           expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(requiredBond.add(excess));
@@ -855,7 +855,7 @@ if (FORK) {
 
           const donation = e18("100");
           await fundXvs(f.xvs, bondAccount, donation);
-          await expect(manager.connect(deployer).withdrawBondExcess(comptroller))
+          await expect(manager.connect(deployer).withdrawExcessBond(comptroller))
             .to.emit(f.bondManager, "ExcessWithdrawn")
             .withArgs(comptroller, donation);
 
@@ -1177,7 +1177,7 @@ if (FORK) {
 
           const donation = e18("100");
           await fundXvs(f.xvs, pool.bondAccount.address, donation);
-          await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller))
+          await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller))
             .to.be.revertedWithCustomError(f.policyRegistry, "BondAssetNotAllowed")
             .withArgs(XVS);
           await expect(f.manager.getExcessBondAmount(comptroller))
@@ -1186,7 +1186,7 @@ if (FORK) {
 
           await f.policyRegistry.connect(f.timelock).setBondAssetFactor(XVS, XVS_BOND_FACTOR);
           const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
-          await f.manager.connect(f.deployer).withdrawBondExcess(comptroller);
+          await f.manager.connect(f.deployer).withdrawExcessBond(comptroller);
           expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(donation);
         });
 
@@ -1212,7 +1212,7 @@ if (FORK) {
             .withArgs(comptroller, topUp);
           const donation = e18("50");
           await fundXvs(f.xvs, pool.bondAccount.address, donation);
-          await expect(asDeployer.withdrawBondExcess(comptroller))
+          await expect(asDeployer.withdrawExcessBond(comptroller))
             .to.be.revertedWithCustomError(f.manager, "DeployerPaused")
             .withArgs(comptroller);
 
@@ -1221,7 +1221,7 @@ if (FORK) {
             .withArgs(comptroller, false);
           await asDeployer.setCollateralFactor(comptroller, collateralVToken, e18("0.55"), e18("0.65"));
           // Everything above the required bond is excess, so the top-up comes back with the donation
-          await expect(asDeployer.withdrawBondExcess(comptroller))
+          await expect(asDeployer.withdrawExcessBond(comptroller))
             .to.emit(f.bondManager, "ExcessWithdrawn")
             .withArgs(comptroller, topUp.add(donation));
           expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND);
@@ -1494,11 +1494,6 @@ if (FORK) {
             manager => manager.callStatic.setBondManager(f.bondManager.address),
           ],
           [
-            "setHubYieldGroup(address,address)",
-            [f.timelock],
-            manager => manager.callStatic.setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address),
-          ],
-          [
             "setWindDownPeriod(uint256)",
             [f.timelock],
             manager => manager.callStatic.setWindDownPeriod(WIND_DOWN_PERIOD),
@@ -1535,7 +1530,7 @@ if (FORK) {
             manager.callStatic.setCollateralFactor(comptroller, collateralVToken.address, e18("0.55"), e18("0.6")),
           manager => manager.callStatic.setCollateralSupplyCap(comptroller, collateralVToken.address, e18("200000")),
           manager => manager.callStatic.pauseCollateralSupply(comptroller, collateralVToken.address),
-          manager => manager.callStatic.withdrawBondExcess(comptroller),
+          manager => manager.callStatic.withdrawExcessBond(comptroller),
           manager => manager.callStatic.topUpBond(comptroller, 0),
           manager => manager.callStatic.requestExit(comptroller),
         ];
@@ -1662,6 +1657,7 @@ if (FORK) {
               registry.callStatic.setLoanAssetConfig(bscmainnet.USDT, {
                 factor: usdtConfig.factor,
                 interestRateModels: usdtConfig.interestRateModels,
+                yieldGroup: usdtConfig.yieldGroup,
               }),
           ],
           [

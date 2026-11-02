@@ -27,9 +27,6 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
     /// @inheritdoc ISpokePoolManager
     uint256 public requestCount;
 
-    /// @inheritdoc ISpokePoolManager
-    mapping(address asset => address yieldGroup) public hubYieldGroups;
-
     /// @dev Pools by comptroller; read them with `getPool`
     mapping(address comptroller => Pool pool) internal pools;
 
@@ -56,5 +53,5 @@ abstract contract SpokePoolManagerStorage is ISpokePoolManager {
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[38] private __gap;
+    uint256[39] private __gap;
 }

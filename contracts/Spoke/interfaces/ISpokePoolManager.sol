@@ -235,14 +235,6 @@ interface ISpokePoolManager {
     event BondManagerSet(ISpokeBondManager indexed newBondManager);
 
     /**
-     * @notice Emitted when an asset's Hub YieldGroup is changed
-     * @param asset The loan asset
-     * @param oldYieldGroup The previous YieldGroup
-     * @param newYieldGroup The new YieldGroup
-     */
-    event HubYieldGroupUpdated(address indexed asset, address oldYieldGroup, address newYieldGroup);
-
-    /**
      * @notice Emitted when the wind-down period is changed
      * @param oldWindDownPeriod The previous period, in seconds
      * @param newWindDownPeriod The new period, in seconds
@@ -659,7 +651,7 @@ interface ISpokePoolManager {
      * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
      */
-    function withdrawBondExcess(address comptroller) external;
+    function withdrawExcessBond(address comptroller) external;
 
     /**
      * @notice Adds to the pool's bond from the caller, in any pool status while its bond is live, even while paused
@@ -767,11 +759,13 @@ interface ISpokePoolManager {
     function rejectExit(address comptroller) external;
 
     /**
-     * @notice Hands a pool whose exit is requested or built over to governance, even with bad debt. The pool keeps
-     *   running, and a built exit VIP then fails. Its bond stays, still seizable for bad debt, until `releaseBond`
+     * @notice Hands a pool over to governance: one that is live, exiting or winding down, with no bad debt. The pool
+     *   keeps running, and a built exit, markets or tier VIP then fails. Its bond stays, still seizable for bad debt,
+     *   until `releaseBond`
      * @param comptroller The pool's comptroller
      * @custom:event Emits PoolHandedOver
-     * @custom:error InvalidPoolStatus is thrown unless the pool's exit is requested or built
+     * @custom:error InvalidPoolStatus is thrown when the pool is not live, exiting or winding down
+     * @custom:error BadDebtExists is thrown when a market of the pool holds bad debt
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function handoverPoolToGovernance(address comptroller) external;
@@ -812,16 +806,6 @@ interface ISpokePoolManager {
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setBondManager(ISpokeBondManager newBondManager) external;
-
-    /**
-     * @notice Sets the Hub YieldGroup that supplies an asset's loan markets; listing and tier VIPs set its caps
-     * @param asset The loan asset
-     * @param yieldGroup The YieldGroup
-     * @custom:event Emits HubYieldGroupUpdated
-     * @custom:error ZeroAddressNotAllowed is thrown when the asset is zero
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setHubYieldGroup(address asset, address yieldGroup) external;
 
     /**
      * @notice Sets the wind-down period
@@ -867,7 +851,7 @@ interface ISpokePoolManager {
     function getPool(address comptroller) external view returns (Pool memory);
 
     /**
-     * @notice Returns what `withdrawBondExcess` would pay the pool's deployer now: what its bond holds beyond the bond
+     * @notice Returns what `withdrawExcessBond` would pay the pool's deployer now: what its bond holds beyond the bond
      *   its tier requires at current prices. It is read before the Hub accrues its fees, so the withdrawal may differ
      *   slightly
      * @param comptroller The pool's comptroller
@@ -943,13 +927,6 @@ interface ISpokePoolManager {
      * @return The count
      */
     function requestCount() external view returns (uint256);
-
-    /**
-     * @notice Returns the Hub YieldGroup that supplies an asset's loan markets
-     * @param asset The loan asset
-     * @return The YieldGroup; zero when the asset has none
-     */
-    function hubYieldGroups(address asset) external view returns (address);
 
     /**
      * @notice Returns a deployer's latest request

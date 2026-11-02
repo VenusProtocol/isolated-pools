@@ -1035,33 +1035,6 @@ if (FORK) {
         expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.Live);
       });
 
-      it("36. refuses to build while the loan asset has no YieldGroup", async () => {
-        await f.manager.connect(f.timelock).setHubYieldGroup(bscmainnet.USDT, ZERO);
-        const collateral = await newCollateralToken(f, "NYG", "2");
-        const request = { collateralMarkets: [collateralMarket(collateral)], loanMarkets: [usdtLoanMarket(f)] };
-        const requestId = await requestPool(f, f.deployer, request);
-        const collateralBefore = await collateral.token.balanceOf(f.deployer.address);
-        const usdtBefore = await f.usdt.balanceOf(f.deployer.address);
-
-        await expect(
-          f.manager.connect(f.team).buildRequestProposal(requestId, "No YieldGroup"),
-        ).to.be.revertedWithCustomError(f.builder, "ZeroAddressNotAllowed");
-        expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
-        expect(await collateral.token.balanceOf(f.deployer.address)).to.equal(collateralBefore);
-        expect(await f.usdt.balanceOf(f.deployer.address)).to.equal(usdtBefore);
-        expect(await f.xvs.balanceOf(f.manager.address)).to.equal(TIER_ONE_XVS_BOND);
-
-        await f.manager.connect(f.team).rejectRequest(requestId);
-        await expectManagerHoldsNothing(f, [collateral.token.address]);
-
-        await f.manager.connect(f.timelock).setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address);
-        const pool = await openPool(f, f.deployer, request);
-        const loanVToken = pool.loanVTokens[0].address;
-        expect((await f.manager.getPool(pool.comptroller.address)).status).to.equal(PoolStatus.Live);
-        expect(await pool.comptroller.isAllowedSupplier(loanVToken, f.yieldGroup.address)).to.equal(true);
-        expect(await f.yieldGroup.resourceCap(loanVToken)).to.equal(TIER_ONE_LOAN_CAP);
-      });
-
       it("37. refuses a request with a repeated asset", async () => {
         const collateral = await newCollateralToken(f, "DUP", "2");
         const cases: [CollateralMarketParams[], LoanMarketParams[], string][] = [
@@ -1586,16 +1559,16 @@ if (FORK) {
           const requestId = await requestMarkets(f, comptroller, markets);
           const deployer = f.manager.connect(f.deployer);
 
-          await expect(deployer.withdrawBondExcess(comptroller))
+          await expect(deployer.withdrawExcessBond(comptroller))
             .to.be.revertedWithCustomError(f.manager, "OpenRequestExists")
             .withArgs(requestId);
           const { payload } = await buildRequest(f, requestId);
-          await expect(deployer.withdrawBondExcess(comptroller))
+          await expect(deployer.withdrawExcessBond(comptroller))
             .to.be.revertedWithCustomError(f.manager, "OpenRequestExists")
             .withArgs(requestId);
 
           await executeVip(f, payload);
-          await expect(deployer.withdrawBondExcess(comptroller))
+          await expect(deployer.withdrawExcessBond(comptroller))
             .to.emit(f.bondManager, "ExcessWithdrawn")
             .withArgs(comptroller, donation);
         });
@@ -1676,10 +1649,10 @@ if (FORK) {
         await hub.setOuterWithdrawQueue([yieldGroup.address]);
 
         await pinLivePrice(f, USDC, "1");
-        await f.manager.connect(f.timelock).setHubYieldGroup(USDC, yieldGroup.address);
         await f.policyRegistry.connect(f.timelock).setLoanAssetConfig(USDC, {
           factor: USDC_LOAN_FACTOR,
           interestRateModels: [f.loanInterestRateModel.address],
+          yieldGroup: yieldGroup.address,
         });
         return yieldGroup;
       }
@@ -1809,7 +1782,9 @@ if (FORK) {
         await f.manager.connect(f.deployer).requestTierUpgrade(comptroller, TIER_TWO);
         const requestId = await f.manager.requestCount();
 
-        await f.policyRegistry.connect(f.timelock).setLoanAssetConfig(USDC, { factor: 0, interestRateModels: [] });
+        await f.policyRegistry
+          .connect(f.timelock)
+          .setLoanAssetConfig(USDC, { factor: 0, interestRateModels: [], yieldGroup: ZERO });
         await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Tier"))
           .to.be.revertedWithCustomError(f.builder, "LoanAssetNotAllowed")
           .withArgs(USDC);

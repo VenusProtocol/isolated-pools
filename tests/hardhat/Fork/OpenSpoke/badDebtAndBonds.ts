@@ -486,8 +486,11 @@ if (FORK) {
         ];
         for (const [index, [label, status, enterStatus]] of statuses.entries()) {
           it(`${14 + index}. recovers from the bond while the pool is ${label}`, async () => {
+            // A pool with bad debt cannot be handed over, so a handed-over pool takes its bad debt afterwards
+            const handedOver = status === PoolStatus.HandedOver;
+            if (handedOver) await enterStatus(pool);
             const badDebt = await createBadDebt(f, pool, SMALL_DEFAULT);
-            await enterStatus(pool);
+            if (!handedOver) await enterStatus(pool);
             expect((await f.manager.getPool(pool.comptroller.address)).status).to.equal(status);
 
             const payout = await bondPayout(pool.loanVToken, XVS, badDebt);
@@ -518,7 +521,7 @@ if (FORK) {
           expect(await f.bondManager.bondAccounts(pool.comptroller.address)).to.equal(ZERO);
           await fundXvs(f.xvs, f.deployer.address, e18("1000"));
 
-          await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+          await expect(f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address))
             .to.be.revertedWithCustomError(f.manager, "InvalidPoolStatus")
             .withArgs(pool.comptroller.address);
           await expect(f.manager.getExcessBondAmount(pool.comptroller.address))
@@ -579,7 +582,7 @@ if (FORK) {
           await fundXvs(f.xvs, pool.bondAccount.address, donation);
           expect(await f.manager.getExcessBondAmount(pool.comptroller.address)).to.equal(donation);
 
-          await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+          await expect(f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address))
             .to.be.revertedWithCustomError(f.manager, "BadDebtExists")
             .withArgs(pool.loanVToken.address);
 
@@ -590,7 +593,7 @@ if (FORK) {
           expect(await pool.loanVToken.badDebt()).to.equal(0);
 
           const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
-          await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+          await expect(f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address))
             .to.emit(f.bondManager, "ExcessWithdrawn")
             .withArgs(pool.comptroller.address, donation.sub(payout));
           expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(donation.sub(payout));
@@ -680,7 +683,7 @@ if (FORK) {
         expect(await f.manager.getExcessBondAmount(pool.comptroller.address)).to.equal(donation);
 
         const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(pool.comptroller.address, donation);
         expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(donation);
@@ -707,7 +710,7 @@ if (FORK) {
           .to.be.gte(donation.sub(10))
           .and.lt(donation.add(e18("0.01")));
         const deployerBefore = await f.usdt.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(comptroller.address, excess);
         expect((await f.usdt.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(excess);
@@ -745,7 +748,7 @@ if (FORK) {
         );
         const burned = await readAtNextBlock(f, () => hub.previewWithdraw(excess), true);
         const deployerBefore = await f.usdt.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(comptroller.address, excess)
           .and.to.emit(bondAccount, "Paid")
@@ -797,7 +800,7 @@ if (FORK) {
         expect(await f.manager.getExcessBondAmount(comptroller.address)).to.equal(excess);
 
         const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(comptroller.address, excess)
           .and.to.emit(bondAccount, "Paid")
@@ -806,7 +809,7 @@ if (FORK) {
         expect(await f.xvs.balanceOf(bondAccount.address)).to.equal(floor);
         expect(await bondAccount.currentBondAmount()).to.equal(floor);
 
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.be.revertedWithCustomError(bondAccount, "NoExcessBond")
           .withArgs(floor, floor);
       });
@@ -838,7 +841,7 @@ if (FORK) {
         expect(await f.manager.getExcessBondAmount(comptroller.address)).to.equal(excess);
 
         const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(comptroller.address, excess);
         expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(excess);
@@ -916,7 +919,7 @@ if (FORK) {
         const excess = TIER_ONE_XVS_BOND.sub(floor);
         expect(await f.manager.getExcessBondAmount(comptroller.address)).to.equal(excess);
         const deployerBefore = await f.xvs.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(comptroller.address, excess);
         expect((await f.xvs.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(excess);
@@ -925,7 +928,7 @@ if (FORK) {
         expect(await requiredBond(f, XVS)).to.equal(TIER_ONE_XVS_BOND);
         expect(await bondAccount.currentBondAmount()).to.equal(floor);
         expect(await f.manager.getExcessBondAmount(comptroller.address)).to.equal(0);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.be.revertedWithCustomError(bondAccount, "NoExcessBond")
           .withArgs(floor, TIER_ONE_XVS_BOND);
       });
@@ -944,7 +947,7 @@ if (FORK) {
         await hub.pauseHub();
         // The donation sits idle in the account, but paying out the top-up needs a Hub withdrawal
         await expect(
-          f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address),
+          f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address),
         ).to.be.revertedWithCustomError(liquidityHub(f), "HubPaused");
 
         await hub.unpauseHub();
@@ -954,7 +957,7 @@ if (FORK) {
           .to.be.gte(topUp.add(donation).sub(10))
           .and.lt(topUp.add(donation).add(e18("0.01")));
         const deployerBefore = await f.usdt.balanceOf(f.deployer.address);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(comptroller.address))
           .to.emit(f.bondManager, "ExcessWithdrawn")
           .withArgs(comptroller.address, excess);
         expect((await f.usdt.balanceOf(f.deployer.address)).sub(deployerBefore)).to.equal(excess);
@@ -981,13 +984,13 @@ if (FORK) {
 
         await f.manager.connect(f.deployer).requestExit(pool.comptroller.address);
         expect(await f.manager.getExcessBondAmount(pool.comptroller.address)).to.equal(donation);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address))
           .to.be.revertedWithCustomError(f.manager, "InvalidPoolStatus")
           .withArgs(pool.comptroller.address);
 
         await exitPool(f, pool.comptroller);
         expect((await f.manager.getPool(pool.comptroller.address)).status).to.equal(PoolStatus.WindingDown);
-        await expect(f.manager.connect(f.deployer).withdrawBondExcess(pool.comptroller.address))
+        await expect(f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address))
           .to.be.revertedWithCustomError(f.manager, "InvalidPoolStatus")
           .withArgs(pool.comptroller.address);
         expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND.add(donation));

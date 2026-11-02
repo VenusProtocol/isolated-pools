@@ -29,6 +29,9 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
     /// @inheritdoc ISpokePoolShortfall
     ISpokePoolManager public immutable SPOKE_POOL_MANAGER;
 
+    /// @dev The manager's ResilientOracle, read at deploy
+    ResilientOracleInterface internal immutable RESILIENT_ORACLE;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
@@ -44,6 +47,7 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
         ensureNonzeroAddress(address(spokePoolManager));
 
         SPOKE_POOL_MANAGER = spokePoolManager;
+        RESILIENT_ORACLE = spokePoolManager.RESILIENT_ORACLE();
 
         _disableInitializers();
     }
@@ -68,9 +72,8 @@ contract SpokePoolShortfall is AccessControlledV8, ReentrancyGuardUpgradeable, I
         address comptroller = _ensureMarketListed(vToken);
 
         IBondAccount bondAccount = IBondAccount(SPOKE_POOL_MANAGER.bondManager().bondAccounts(comptroller));
-        ResilientOracleInterface resilientOracle = SPOKE_POOL_MANAGER.RESILIENT_ORACLE();
-        uint256 debtPrice = resilientOracle.getUnderlyingPrice(address(vToken));
-        uint256 bondPrice = resilientOracle.getPrice(address(bondAccount.asset()));
+        uint256 debtPrice = RESILIENT_ORACLE.getUnderlyingPrice(address(vToken));
+        uint256 bondPrice = RESILIENT_ORACLE.getPrice(address(bondAccount.asset()));
 
         uint256 repaid = _repayBadDebt(vToken, amount);
         seizedAmount = (repaid * debtPrice) / bondPrice;

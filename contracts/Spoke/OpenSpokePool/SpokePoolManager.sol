@@ -217,7 +217,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
         request.status = RequestStatus.Settled;
         if (requestType == RequestType.Pool) {
-            _activatePool(request, requestId);
+            _activatePoolWithBond(request, requestId);
         } else if (requestType == RequestType.TierUpgrade) {
             Pool storage pool = pools[comptroller];
             emit PoolTierUpgraded(comptroller, pool.tierId, request.tierId);
@@ -282,7 +282,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     // ──────────────────────────────────────────────────────────────────────
 
     /// @inheritdoc ISpokePoolManager
-    function withdrawBondExcess(address comptroller) external nonReentrant {
+    function withdrawExcessBond(address comptroller) external nonReentrant {
         Pool storage pool = _ensureCallerHasLivePool(comptroller);
         // An open request was checked against the current bond, so none is withdrawn until it closes
         _ensureNoOpenRequest(msg.sender);
@@ -400,7 +400,10 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     ///   start the wind-down without pausing the markets listed since
     function rejectExit(address comptroller) external {
         _checkAccessAllowed("rejectExit(address)");
-        Pool storage pool = _ensureExitingPool(comptroller);
+        Pool storage pool = pools[comptroller];
+        if (pool.status != PoolStatus.ExitRequested && pool.status != PoolStatus.ExitProposed) {
+            revert InvalidPoolStatus(comptroller);
+        }
 
         pool.status = PoolStatus.Live;
 
@@ -410,7 +413,12 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function handoverPoolToGovernance(address comptroller) external {
         _checkAccessAllowed("handoverPoolToGovernance(address)");
-        Pool storage pool = _ensureExitingPool(comptroller);
+        Pool storage pool = pools[comptroller];
+        PoolStatus status = pool.status;
+        if (status == PoolStatus.None || status == PoolStatus.Closed || status == PoolStatus.HandedOver) {
+            revert InvalidPoolStatus(comptroller);
+        }
+        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
 
         pool.status = PoolStatus.HandedOver;
         delete activePools[pool.deployer];
@@ -455,15 +463,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         bondManager = newBondManager;
 
         emit BondManagerSet(newBondManager);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setHubYieldGroup(address asset, address yieldGroup) external {
-        _checkAccessAllowed("setHubYieldGroup(address,address)");
-        ensureNonzeroAddress(asset);
-
-        emit HubYieldGroupUpdated(asset, hubYieldGroups[asset], yieldGroup);
-        hubYieldGroups[asset] = yieldGroup;
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -562,7 +561,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @dev Starts a pool request's pool on its tier and moves the escrowed bond to the bond manager
-    function _activatePool(Request storage request, uint256 requestId) private {
+    function _activatePoolWithBond(Request storage request, uint256 requestId) private {
         address comptroller = request.comptroller;
         address deployer = request.deployer;
         Pool storage pool = pools[comptroller];
@@ -714,15 +713,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     function _ensurePoolStatus(address comptroller, PoolStatus status) private view returns (Pool storage pool) {
         pool = pools[comptroller];
         if (pool.status != status) {
-            revert InvalidPoolStatus(comptroller);
-        }
-    }
-
-    /// @dev Returns a pool after checking its exit is requested or proposed, so it can be rejected or handed over
-    function _ensureExitingPool(address comptroller) private view returns (Pool storage pool) {
-        pool = pools[comptroller];
-        PoolStatus status = pool.status;
-        if (status != PoolStatus.ExitRequested && status != PoolStatus.ExitProposed) {
             revert InvalidPoolStatus(comptroller);
         }
     }

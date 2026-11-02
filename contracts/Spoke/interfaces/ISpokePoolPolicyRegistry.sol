@@ -36,6 +36,8 @@ interface ISpokePoolPolicyRegistry {
         uint256 factor;
         // The models a new loan market of the asset may pick from; a live market keeps its own
         address[] interestRateModels;
+        // The Hub YieldGroup that supplies the asset's loan markets; zero for an asset not lent
+        address yieldGroup;
     }
 
     /// @notice A new pool's comptroller parameters
@@ -98,6 +100,14 @@ interface ISpokePoolPolicyRegistry {
     event LoanAssetConfigUpdated(address indexed asset, LoanAssetConfig oldConfig, LoanAssetConfig newConfig);
 
     /**
+     * @notice Emitted when the symbol new markets of an asset are named with is set
+     * @param asset The asset
+     * @param oldSymbol The previous symbol
+     * @param newSymbol The new symbol; empty for the asset's own
+     */
+    event AssetSymbolUpdated(address indexed asset, string oldSymbol, string newSymbol);
+
+    /**
      * @notice Thrown when a bond asset has no factor, being disabled or never set
      * @param asset The bond asset
      */
@@ -116,7 +126,8 @@ interface ISpokePoolPolicyRegistry {
     error InvalidTier(uint256 tierId);
 
     /**
-     * @notice Thrown when a loan asset's config has a factor but no model, or a model but no factor
+     * @notice Thrown when a loan asset's config has a factor without a model and a YieldGroup of the asset, or a model
+     *   or YieldGroup without a factor
      * @param asset The loan asset
      */
     error InvalidLoanAssetConfig(address asset);
@@ -148,20 +159,20 @@ interface ISpokePoolPolicyRegistry {
 
     /**
      * @notice Sets a loan asset's config. A nonzero factor lists the asset for new loan markets in every tier; a zero
-     *   factor, with no models, delists it. Live markets keep their caps and model
+     *   factor, with no models and no YieldGroup, delists it. Live markets keep their caps and model
      * @param asset The loan asset
      * @param config The config
      * @custom:event Emits LoanAssetConfigUpdated
      * @custom:error ZeroAddressNotAllowed is thrown when the asset or one of the models is zero
-     * @custom:error InvalidLoanAssetConfig is thrown when the config has a factor but no model, or a model but no
-     *   factor
+     * @custom:error InvalidLoanAssetConfig is thrown when the config has a factor without a model and a YieldGroup of
+     *   the asset, or a model or YieldGroup without a factor
      * @custom:error DuplicateInterestRateModel is thrown when a model is listed twice
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function setLoanAssetConfig(address asset, LoanAssetConfig calldata config) external;
 
     /**
-     * @notice Sets a listed loan asset's factor, keeping its models; delist it with `setLoanAssetConfig`
+     * @notice Sets a listed loan asset's factor, keeping its models and YieldGroup; delist it with `setLoanAssetConfig`
      * @param asset The loan asset
      * @param factor The factor, scaled by 1e18
      * @custom:event Emits LoanAssetConfigUpdated
@@ -187,7 +198,7 @@ interface ISpokePoolPolicyRegistry {
      * @notice Sets a bond asset's factor, which multiplies a tier's minimum bond for a bond in the asset: above 1e18
      *   so a volatile asset such as XVS covers more than a stablecoin, or below it for a safer one. Zero disables the
      *   asset: new pools cannot bond in it, and live pools bonded in it cannot make requests, change their risk
-     *   parameters or withdraw bond excess until it is set again. Their markets keep working
+     *   parameters or withdraw excess bond until it is set again. Their markets keep working
      * @param asset The bond asset
      * @param factor The factor, scaled by 1e18
      * @custom:event Emits BondAssetFactorUpdated
@@ -228,6 +239,17 @@ interface ISpokePoolPolicyRegistry {
     function setSupportedOracles(address[] calldata oracles) external;
 
     /**
+     * @notice Sets the symbol new markets of an asset are named with, in place of the asset's own: for an asset whose
+     *   `symbol()` reverts or returns no string, which would otherwise fail its request's build
+     * @param asset The asset
+     * @param symbol The symbol; empty to use the asset's own
+     * @custom:event Emits AssetSymbolUpdated
+     * @custom:error ZeroAddressNotAllowed is thrown when the asset is zero
+     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
+     */
+    function setAssetSymbol(address asset, string calldata symbol) external;
+
+    /**
      * @notice Returns a bond asset's factor
      * @param asset The bond asset
      * @return The factor, scaled by 1e18; zero when the asset is disabled
@@ -255,6 +277,13 @@ interface ISpokePoolPolicyRegistry {
         external
         view
         returns (address collateralInterestRateModel, uint256 reserveFactor, uint256 reduceReservesBlockDelta);
+
+    /**
+     * @notice Returns the symbol new markets of an asset are named with, when set
+     * @param asset The asset
+     * @return The symbol; empty when they use the asset's own
+     */
+    function assetSymbols(address asset) external view returns (string memory);
 
     /**
      * @notice Returns the USD bond a tier requires for a bond in an asset: the tier's minimum bond times the asset's

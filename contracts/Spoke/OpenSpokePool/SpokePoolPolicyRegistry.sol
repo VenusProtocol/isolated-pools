@@ -6,15 +6,17 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { ISpokePoolPolicyRegistry } from "../interfaces/ISpokePoolPolicyRegistry.sol";
+import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
 
 /**
  * @title SpokePoolPolicyRegistry
  * @author Venus
  * @notice Holds the policy open spoke pools run under, set by VIP: the tiers, each with its bond requirement and pool
- * limits, including the USD supply cap of a loan market; the loan assets, each with its factor on that cap and the
- * interest rate models its markets may pick from; the bond assets, each with the factor on a tier's minimum bond; the
- * comptroller and market parameters new pools and markets get; and the oracles new collateral assets' feeds may be set
- * on. It reads no pool state: callers pass values and it checks them against the policy
+ * limits, including the USD supply cap of a loan market; the loan assets, each with its factor on that cap, the
+ * interest rate models its markets may pick from and the Hub YieldGroup that supplies them; the bond assets, each with
+ * the factor on a tier's minimum bond; the comptroller and market parameters new pools and markets get; the oracles
+ * new collateral assets' feeds may be set on; and any symbol a new market is named with in place of its asset's own.
+ * It reads no pool state: callers pass values and it checks them against the policy
  * @custom:oz-upgrades-unsafe-allow constructor
  */
 contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry {
@@ -53,12 +55,15 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     /// @inheritdoc ISpokePoolPolicyRegistry
     mapping(address oracle => bool supported) public isSupportedOracle;
 
+    /// @inheritdoc ISpokePoolPolicyRegistry
+    mapping(address asset => string symbol) public assetSymbols;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[36] private __gap;
+    uint256[35] private __gap;
 
     constructor() {
         _disableInitializers();
@@ -107,8 +112,12 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
         ensureNonzeroAddress(asset);
         address[] calldata interestRateModels = config.interestRateModels;
         uint256 modelCount = interestRateModels.length;
-        // A loan asset needs a model for its markets to pick; a removed one keeps none
-        if ((config.factor == 0) != (modelCount == 0)) {
+        // A loan asset needs a model for its markets to pick and a YieldGroup of its asset to supply them; a removed
+        // one keeps neither
+        bool yieldGroupFits = config.factor != 0
+            ? config.yieldGroup != address(0) && IYieldGroup(config.yieldGroup).asset() == asset
+            : config.yieldGroup == address(0);
+        if ((config.factor == 0) != (modelCount == 0) || !yieldGroupFits) {
             revert InvalidLoanAssetConfig(asset);
         }
 
@@ -121,6 +130,7 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
 
         LoanAssetConfig memory oldConfig = current;
         current.factor = config.factor;
+        current.yieldGroup = config.yieldGroup;
         delete current.interestRateModels;
         for (uint256 i; i < modelCount; ++i) {
             _addInterestRateModel(asset, current, interestRateModels[i]);
@@ -213,6 +223,15 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
 
         emit SupportedOraclesUpdated(supportedOracles, oracles);
         supportedOracles = oracles;
+    }
+
+    /// @inheritdoc ISpokePoolPolicyRegistry
+    function setAssetSymbol(address asset, string calldata symbol) external {
+        _checkAccessAllowed("setAssetSymbol(address,string)");
+        ensureNonzeroAddress(asset);
+
+        emit AssetSymbolUpdated(asset, assetSymbols[asset], symbol);
+        assetSymbols[asset] = symbol;
     }
 
     // ──────────────────────────────────────────────────────────────────────

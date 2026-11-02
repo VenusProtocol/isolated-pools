@@ -460,7 +460,6 @@ if (FORK) {
           "buildForceCloseProposal",
           "closePool",
           "rejectExit",
-          "handoverPoolToGovernance",
           "releaseBond",
         ]);
         await expect(
@@ -490,7 +489,6 @@ if (FORK) {
           "buildExitProposal",
           "startWindDown",
           "rejectExit",
-          "handoverPoolToGovernance",
           "releaseBond",
         ]);
         await expect(calls.buildForceCloseProposal()).to.be.revertedWithCustomError(

@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import { SpokePoolPolicyRegistry } from "../../../../contracts/Spoke/OpenSpokePool/SpokePoolPolicyRegistry.sol";
 import { ISpokePoolPolicyRegistry } from "../../../../contracts/Spoke/interfaces/ISpokePoolPolicyRegistry.sol";
+import { IYieldGroup } from "../../../../contracts/Spoke/interfaces/external/IYieldGroup.sol";
 import { OpenSpokeFuzzBase } from "./OpenSpokeFuzzBase.t.sol";
 
 /**
@@ -18,6 +19,7 @@ contract SpokePoolPolicyRegistryFuzzTest is OpenSpokeFuzzBase {
     SpokePoolPolicyRegistry internal registry;
     address internal asset = makeAddr("asset");
     address internal interestRateModel = makeAddr("interestRateModel");
+    address internal yieldGroup = makeAddr("yieldGroup");
 
     function setUp() public override {
         super.setUp();
@@ -213,7 +215,8 @@ contract SpokePoolPolicyRegistryFuzzTest is OpenSpokeFuzzBase {
 
         address[] memory models = new address[](1);
         models[0] = interestRateModel;
-        registry.setLoanAssetConfig(asset, ISpokePoolPolicyRegistry.LoanAssetConfig(factor, models));
+        vm.mockCall(yieldGroup, abi.encodeCall(IYieldGroup.asset, ()), abi.encode(asset));
+        registry.setLoanAssetConfig(asset, ISpokePoolPolicyRegistry.LoanAssetConfig(factor, models, yieldGroup));
         uint256 cap = registry.getLoanSupplyCapUsd(TIER_A, asset);
         assertEq(cap, (tier.limits.loanSupplyCapUsd * factor) / 1e18);
         if (factor <= 1e18) {

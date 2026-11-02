@@ -298,7 +298,6 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
     "handoverPoolToGovernance(address)",
     "setProposalBuilder(address)",
     "setBondManager(address)",
-    "setHubYieldGroup(address,address)",
     "setWindDownPeriod(uint256)",
     "setMaxResidualPoolDebtUsd(uint256)",
     "sweepToken(address,address,uint256)",
@@ -385,6 +384,7 @@ async function configurePolicy(f: OpenSpokeFixture) {
   await registry.setLoanAssetConfig(bscmainnet.USDT, {
     factor: e18("1"),
     interestRateModels: [f.loanInterestRateModel.address],
+    yieldGroup: f.yieldGroup.address,
   });
   await registry.setBondAssetFactor(XVS, XVS_BOND_FACTOR);
   await registry.setBondAssetFactor(bscmainnet.USDT, USDT_BOND_FACTOR);
@@ -407,7 +407,6 @@ async function configurePolicy(f: OpenSpokeFixture) {
   const manager = f.manager.connect(f.timelock);
   await manager.setBondManager(f.bondManager.address);
   await manager.setProposalBuilder(f.builder.address);
-  await manager.setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address);
   await manager.setWindDownPeriod(WIND_DOWN_PERIOD);
   await manager.setMaxResidualPoolDebtUsd(MAX_RESIDUAL_POOL_DEBT_USD);
 
@@ -519,7 +518,7 @@ async function deployOpenSpokeFixture(): Promise<OpenSpokeFixture> {
     stack.vTokenBeacon.address,
     bscmainnet.PSR,
     shortfall.address,
-    9,
+    5,
   )) as SpokePoolProposalBuilder;
   const supplyPauseSteward = await deployArtifactProxy(admin, SUPPLY_PAUSE_STEWARD_ARTIFACT, [
     CORE_POOL_COMPTROLLER,

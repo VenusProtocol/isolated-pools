@@ -33,8 +33,9 @@ import { RequestStatus, RequestType, deployProxy, e18, resetFakes } from "./util
 const { expect } = chai;
 chai.use(smock.matchers);
 
-const MAX_OPERATIONS = 100;
 const MAX_POOL_MARKETS = 5;
+/// The builder's MAX_VIP_MARKETS
+const MAX_VIP_MARKETS = 5;
 /// A new pool's VIP actions besides its markets': acceptOwnership, addPool and settleRequest
 const POOL_CREATION_ACTIONS = 3;
 /// One batch per supported oracle a new feed is on, at most three, and the ResilientOracle's
@@ -129,9 +130,16 @@ describe("SpokePoolProposalBuilder", () => {
     limits: { ...LIMITS, loanSupplyCapUsd },
   });
 
-  /// Lists `asset` as a loan asset at a factor of 1, so its supply cap is the tier's USD cap at its price
-  const listLoanAsset = (asset: MockToken) =>
-    policyRegistry.setLoanAssetConfig(asset.address, { factor: e18("1"), interestRateModels: [loanIrm.address] });
+  /// Lists `asset` as a loan asset at a factor of 1, so its supply cap is the tier's USD cap at its price, supplied by
+  /// `yieldGroup`
+  const listLoanAsset = (asset: MockToken) => {
+    yieldGroup.asset.returns(asset.address);
+    return policyRegistry.setLoanAssetConfig(asset.address, {
+      factor: e18("1"),
+      interestRateModels: [loanIrm.address],
+      yieldGroup: yieldGroup.address,
+    });
+  };
 
   const feedOn = (oracle: string, feed: string): Feed => ({ oracle, feed, maxStalePeriod: MAX_STALE_PERIOD });
 
@@ -389,15 +397,11 @@ describe("SpokePoolProposalBuilder", () => {
   /// The shared fakes' default behaviour, reapplied before every test
   const programFakes = () => {
     acm.isAllowedToCall.returns(true);
-    governor.proposalMaxOperations.returns(MAX_OPERATIONS);
     governor.proposalTimelocks.whenCalledWith(0).returns(timelock.address);
     resilientOracle.getPrice.returns(e18("1"));
     manager.POLICY_REGISTRY.returns(policyRegistry.address);
     manager.RESILIENT_ORACLE.returns(resilientOracle.address);
     manager.accessControlManager.returns(acm.address);
-    for (const asset of [usdt, usdc, wbtc, dai]) {
-      manager.hubYieldGroups.whenCalledWith(asset.address).returns(yieldGroup.address);
-    }
     for (const asset of tokenDecimals.keys()) {
       manager.requestSeeds.whenCalledWith(REQUEST_ID, asset).returns(seedOf(asset));
     }
@@ -499,14 +503,11 @@ describe("SpokePoolProposalBuilder", () => {
 
     it("rejects more markets per pool than a new pool's VIP can hold", async () => {
       const factory = new SpokePoolProposalBuilder__factory(deployer);
-      const largest = Math.floor(
-        (MAX_OPERATIONS - POOL_CREATION_ACTIONS - ORACLE_CONFIG_ACTIONS) / MAX_ACTIONS_PER_MARKET,
-      );
-      await expect(factory.deploy(...builderAddresses(), largest + 1))
+      await expect(factory.deploy(...builderAddresses(), MAX_VIP_MARKETS + 1))
         .to.be.revertedWithCustomError(factory, "TooManyMarkets")
-        .withArgs(largest + 1, largest);
-      const largestBuilder = await factory.deploy(...builderAddresses(), largest);
-      expect(await largestBuilder.MAX_POOL_MARKETS()).to.equal(largest);
+        .withArgs(MAX_VIP_MARKETS + 1, MAX_VIP_MARKETS);
+      const largestBuilder = await factory.deploy(...builderAddresses(), MAX_VIP_MARKETS);
+      expect(await largestBuilder.MAX_POOL_MARKETS()).to.equal(MAX_VIP_MARKETS);
     });
 
     it("stores its dependencies", async () => {
@@ -529,6 +530,17 @@ describe("SpokePoolProposalBuilder", () => {
       await expect(builder.connect(deployer).buildRequestProposal(REQUEST_ID, DESCRIPTION))
         .to.be.revertedWithCustomError(builder, "NotSpokePoolManager")
         .withArgs(deployer.address);
+    });
+
+    // The build's last branch takes any type that is not Pool or TierUpgrade as NewMarkets, which holds only while
+    // decoding rejects a value past `RequestType`. A new type makes 3 valid and builds it as NewMarkets: branch it first
+    it("rejects a request type past the three its dispatch handles", async () => {
+      const [comptroller] = await buildRequest(request({ collateralMarkets: [collateralMarket(colA)] }));
+      registerPool(comptroller);
+      manager.getRequest.returns(request({ requestType: 3, comptroller, collateralMarkets: [collateralMarket(colB)] }));
+      await expect(
+        builder.connect(manager.wallet).buildRequestProposal(REQUEST_ID, DESCRIPTION),
+      ).to.be.revertedWithoutReason();
     });
 
     describe("pool and markets requests", () => {
@@ -563,12 +575,15 @@ describe("SpokePoolProposalBuilder", () => {
         ]);
       });
 
-      it("rejects a loan market whose asset has no Hub YieldGroup", async () => {
-        manager.hubYieldGroups.whenCalledWith(usdt.address).returns(constants.AddressZero);
-        await expect(buildRequest(request({ loanMarkets: [loanMarket()] }))).to.be.revertedWithCustomError(
-          builder,
-          "ZeroAddressNotAllowed",
+      it("names a market with the registry's symbol for its asset when set, in place of the asset's own", async () => {
+        await policyRegistry.setAssetSymbol(colA.address, "CA");
+        const [comptroller, vTokens] = await buildRequest(
+          request({ collateralMarkets: [collateralMarket(colA)], loanMarkets: [loanMarket()] }),
         );
+        await expectMarkets(comptroller, NEW_POOL, [
+          { vToken: vTokens[0], asset: colA.address, symbol: "CA", interestRateModel: collateralIrm.address },
+          { vToken: vTokens[1], asset: usdt.address, symbol: "USDT", interestRateModel: loanIrm.address },
+        ]);
       });
 
       it("lists each market with its own seed from the manager, burning the vTokens it mints at its decimals' exchange rate", async () => {
@@ -608,13 +623,8 @@ describe("SpokePoolProposalBuilder", () => {
         ]);
       });
 
-      it("fits a request of the most markets with the most actions in a VIP limit that only just allows that many", async () => {
+      it("keeps a request of the most markets with the most actions within the counts MAX_VIP_MARKETS is sized by", async () => {
         const actionLimit = POOL_CREATION_ACTIONS + ORACLE_CONFIG_ACTIONS + MAX_ACTIONS_PER_MARKET * MAX_POOL_MARKETS;
-        governor.proposalMaxOperations.returns(actionLimit);
-        const tightBuilder = await new SpokePoolProposalBuilder__factory(deployer).deploy(
-          ...builderAddresses(),
-          MAX_POOL_MARKETS,
-        );
         const loanAssets = [usdt, usdc, wbtc, dai];
         for (const asset of loanAssets) {
           await listLoanAsset(asset);
@@ -623,7 +633,6 @@ describe("SpokePoolProposalBuilder", () => {
 
         const [comptroller, vTokens, proposal] = await buildRequest(
           request({ collateralMarkets: [collateral], loanMarkets: loanAssets.map(asset => loanMarket(asset)) }),
-          tightBuilder,
         );
         expect(vTokens).to.have.length(MAX_POOL_MARKETS);
         const actions: Action[] = [
@@ -815,7 +824,11 @@ describe("SpokePoolProposalBuilder", () => {
       });
 
       it("rejects a pool with a market of an asset no longer lent", async () => {
-        await policyRegistry.setLoanAssetConfig(usdt.address, { factor: 0, interestRateModels: [] });
+        await policyRegistry.setLoanAssetConfig(usdt.address, {
+          factor: 0,
+          interestRateModels: [],
+          yieldGroup: constants.AddressZero,
+        });
         await expect(buildTier()).to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed").withArgs(usdt.address);
       });
     });

@@ -18,6 +18,7 @@ import {
   IRiskStewardReceiver,
   ISpokeBondManager,
   ISpokePoolProposalBuilder,
+  IYieldGroup,
   MockToken,
   MockToken__factory,
   PoolRegistry,
@@ -96,7 +97,6 @@ describe("SpokePoolManager", () => {
   let timelock: SignerWithAddress;
   let other: SignerWithAddress;
   let irm: SignerWithAddress;
-  let yieldGroup: SignerWithAddress;
   let chainlinkOracle: SignerWithAddress;
   let redstoneOracle: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
@@ -324,8 +324,15 @@ describe("SpokePoolManager", () => {
     comptroller.isSupplyAllowlistEnabled.whenCalledWith(vTokenB.address).returns(true);
   };
 
+  /// A YieldGroup of `asset`, for listing it as a loan asset
+  const yieldGroupOf = async (asset: string) => {
+    const yieldGroup = await smock.fake<IYieldGroup>("IYieldGroup");
+    yieldGroup.asset.returns(asset);
+    return yieldGroup.address;
+  };
+
   const deployFixture = async () => {
-    [owner, deployer, timelock, other, irm, yieldGroup, chainlinkOracle, redstoneOracle] = await ethers.getSigners();
+    [owner, deployer, timelock, other, irm, chainlinkOracle, redstoneOracle] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     oracle = await smock.fake<ResilientOracleInterface & IResilientOracle>([
       ...ResilientOracleInterface__factory.abi,
@@ -354,7 +361,11 @@ describe("SpokePoolManager", () => {
     }
 
     policyRegistry = await deployProxy(await new SpokePoolPolicyRegistry__factory(owner).deploy(), acm.address);
-    await policyRegistry.setLoanAssetConfig(loanAsset.address, { factor: e18("1"), interestRateModels: [irm.address] });
+    await policyRegistry.setLoanAssetConfig(loanAsset.address, {
+      factor: e18("1"),
+      interestRateModels: [irm.address],
+      yieldGroup: await yieldGroupOf(loanAsset.address),
+    });
     await policyRegistry.setTier(1, tier(BOND, LOAN_CAP));
     await policyRegistry.setTier(
       2,
@@ -453,7 +464,6 @@ describe("SpokePoolManager", () => {
       ["unpauseDeployer(address)", () => m().unpauseDeployer(comptroller.address)],
       ["setProposalBuilder(address)", () => m().setProposalBuilder(builder.address)],
       ["setBondManager(address)", () => m().setBondManager(bondManager.address)],
-      ["setHubYieldGroup(address,address)", () => m().setHubYieldGroup(loanAsset.address, yieldGroup.address)],
       ["setWindDownPeriod(uint256)", () => m().setWindDownPeriod(1)],
       ["setMaxResidualPoolDebtUsd(uint256)", () => m().setMaxResidualPoolDebtUsd(1)],
       ["sweepToken(address,address,uint256)", () => m().sweepToken(bondToken.address, other.address, 1)],
@@ -653,6 +663,7 @@ describe("SpokePoolManager", () => {
       await policyRegistry.setLoanAssetConfig(bondToken.address, {
         factor: e18("1"),
         interestRateModels: [irm.address],
+        yieldGroup: await yieldGroupOf(bondToken.address),
       });
       const requestId = (await manager.requestCount()).add(1);
       await expect(
@@ -1150,7 +1161,11 @@ describe("SpokePoolManager", () => {
 
     it("checks the markets against the current policy again, rejecting a delisted loan asset", async () => {
       await requestPool();
-      await policyRegistry.setLoanAssetConfig(loanAsset.address, { factor: 0, interestRateModels: [] });
+      await policyRegistry.setLoanAssetConfig(loanAsset.address, {
+        factor: 0,
+        interestRateModels: [],
+        yieldGroup: constants.AddressZero,
+      });
       await expect(build(1)).to.be.revertedWithCustomError(manager, "LoanAssetNotAllowed").withArgs(loanAsset.address);
     });
 
@@ -1678,20 +1693,20 @@ describe("SpokePoolManager", () => {
   describe("bond functions", () => {
     beforeEach(activatePool);
 
-    describe("withdrawBondExcess", () => {
+    describe("withdrawExcessBond", () => {
       it("withdraws the bond's excess", async () => {
-        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        await manager.connect(deployer).withdrawExcessBond(comptroller.address, NO_ESTIMATE);
         expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, BOND);
       });
 
       it("keeps the tier's required bond, at the current price and rounded up, in the bond", async () => {
         await policyRegistry.setBondAssetFactor(bondToken.address, e18("1.5"));
         setPrice(bondToken.address, e18("3"));
-        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        await manager.connect(deployer).withdrawExcessBond(comptroller.address, NO_ESTIMATE);
         expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, e18("500"));
 
         setPrice(bondToken.address, e18("7"));
-        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        await manager.connect(deployer).withdrawExcessBond(comptroller.address, NO_ESTIMATE);
         expect(bondManager.withdrawExcess).to.have.callCount(2);
         const [pool, floor] = bondManager.withdrawExcess.getCall(1).args;
         expect(pool).to.equal(comptroller.address);
@@ -1701,40 +1716,40 @@ describe("SpokePoolManager", () => {
 
       it("reverts while the deployer's latest request is pending or built, then works once it closes", async () => {
         const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
-        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
+        await expect(manager.connect(deployer).withdrawExcessBond(comptroller.address))
           .to.be.revertedWithCustomError(manager, "OpenRequestExists")
           .withArgs(requestId);
 
         await build(requestId, [vTokenC.address]);
-        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
+        await expect(manager.connect(deployer).withdrawExcessBond(comptroller.address))
           .to.be.revertedWithCustomError(manager, "OpenRequestExists")
           .withArgs(requestId);
 
         await manager.rejectRequest(requestId);
-        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        await manager.connect(deployer).withdrawExcessBond(comptroller.address, NO_ESTIMATE);
         expect(bondManager.withdrawExcess).to.have.been.calledOnce;
       });
 
       it("reverts while a market of the pool holds bad debt, a wei included", async () => {
         vTokenB.badDebt.returns(1);
-        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
+        await expect(manager.connect(deployer).withdrawExcessBond(comptroller.address))
           .to.be.revertedWithCustomError(manager, "BadDebtExists")
           .withArgs(vTokenB.address);
 
         vTokenB.badDebt.returns(0);
-        await manager.connect(deployer).withdrawBondExcess(comptroller.address, NO_ESTIMATE);
+        await manager.connect(deployer).withdrawExcessBond(comptroller.address, NO_ESTIMATE);
         expect(bondManager.withdrawExcess).to.have.been.calledOnce;
       });
 
       it("reverts once the bond asset has no factor", async () => {
         await policyRegistry.setBondAssetFactor(bondToken.address, 0);
-        await expect(manager.connect(deployer).withdrawBondExcess(comptroller.address))
+        await expect(manager.connect(deployer).withdrawExcessBond(comptroller.address))
           .to.be.revertedWithCustomError(policyRegistry, "BondAssetNotAllowed")
           .withArgs(bondToken.address);
       });
 
       it("reverts for anyone but an active deployer of a live pool", async () => {
-        await expectActiveDeployerOnly(signer => manager.connect(signer).withdrawBondExcess(comptroller.address));
+        await expectActiveDeployerOnly(signer => manager.connect(signer).withdrawExcessBond(comptroller.address));
       });
     });
 
@@ -1747,7 +1762,7 @@ describe("SpokePoolManager", () => {
         expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(0);
       });
 
-      it("uses withdrawBondExcess's floor", async () => {
+      it("uses withdrawExcessBond's floor", async () => {
         await policyRegistry.setBondAssetFactor(bondToken.address, e18("1.5"));
         setPrice(bondToken.address, e18("7"));
         bondManager.getCurrentBondAmount.returns(e18("1200"));
@@ -2164,14 +2179,42 @@ describe("SpokePoolManager", () => {
           .withArgs(comptroller.address);
       });
 
-      it("reverts before the exit or once the wind-down starts", async () => {
+      it("hands over a live pool", async () => {
         await expect(manager.handoverPoolToGovernance(comptroller.address))
-          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+          .to.emit(manager, "PoolHandedOver")
           .withArgs(comptroller.address);
+        expect(await manager.activePools(deployer.address)).to.equal(constants.AddressZero);
+      });
+
+      it("hands over a winding-down pool", async () => {
         await startWindDown();
+        await manager.handoverPoolToGovernance(comptroller.address);
+        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.HandedOver);
+      });
+
+      it("reverts for an unknown or handed-over pool", async () => {
+        await expect(manager.handoverPoolToGovernance(other.address))
+          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+          .withArgs(other.address);
+        await manager.handoverPoolToGovernance(comptroller.address);
         await expect(manager.handoverPoolToGovernance(comptroller.address))
           .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
           .withArgs(comptroller.address);
+      });
+
+      it("reverts for a closed pool", async () => {
+        await startWindDown();
+        await manager.closePool(comptroller.address);
+        await expect(manager.handoverPoolToGovernance(comptroller.address))
+          .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+          .withArgs(comptroller.address);
+      });
+
+      it("reverts while a market of the pool holds bad debt", async () => {
+        vTokenA.badDebt.returns(1);
+        await expect(manager.handoverPoolToGovernance(comptroller.address))
+          .to.be.revertedWithCustomError(manager, "BadDebtExists")
+          .withArgs(vTokenA.address);
       });
     });
   });
@@ -2200,20 +2243,6 @@ describe("SpokePoolManager", () => {
         .to.emit(fresh, "BondManagerSet")
         .withArgs(bondManager.address);
       expect(await fresh.bondManager()).to.equal(bondManager.address);
-    });
-
-    it("setHubYieldGroup sets an asset's YieldGroup", async () => {
-      await expect(manager.setHubYieldGroup(loanAsset.address, yieldGroup.address))
-        .to.emit(manager, "HubYieldGroupUpdated")
-        .withArgs(loanAsset.address, constants.AddressZero, yieldGroup.address);
-      expect(await manager.hubYieldGroups(loanAsset.address)).to.equal(yieldGroup.address);
-      await expect(manager.setHubYieldGroup(loanAsset.address, constants.AddressZero))
-        .to.emit(manager, "HubYieldGroupUpdated")
-        .withArgs(loanAsset.address, yieldGroup.address, constants.AddressZero);
-      await expect(manager.setHubYieldGroup(constants.AddressZero, yieldGroup.address)).to.be.revertedWithCustomError(
-        manager,
-        "ZeroAddressNotAllowed",
-      );
     });
 
     it("setWindDownPeriod sets a non-zero wind-down period", async () => {
@@ -2257,7 +2286,7 @@ describe("SpokePoolManager", () => {
       ["buildRequestProposal", () => manager.interface.encodeFunctionData("buildRequestProposal", [1, DESCRIPTION])],
       ["settleRequest", () => manager.interface.encodeFunctionData("settleRequest", [1])],
       ["rejectRequest", () => manager.interface.encodeFunctionData("rejectRequest", [1])],
-      ["withdrawBondExcess", () => manager.interface.encodeFunctionData("withdrawBondExcess", [comptroller.address])],
+      ["withdrawExcessBond", () => manager.interface.encodeFunctionData("withdrawExcessBond", [comptroller.address])],
       ["topUpBond", () => manager.interface.encodeFunctionData("topUpBond", [comptroller.address, 1])],
       ["seizeBond", () => manager.interface.encodeFunctionData("seizeBond", [comptroller.address, 1, other.address])],
       ["releaseBond", () => manager.interface.encodeFunctionData("releaseBond", [comptroller.address])],
