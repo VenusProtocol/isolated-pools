@@ -564,21 +564,6 @@ describe("SpokeBondManager", () => {
     });
   });
 
-  describe("previewBondAmount", () => {
-    it("returns the amount itself for an idle asset", async () => {
-      expect(await bondManager.previewBondAmount(idleToken.address, BOND)).to.equal(BOND);
-    });
-
-    it("returns what a new Hub bond of the amount holds, net of the Hub's exit fee", async () => {
-      await hub.setRedeemFeeBps(30);
-      const preview = await bondManager.previewBondAmount(usdt.address, BOND);
-      expect(preview).to.be.lt(BOND);
-
-      await createHubBond();
-      expect(await bondManager.getCurrentBondAmount(comptroller.address)).to.equal(preview);
-    });
-  });
-
   describe("release", () => {
     it("detaches the account from its pool", async () => {
       const account = await createIdleBond();

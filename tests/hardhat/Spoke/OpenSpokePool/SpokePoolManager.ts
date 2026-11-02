@@ -329,7 +329,6 @@ describe("SpokePoolManager", () => {
       feed.decimals.returns(FEED_DECIMALS);
     }
     bondManager.bondAccounts.returns(bondAccount.address);
-    bondManager.previewBondAmount.returns(([, amount]: [string, BigNumber]) => amount);
     bondAccount.asset.returns(bondToken.address);
     setBond(BOND);
     comptroller.isMarketListed.returns(true);
@@ -640,13 +639,6 @@ describe("SpokePoolManager", () => {
       await expect(requestPool())
         .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
         .withArgs(e18("999"), BOND);
-    });
-
-    it("values the bond as it will be held once deposited in its source", async () => {
-      bondManager.previewBondAmount.whenCalledWith(bondToken.address, BOND).returns(BOND.sub(1));
-      await expect(requestPool())
-        .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
-        .withArgs(BOND.sub(1), BOND);
     });
   });
 
@@ -1288,14 +1280,6 @@ describe("SpokePoolManager", () => {
       await requestPool();
       await policyRegistry.setTier(1, { ...tier(BOND, LOAN_CAP), enabled: false });
       await expect(build(1)).to.be.revertedWithCustomError(manager, "TierDisabled").withArgs(1);
-    });
-
-    it("values a pool request's bond as it will be held once deposited", async () => {
-      await requestPool();
-      bondManager.previewBondAmount.returns(BOND.sub(1));
-      await expect(build(1))
-        .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
-        .withArgs(BOND.sub(1), BOND);
     });
 
     it("checks a markets request's bond against the pool's tier again", async () => {

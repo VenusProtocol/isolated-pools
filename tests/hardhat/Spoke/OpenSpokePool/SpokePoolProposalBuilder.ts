@@ -969,22 +969,9 @@ describe("SpokePoolProposalBuilder", () => {
         expectActions(proposal, [settlement()]);
       });
 
-      it("keeps the caps of a market whose asset is no longer lent, moving the other loan markets to the new tier", async () => {
-        const usdcCap = parseUnits("200", 6);
-        const usdcVToken = fakeVToken(usdc.address);
-        comptroller.getAllMarkets.returns([loanVToken.address, collateralVToken.address, usdcVToken.address]);
-        makeLoanMarket(comptroller, usdcVToken.address);
-        yieldGroup.resourceCap.whenCalledWith(usdcVToken.address).returns(parseUnits("300", 6));
-        await listLoanAsset(usdc);
-        resilientOracle.getPrice.whenCalledWith(usdc.address).returns(parseUnits("5000", 30));
+      it("rejects a pool with a market of an asset no longer lent", async () => {
         await policyRegistry.setLoanAssetConfig(usdt.address, { factor: 0, interestRateModels: [] });
-
-        const [, , proposal] = await buildTier();
-        expectActions(proposal, [
-          settlement(),
-          hubCapAction("lowerResourceCap(address,uint256)", usdcCap, usdcVToken.address),
-          ...capActions(comptroller.address, [usdcVToken.address], [usdcCap]),
-        ]);
+        await expect(buildTier()).to.be.revertedWithCustomError(builder, "LoanAssetNotAllowed").withArgs(usdt.address);
       });
     });
   });

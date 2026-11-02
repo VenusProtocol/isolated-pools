@@ -514,20 +514,13 @@ if (FORK) {
       it("15. deposits a LiquidityHub USDT bond in the Hub", async () => {
         await useLiquidityHubBonds(f);
         const collateral = await newCollateralToken(f, "LHB", "2");
-        const minimum = e18("100000");
-        const request = {
+        const bondAmount = e18("100000");
+        const pool = await openPool(f, f.deployer, {
           bondAsset: bscmainnet.USDT,
-          bondAmount: minimum,
+          bondAmount,
           collateralMarkets: [collateralMarket(collateral)],
           loanMarkets: [usdtLoanMarket(f)],
-        };
-        const previewed = await f.bondManager.previewBondAmount(bscmainnet.USDT, minimum);
-        expect(previewed).to.be.lt(minimum);
-        await expect(requestPool(f, f.deployer, request))
-          .to.be.revertedWithCustomError(f.manager, "InsufficientBondValue")
-          .withArgs(previewed, minimum);
-
-        const pool = await openPool(f, f.deployer, { ...request, bondAmount: minimum.add(1) });
+        });
         const shares = await f.hub.balanceOf(pool.bondAccount.address);
         expect(shares).to.be.gt(0);
         expect(await f.usdt.balanceOf(pool.bondAccount.address)).to.equal(0);
@@ -1906,30 +1899,21 @@ if (FORK) {
         expect(await pool.comptroller.borrowCaps(usdtVToken.address)).to.equal(TIER_TWO_LOAN_CAP);
       });
 
-      it("67. upgrades the tier but keeps a delisted loan asset's market on its caps", async () => {
+      it("67. refuses a tier build once a loan asset is delisted", async () => {
         const pool = await openTwoLoanPool();
         const comptroller = pool.comptroller.address;
-        const [usdtVToken, usdcVToken] = pool.loanVTokens;
         await topUpToTierTwo(f, comptroller);
         await f.manager.connect(f.deployer).requestTierUpgrade(comptroller, TIER_TWO);
-        const requestId = (await f.manager.requestCount()).toNumber();
+        const requestId = await f.manager.requestCount();
 
         await f.policyRegistry.connect(f.timelock).setLoanAssetConfig(USDC, { factor: 0, interestRateModels: [] });
-        const { payload } = await buildRequest(f, requestId);
-        expect(actionList(payload)).to.deep.equal([
-          [f.manager.address, "settleRequest(uint256)"],
-          [f.yieldGroup.address, "raiseResourceCap(address,uint256)"],
-          [comptroller, "setMarketSupplyCaps(address[],uint256[])"],
-          [comptroller, "setMarketBorrowCaps(address[],uint256[])"],
-        ]);
-        await executeVip(f, payload);
+        await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Tier"))
+          .to.be.revertedWithCustomError(f.builder, "LoanAssetNotAllowed")
+          .withArgs(USDC);
+        expect((await f.manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
 
-        expect((await f.manager.getPool(comptroller)).tierId).to.equal(TIER_TWO);
-        expect(await pool.comptroller.supplyCaps(usdtVToken.address)).to.equal(TIER_TWO_LOAN_CAP);
-        expect(await f.yieldGroup.resourceCap(usdtVToken.address)).to.equal(TIER_TWO_LOAN_CAP);
-        expect(await pool.comptroller.supplyCaps(usdcVToken.address)).to.equal(USDC_TIER_ONE_CAP);
-        expect(await pool.comptroller.borrowCaps(usdcVToken.address)).to.equal(USDC_TIER_ONE_CAP);
-        expect(await usdcYieldGroup.resourceCap(usdcVToken.address)).to.equal(USDC_TIER_ONE_CAP);
+        await f.manager.connect(f.team).rejectRequest(requestId);
+        expect((await f.manager.getPool(comptroller)).tierId).to.equal(TIER_ONE);
       });
     });
   });
