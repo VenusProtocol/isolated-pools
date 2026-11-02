@@ -1,3 +1,30 @@
+## 4.4.0-dev.16 (2026-11-02)
+
+* feat: add BPN Loan spoke pool and BPNC token to the deployment config ([4c29cdd](https://github.com/VenusProtocol/isolated-pools/commit/4c29cdd))
+* feat: add CustodyReceiptToken, committed as is from fixed-rate-vaults ([932b79a](https://github.com/VenusProtocol/isolated-pools/commit/932b79a))
+* feat: drop fixed-rate-vaults note from CustodyReceiptToken natspec and add its deploy script ([39d0ced](https://github.com/VenusProtocol/isolated-pools/commit/39d0ced))
+* feat: updating deployment files ([9e12345](https://github.com/VenusProtocol/isolated-pools/commit/9e12345))
+* Merge pull request #578 from VenusProtocol/feat/bpn-loan-spoke-pool ([540d0be](https://github.com/VenusProtocol/isolated-pools/commit/540d0be)), closes [#578](https://github.com/VenusProtocol/isolated-pools/issues/578)
+* test: port CustodyReceiptToken forge tests from fixed-rate-vaults ([b58db48](https://github.com/VenusProtocol/isolated-pools/commit/b58db48))
+* chore: deploy BPNC on bscmainnet ([e6cc18e](https://github.com/VenusProtocol/isolated-pools/commit/e6cc18e))
+* chore: deploy the BPN Loan spoke pool on bscmainnet ([c73a618](https://github.com/VenusProtocol/isolated-pools/commit/c73a618))
+* refactor: simplify the spoke pool deployment config into one list of pools per network ([80c0e6e](https://github.com/VenusProtocol/isolated-pools/commit/80c0e6e))
+
+## 4.4.0-dev.15 (2026-11-02)
+
+* Merge pull request #575 from VenusProtocol/feat/bstock-bluechips-spoke-deployment ([3f05f87](https://github.com/VenusProtocol/isolated-pools/commit/3f05f87)), closes [#575](https://github.com/VenusProtocol/isolated-pools/issues/575)
+* feat: updating deployment files ([7d9dcd1](https://github.com/VenusProtocol/isolated-pools/commit/7d9dcd1))
+* feat: updating deployment files ([4bf795f](https://github.com/VenusProtocol/isolated-pools/commit/4bf795f))
+* feat(spoke): prepare the Bluechips pool for deployment ([9ca149e](https://github.com/VenusProtocol/isolated-pools/commit/9ca149e))
+* chore(spoke): deploy the Bluechips pool on bscmainnet ([da01dde](https://github.com/VenusProtocol/isolated-pools/commit/da01dde))
+* chore(spoke): deploy the bStock mainstream spoke pool on bscmainnet ([7e1fc31](https://github.com/VenusProtocol/isolated-pools/commit/7e1fc31))
+* chore(spoke): remove old bStock bluechips spoke pool deployments ([e7e736f](https://github.com/VenusProtocol/isolated-pools/commit/e7e736f))
+
+## 4.4.0-dev.14 (2026-10-28)
+
+* Merge pull request #576 from VenusProtocol/fix/storage-layout-deployed-renames ([84ab3e6](https://github.com/VenusProtocol/isolated-pools/commit/84ab3e6)), closes [#576](https://github.com/VenusProtocol/isolated-pools/issues/576)
+* fix: ignore already-deployed oz-renamed-from in storage layout check ([c65d9b7](https://github.com/VenusProtocol/isolated-pools/commit/c65d9b7))
+
 ## 4.4.0-dev.13 (2026-10-27)
 
 * Merge pull request #574 from VenusProtocol/fix/spoke-lens ([fbcce55](https://github.com/VenusProtocol/isolated-pools/commit/fbcce55)), closes [#574](https://github.com/VenusProtocol/isolated-pools/issues/574)
