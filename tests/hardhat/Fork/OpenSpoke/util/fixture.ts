@@ -227,7 +227,7 @@ export async function fundUsdt(usdt: IERC20, to: string, amount: BigNumber) {
   await fundFrom(usdt, bscmainnet.USDT_HOLDER, to, amount);
 }
 
-async function deployProxy(admin: SignerWithAddress, name: string, args: unknown[], libraries = {}) {
+export async function deployProxy(admin: SignerWithAddress, name: string, args: unknown[], libraries = {}) {
   const implementation = await (await ethers.getContractFactory(name, { signer: admin, libraries })).deploy(...args);
   const proxy = await (
     await ethers.getContractFactory(
