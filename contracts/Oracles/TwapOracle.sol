@@ -10,11 +10,11 @@ import { ITwapOracle } from "./ITwapOracle.sol";
 /**
  * @title TwapOracle
  * @author Venus
- * @notice Time-weighted average prices (TWAP) of the ResilientOracle's prices. Between updates the last price
- * applies. A TWAP is available once there is a checkpoint at the start of the window
+ * @notice Time-weighted average prices (TWAP) of the ResilientOracle's prices over exactly the period. Between
+ * updates the last price applies, so the running total at the window start follows from the last checkpoint before it
  * @dev A keeper calls `updatePrice` for each asset once every update interval to record its price. Anyone can call
- * it. When an interval is missed, `getPrice` reverts once the window starts in that interval, until the window moves
- * past it
+ * it. A missed update counts at the last price; `getPrice` reverts only when the last checkpoint before the window
+ * start is more than `maxWindowStartGap` older than it
  * @custom:oz-upgrades-unsafe-allow constructor state-variable-immutable
  */
 contract TwapOracle is AccessControlledV8, ITwapOracle {
@@ -50,17 +50,17 @@ contract TwapOracle is AccessControlledV8, ITwapOracle {
     }
 
     /// @inheritdoc ITwapOracle
-    function setTokenConfig(address asset, uint256 period, uint256 updateInterval) external {
-        _checkAccessAllowed("setTokenConfig(address,uint256,uint256)");
+    function setTokenConfig(address asset, uint256 period, uint256 updateInterval, uint256 maxWindowStartGap) external {
+        _checkAccessAllowed("setTokenConfig(address,uint256,uint256,uint256)");
         ensureNonzeroAddress(asset);
-        if (period != 0 && (updateInterval == 0 || period % updateInterval != 0)) {
+        if (period != 0 && (updateInterval == 0 || maxWindowStartGap < updateInterval || maxWindowStartGap > period)) {
             revert InvalidTokenConfig(asset);
         }
 
         // Removing an asset (zero period) also disables it
         bool enabled = period != 0 && tokenConfigs[asset].enabled;
-        tokenConfigs[asset] = TokenConfig(enabled, period, updateInterval, block.timestamp, 0, 0, 0);
-        emit TokenConfigUpdated(asset, period, updateInterval);
+        tokenConfigs[asset] = TokenConfig(enabled, period, updateInterval, maxWindowStartGap, block.timestamp, 0, 0, 0);
+        emit TokenConfigUpdated(asset, period, updateInterval, maxWindowStartGap);
     }
 
     /// @inheritdoc ITwapOracle
@@ -94,7 +94,7 @@ contract TwapOracle is AccessControlledV8, ITwapOracle {
         config.lastUpdatedAt = block.timestamp;
         config.lastPrice = price;
         config.cumulativePrice = cumulativePrice;
-        checkpoints[asset][currentIntervalSlot] = Checkpoint(block.timestamp, cumulativePrice);
+        checkpoints[asset][currentIntervalSlot] = Checkpoint(block.timestamp, cumulativePrice, price);
 
         emit PriceUpdated(asset, price, cumulativePrice);
     }
@@ -105,30 +105,51 @@ contract TwapOracle is AccessControlledV8, ITwapOracle {
         if (!config.enabled) {
             revert AssetNotEnabled(asset);
         }
-        Checkpoint memory start = _windowStart(asset, config);
-        if (start.timestamp == 0) {
+        (bool hasStartCheckpoint, uint256 startCumulativePrice) = _cumulativePriceAtWindowStart(asset, config);
+        if (!hasStartCheckpoint) {
             revert InsufficientHistory(asset);
         }
 
         uint256 cumulativePrice = config.cumulativePrice + config.lastPrice * (block.timestamp - config.lastUpdatedAt);
-        return (cumulativePrice - start.cumulativePrice) / (block.timestamp - start.timestamp);
+        return (cumulativePrice - startCumulativePrice) / config.period;
     }
 
     /// @inheritdoc ITwapOracle
     function isPriceAvailable(address asset) external view returns (bool) {
         TokenConfig storage config = tokenConfigs[asset];
-        return config.enabled && _windowStart(asset, config).timestamp != 0;
+        if (!config.enabled) {
+            return false;
+        }
+        (bool hasStartCheckpoint, ) = _cumulativePriceAtWindowStart(asset, config);
+        return hasStartCheckpoint;
     }
 
     /**
-     * @dev Returns the checkpoint in the interval slot where the window starts, or one with a zero timestamp when it
-     *   is missing or not after the last config (a checkpoint in the same second may be from the old history)
+     * @dev Returns the running total at the window start, from the last checkpoint at or before it at that checkpoint's
+     *   price; `hasStartCheckpoint` is false when that checkpoint is more than `maxWindowStartGap` before the start.
+     *   It walks back one interval slot at a time, skipping checkpoints from before the last config (one in the same
+     *   second may be from the old history)
      */
-    function _windowStart(address asset, TokenConfig storage config) private view returns (Checkpoint memory start) {
-        uint256 startIntervalSlot = (block.timestamp - config.period) / config.updateInterval;
-        start = checkpoints[asset][startIntervalSlot];
-        if (start.timestamp <= config.lastConfiguredAt) {
-            start.timestamp = 0;
+    function _cumulativePriceAtWindowStart(
+        address asset,
+        TokenConfig storage config
+    ) private view returns (bool hasStartCheckpoint, uint256 cumulativePrice) {
+        uint256 windowStart = block.timestamp - config.period;
+        uint256 earliestCheckpointAt = windowStart - config.maxWindowStartGap;
+
+        // Walk back from the window start's interval slot; the first usable checkpoint is the last one before the start
+        uint256 startIntervalSlot = windowStart / config.updateInterval;
+        uint256 earliestIntervalSlot = earliestCheckpointAt / config.updateInterval;
+        for (uint256 intervalSlot = startIntervalSlot; intervalSlot >= earliestIntervalSlot; --intervalSlot) {
+            Checkpoint storage checkpoint = checkpoints[asset][intervalSlot];
+            uint256 checkpointAt = checkpoint.timestamp;
+            bool isInRange = checkpointAt >= earliestCheckpointAt && checkpointAt <= windowStart;
+            // One taken in the same second as the config may be from the old history
+            bool isSinceLastConfig = checkpointAt > config.lastConfiguredAt;
+            if (isInRange && isSinceLastConfig) {
+                // Its price holds from the checkpoint until the window start
+                return (true, checkpoint.cumulativePrice + checkpoint.price * (windowStart - checkpointAt));
+            }
         }
     }
 }

@@ -14,20 +14,22 @@ interface ITwapOracle {
         bool enabled;
         uint256 period;
         uint256 updateInterval;
+        uint256 maxWindowStartGap;
         uint256 lastConfiguredAt;
         uint256 lastUpdatedAt;
         uint256 lastPrice;
         uint256 cumulativePrice;
     }
 
-    /// @notice An update's time and the running total of price × seconds up to it
+    /// @notice An update's time, the running total of price × seconds up to it, and the price it recorded
     struct Checkpoint {
         uint256 timestamp;
         uint256 cumulativePrice;
+        uint256 price;
     }
 
     /// @notice Emitted when an asset's config is set; this restarts its history
-    event TokenConfigUpdated(address indexed asset, uint256 period, uint256 updateInterval);
+    event TokenConfigUpdated(address indexed asset, uint256 period, uint256 updateInterval, uint256 maxWindowStartGap);
 
     /// @notice Emitted when an asset is enabled or disabled
     event TokenEnabledUpdated(address indexed asset, bool enabled);
@@ -41,20 +43,22 @@ interface ITwapOracle {
     /// @notice Thrown when an asset has no config
     error AssetNotConfigured(address asset);
 
-    /// @notice Thrown when the update interval is zero or does not divide the period
+    /// @notice Thrown when the update interval is zero, or `maxWindowStartGap` is below it or above the period
     error InvalidTokenConfig(address asset);
 
-    /// @notice Thrown when there is no checkpoint at the start of the window
+    /// @notice Thrown when there is no checkpoint at most `maxWindowStartGap` before the start of the window
     error InsufficientHistory(address asset);
 
     /**
      * @notice Sets an asset's config and restarts its history; the enabled flag is kept
      * @param asset The asset
-     * @param period The TWAP window, a multiple of `updateInterval`; zero removes the asset and disables it
+     * @param period The TWAP window; zero removes the asset and disables it
      * @param updateInterval How often the price is updated
+     * @param maxWindowStartGap The most the last checkpoint may precede the window start, so updates missed there still
+     *   give a TWAP: at least `updateInterval`, and twice it tolerates one missed update
      * @custom:access Controlled by AccessControlManager
      */
-    function setTokenConfig(address asset, uint256 period, uint256 updateInterval) external;
+    function setTokenConfig(address asset, uint256 period, uint256 updateInterval, uint256 maxWindowStartGap) external;
 
     /**
      * @notice Enables or disables `getPrice` for an asset; price updates continue either way
@@ -88,7 +92,7 @@ interface ITwapOracle {
     /**
      * @notice Returns whether `getPrice` succeeds for an asset now
      * @param asset The asset
-     * @return Whether the asset is enabled and has a checkpoint at the start of its window
+     * @return Whether the asset is enabled and has a checkpoint at most `maxWindowStartGap` before its window start
      */
     function isPriceAvailable(address asset) external view returns (bool);
 
@@ -98,6 +102,7 @@ interface ITwapOracle {
      * @return enabled Whether `getPrice` is allowed for the asset
      * @return period The TWAP window
      * @return updateInterval How often the price is updated
+     * @return maxWindowStartGap The most the last checkpoint may precede the window start
      * @return lastConfiguredAt When the config was last set
      * @return lastUpdatedAt When the price was last updated
      * @return lastPrice The price from the last update
@@ -112,6 +117,7 @@ interface ITwapOracle {
             bool enabled,
             uint256 period,
             uint256 updateInterval,
+            uint256 maxWindowStartGap,
             uint256 lastConfiguredAt,
             uint256 lastUpdatedAt,
             uint256 lastPrice,

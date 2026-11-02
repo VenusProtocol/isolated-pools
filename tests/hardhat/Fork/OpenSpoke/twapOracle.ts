@@ -23,9 +23,11 @@ const HOUR = 3600;
 const DAY = 24 * HOUR;
 const WEEK = 7 * DAY;
 const HOURS_PER_WEEK = WEEK / HOUR;
+/// Tolerates two missed hourly updates at the window start
+const MAX_WINDOW_START_GAP = 3 * HOUR;
 const LONG_STALE_PERIOD = 10 * 365 * DAY;
 const INVALID_PRICE = "invalid resilient oracle price";
-const SET_TOKEN_CONFIG = "setTokenConfig(address,uint256,uint256)";
+const SET_TOKEN_CONFIG = "setTokenConfig(address,uint256,uint256,uint256)";
 const SET_TOKEN_ENABLED = "setTokenEnabled(address,bool)";
 const FEED_CONFIG = "setTokenConfig((address,address,uint256))";
 const RESILIENT_CONFIG = "setTokenConfig((address,address[3],bool[3],bool))";
@@ -42,7 +44,7 @@ const PROXY_ADMIN_ABI = [
   "function upgrade(address proxy, address implementation)",
 ];
 
-type Checkpoint = { timestamp: number; cumulativePrice: BigNumber };
+type Checkpoint = { timestamp: number; cumulativePrice: BigNumber; price: BigNumber };
 
 /// An independent copy of the oracle's accumulator: every update and read is checked against it
 class TwapModel {
@@ -51,7 +53,12 @@ class TwapModel {
   cumulativePrice = BigNumber.from(0);
   checkpoints = new Map<number, Checkpoint>();
 
-  constructor(readonly period: number, readonly updateInterval: number, readonly configuredAt: number) {}
+  constructor(
+    readonly period: number,
+    readonly updateInterval: number,
+    readonly maxWindowStartGap: number,
+    readonly configuredAt: number,
+  ) {}
 
   /// Returns whether the update takes a checkpoint
   update(timestamp: number, price: BigNumber) {
@@ -60,7 +67,7 @@ class TwapModel {
     this.cumulativePrice = this.cumulativeAt(timestamp);
     this.lastUpdatedAt = timestamp;
     this.lastPrice = price;
-    this.checkpoints.set(slot, { timestamp, cumulativePrice: this.cumulativePrice });
+    this.checkpoints.set(slot, { timestamp, cumulativePrice: this.cumulativePrice, price });
     return true;
   }
 
@@ -68,13 +75,24 @@ class TwapModel {
     return this.cumulativePrice.add(this.lastPrice.mul(timestamp - this.lastUpdatedAt));
   }
 
-  /// The TWAP at `timestamp`, or undefined without a usable checkpoint where the window starts
+  /// The TWAP at `timestamp` over exactly the period, or undefined when the last checkpoint at or before the window
+  /// start is missing or more than the max window start gap before it
   price(timestamp: number) {
-    const start = this.checkpoints.get(Math.floor((timestamp - this.period) / this.updateInterval));
-    if (!start || start.timestamp <= this.configuredAt) return undefined;
-    return this.cumulativeAt(timestamp)
-      .sub(start.cumulativePrice)
-      .div(timestamp - start.timestamp);
+    const windowStart = timestamp - this.period;
+    const earliestCheckpointAt = windowStart - this.maxWindowStartGap;
+    for (
+      let slot = Math.floor(windowStart / this.updateInterval);
+      slot >= Math.floor(earliestCheckpointAt / this.updateInterval);
+      slot--
+    ) {
+      const start = this.checkpoints.get(slot);
+      if (start && start.timestamp > this.configuredAt && start.timestamp <= windowStart) {
+        if (start.timestamp < earliestCheckpointAt) return undefined;
+        const startCumulativePrice = start.cumulativePrice.add(start.price.mul(windowStart - start.timestamp));
+        return this.cumulativeAt(timestamp).sub(startCumulativePrice).div(this.period);
+      }
+    }
+    return undefined;
   }
 }
 
@@ -116,7 +134,7 @@ if (FORK) {
       await deployed.restore();
       t0 = (Math.floor((await time.latest()) / DAY) + 2) * DAY;
       enabled = false;
-      await configure(WEEK, HOUR, t0 - HOUR / 2);
+      await configure(WEEK, HOUR, MAX_WINDOW_START_GAP, t0 - HOUR / 2);
     });
 
     afterEach(async function () {
@@ -125,6 +143,7 @@ if (FORK) {
       expect(config.enabled).to.equal(enabled);
       expect(config.period).to.equal(model.period);
       expect(config.updateInterval).to.equal(model.updateInterval);
+      expect(config.maxWindowStartGap).to.equal(model.maxWindowStartGap);
       expect(config.lastConfiguredAt).to.equal(model.configuredAt);
       expect(config.lastUpdatedAt).to.equal(model.lastUpdatedAt);
       expect(config.lastPrice).to.equal(model.lastPrice);
@@ -136,13 +155,14 @@ if (FORK) {
 
     const at = (timestamp: number) => time.setNextBlockTimestamp(timestamp);
 
-    async function configure(period: number, updateInterval: number, timestamp?: number) {
+    async function configure(period: number, updateInterval: number, maxWindowStartGap: number, timestamp?: number) {
       if (timestamp !== undefined) await at(timestamp);
-      const tx = await twap.connect(f.timelock).setTokenConfig(XVS, period, updateInterval);
-      await expect(tx).to.emit(twap, "TokenConfigUpdated").withArgs(XVS, period, updateInterval);
+      const tx = await twap.connect(f.timelock).setTokenConfig(XVS, period, updateInterval, maxWindowStartGap);
+      await expect(tx).to.emit(twap, "TokenConfigUpdated").withArgs(XVS, period, updateInterval, maxWindowStartGap);
       model = new TwapModel(
         period,
         updateInterval,
+        maxWindowStartGap,
         (await ethers.provider.getBlock((await tx.wait()).blockNumber)).timestamp,
       );
       enabled = enabled && period !== 0;
@@ -225,7 +245,16 @@ if (FORK) {
         const proxyAdmin = new ethers.Contract(bscmainnet.DEFAULT_PROXY_ADMIN, PROXY_ADMIN_ABI, f.admin);
         const implementation = await proxyAdmin.getProxyImplementation(twap.address);
         expect(await ethers.provider.getCode(implementation)).not.to.equal("0x");
-        expect(await twap.tokenConfigs(XVS)).to.deep.equal([false, WEEK, HOUR, t0 - HOUR / 2, 0, 0, 0]);
+        expect(await twap.tokenConfigs(XVS)).to.deep.equal([
+          false,
+          WEEK,
+          HOUR,
+          MAX_WINDOW_START_GAP,
+          t0 - HOUR / 2,
+          0,
+          0,
+          0,
+        ]);
       });
 
       it("serves the TWAP at once when governance enables XVS after the keeper filled a week while disabled", async () => {
@@ -263,7 +292,7 @@ if (FORK) {
           }
         });
 
-        it("averages a rising price hour by hour and drops the oldest hour as the window slides", async () => {
+        it("averages a rising price hour by hour and drops the earliestCheckpointAt hour as the window slides", async () => {
           const ramp = (h: number) => (5 + h / 100).toFixed(2);
           await updateHourly(
             0,
@@ -302,13 +331,13 @@ if (FORK) {
             await update(hour(h) + 50 * 60, undefined, f.outsider);
           }
           await expectTwap(hour(HOURS_PER_WEEK) + 45 * 60, e18("5.5"));
-          // Until the next update the window keeps starting at hour 0's late checkpoint
+          // The window starts between hour 0's and hour 1's checkpoints, at hour 0's price
           await expectTwap(hour(HOURS_PER_WEEK) + 50 * 60, modelTwap(hour(HOURS_PER_WEEK) + 50 * 60));
         });
       });
 
       describe("edge cases", () => {
-        it("counts a missed hour at the last price and refuses a TWAP for the hour the window starts in it", async () => {
+        it("counts a missed hour at the last price, also when the window starts in it", async () => {
           await updateHourly(0, ["5", ...Array(49).fill(undefined)]);
           // Hour 50 is missed while the feed already moved to 7
           await movePrice(hour(50), "7");
@@ -316,13 +345,20 @@ if (FORK) {
           await expectTwap(hour(HOURS_PER_WEEK), hourlyTwap(["5", 51], ["7", 117]));
 
           await updateHourly(HOURS_PER_WEEK + 1, Array(50).fill(undefined));
-          await expectNoTwap(hour(HOURS_PER_WEEK + 50));
-          await expectNoTwap(hour(HOURS_PER_WEEK + 51) - 1);
+          // The window starts in the missed hour, read from hour 49's checkpoint at 5
+          await expectTwap(hour(HOURS_PER_WEEK + 50), hourlyTwap(["5", 1], ["7", 167]));
+          await expectTwap(
+            hour(HOURS_PER_WEEK + 50) + HOUR / 2,
+            e18("5")
+              .mul(HOUR / 2)
+              .add(e18("7").mul(167 * HOUR + HOUR / 2))
+              .div(WEEK),
+          );
           await update(hour(HOURS_PER_WEEK + 51));
           await expectTwap(hour(HOURS_PER_WEEK + 51), e18("7"));
         });
 
-        it("carries the last price through a keeper outage and fails closed once the window passes the last update", async () => {
+        it("carries the last price through a keeper outage and fails closed once the last update is more than the max window start gap before the window", async () => {
           await updateHourly(0, ["5", ...Array(HOURS_PER_WEEK - 25).fill(undefined), "6"]);
           await updateHourly(HOURS_PER_WEEK - 23, Array(23).fill(undefined));
           await movePrice(hour(HOURS_PER_WEEK + 1), "9");
@@ -332,7 +368,9 @@ if (FORK) {
           expect(await oracle.getPrice(XVS)).to.equal(e18("9"));
           expect(await bondPrice()).to.equal(hourlyTwap(["5", 134], ["6", 34]));
           await expectTwap(hour(2 * HOURS_PER_WEEK) - 1, e18("6"));
-          await expectNoTwap(hour(2 * HOURS_PER_WEEK));
+          // The window starts the max window start gap after the last update, hour 167
+          await expectTwap(hour(HOURS_PER_WEEK + 170), e18("6"));
+          await expectNoTwap(hour(HOURS_PER_WEEK + 170) + 1);
         });
 
         it("rejects an update while the ResilientOracle reverts, runs the last price on and recovers in the same hour", async () => {
@@ -429,31 +467,31 @@ if (FORK) {
           await goTo(hour(HOURS_PER_WEEK + 11) + 10);
           await expectNotEnabled();
           await setEnabled(true, hour(HOURS_PER_WEEK + 11) + HOUR / 2);
-          // The window starts at hour 11: 157 hours at 5, then 11.5 hours at 6
+          // From halfway through hour 11: 156.5 hours at 5, then 11.5 hours at 6
           const expected = e18("5")
-            .mul(157 * HOUR)
+            .mul(156 * HOUR + HOUR / 2)
             .add(e18("6").mul(11 * HOUR + HOUR / 2))
-            .div(168 * HOUR + HOUR / 2);
+            .div(WEEK);
           await expectTwap(hour(HOURS_PER_WEEK + 11) + HOUR / 2, expected);
         });
 
         it("restarts the history on a period change and ignores the checkpoints from before it", async () => {
           await fillWeek();
           await update(hour(HOURS_PER_WEEK));
-          await configure(DAY, HOUR, hour(HOURS_PER_WEEK) + HOUR / 2);
+          await configure(DAY, HOUR, MAX_WINDOW_START_GAP, hour(HOURS_PER_WEEK) + HOUR / 2);
           expect(enabled).to.equal(true);
-          // The window would start in hour 144, which has a checkpoint from the old history
+          // Only the old history precedes the window start, in hour 144
           await expectNoTwap(hour(HOURS_PER_WEEK) + HOUR / 2 + 1);
 
           await updateHourly(HOURS_PER_WEEK + 1, ["8", ...Array(23).fill(undefined)]);
-          // The window starts in hour 168, which only has the old history's checkpoint
+          // The window starts just before the first new update, after hour 168's old checkpoint
           await expectNoTwap(hour(HOURS_PER_WEEK + 25) - 1);
           await expectTwap(hour(HOURS_PER_WEEK + 25), e18("8"));
         });
 
         it("stops updates and reads once XVS is removed, and a re-added XVS starts over disabled", async () => {
           await fillWeek();
-          await configure(0, 0);
+          await configure(0, 0, 0);
           expect(enabled).to.equal(false);
           await expectNotEnabled();
           await expect(twap.connect(f.keeper).updatePrice(XVS))
@@ -463,10 +501,10 @@ if (FORK) {
             .to.be.revertedWithCustomError(twap, "AssetNotConfigured")
             .withArgs(XVS);
 
-          await configure(WEEK, HOUR, hour(HOURS_PER_WEEK) + 10);
+          await configure(WEEK, HOUR, MAX_WINDOW_START_GAP, hour(HOURS_PER_WEEK) + 10);
           expect(enabled).to.equal(false);
           await setEnabled(true);
-          // Hour 0's old checkpoint is where the window starts, and it is ignored
+          // Hour 0's old checkpoint precedes the window start, and it is ignored
           await expectNoTwap(hour(HOURS_PER_WEEK) + 20);
         });
 
@@ -555,8 +593,8 @@ if (FORK) {
 
         it("an attacker cannot configure, enable, disable or remove XVS", async () => {
           const calls = [
-            { signature: SET_TOKEN_CONFIG, call: () => twap.connect(f.attacker).setTokenConfig(XVS, HOUR, HOUR) },
-            { signature: SET_TOKEN_CONFIG, call: () => twap.connect(f.attacker).setTokenConfig(XVS, 0, 0) },
+            { signature: SET_TOKEN_CONFIG, call: () => twap.connect(f.attacker).setTokenConfig(XVS, HOUR, HOUR, HOUR) },
+            { signature: SET_TOKEN_CONFIG, call: () => twap.connect(f.attacker).setTokenConfig(XVS, 0, 0, 0) },
             { signature: SET_TOKEN_ENABLED, call: () => twap.connect(f.attacker).setTokenEnabled(XVS, false) },
             { signature: SET_TOKEN_ENABLED, call: () => twap.connect(f.attacker).setTokenEnabled(XVS, true) },
           ];
@@ -584,7 +622,7 @@ if (FORK) {
           await expect(twap.connect(f.attacker).updatePrice(bscmainnet.USDT))
             .to.be.revertedWithCustomError(twap, "AssetNotConfigured")
             .withArgs(bscmainnet.USDT);
-          await twap.connect(f.timelock).setTokenConfig(bscmainnet.USDT, DAY, HOUR);
+          await twap.connect(f.timelock).setTokenConfig(bscmainnet.USDT, DAY, HOUR, MAX_WINDOW_START_GAP);
           await at(hour(HOURS_PER_WEEK));
           await expect(twap.connect(f.attacker).updatePrice(bscmainnet.USDT))
             .to.emit(twap, "PriceUpdated")
@@ -592,16 +630,15 @@ if (FORK) {
           await expectTwap(hour(HOURS_PER_WEEK) + 1, e18("5"));
         });
 
-        it("a missed hour cannot be backfilled later", async () => {
-          await movePrice(hour(HOURS_PER_WEEK), "9");
-          await update(hour(HOURS_PER_WEEK + 1) - 1, undefined, f.attacker);
-          // That update landed in hour 168; hour 169 is skipped and no later call can write it
-          await updateHourly(HOURS_PER_WEEK + 2, Array(HOURS_PER_WEEK).fill(undefined));
+        it("a missed hour counts at the price before it, so a later pumped update cannot backfill it", async () => {
+          await update(hour(HOURS_PER_WEEK), "9");
+          // Hour 169 is missed; the attacker records a pump in hour 170, then the keeper records 9 again
+          await update(hour(HOURS_PER_WEEK + 2), "25", f.attacker);
+          await update(hour(HOURS_PER_WEEK + 3), "9");
           expect(model.checkpoints.has(Math.floor(hour(HOURS_PER_WEEK + 1) / HOUR))).to.equal(false);
-          await expectNoTwap(hour(2 * HOURS_PER_WEEK + 1));
-          await expectNoTwap(hour(2 * HOURS_PER_WEEK + 2) - 1);
-          await update(hour(2 * HOURS_PER_WEEK + 2));
-          await expectTwap(hour(2 * HOURS_PER_WEEK + 2), e18("9"));
+          await expectTwap(hour(HOURS_PER_WEEK + 4), hourlyTwap(["5", 164], ["9", 3], ["25", 1]));
+          // The window starts in the missed hour, read from hour 168's checkpoint at 9
+          await expectTwap(hour(2 * HOURS_PER_WEEK + 1), hourlyTwap(["9", 167], ["25", 1]));
         });
       });
     });
