@@ -1,5 +1,5 @@
 import { deployments, ethers, getNamedAccounts } from "hardhat";
-import { DeployResult } from "hardhat-deploy/dist/types";
+import { DeployOptions, DeployResult } from "hardhat-deploy/dist/types";
 import { HardhatRuntimeEnvironment } from "hardhat/types";
 
 import { Comptroller, ERC20, MockToken } from "../typechain";
@@ -219,3 +219,45 @@ export const getProxyBeacon = async (proxy: string): Promise<string> =>
   ethers.utils.getAddress(
     ethers.utils.hexDataSlice(await ethers.provider.getStorageAt(proxy, EIP_1967_BEACON_SLOT), 12),
   );
+
+// solc appends CBOR-encoded metadata to the bytecode, followed by two bytes giving its length. Returns undefined when
+// the tail is not a CBOR map with a `solc` entry, as in a build without metadata, so code is never stripped.
+const stripMetadata = (bytecode: string): string | undefined => {
+  const metadataLength = parseInt(bytecode.slice(-4), 16);
+  const start = bytecode.length - (metadataLength + 2) * 2;
+  const metadata = bytecode.slice(start, -4);
+  if (start < 2 || !["a1", "a2", "a3"].includes(metadata.slice(0, 2)) || !metadata.includes("64736f6c63")) {
+    return undefined;
+  }
+  return bytecode.slice(0, start);
+};
+
+// Deploys like `deploy`, but reuses the recorded deployment when the build differs from it only in the metadata hash
+// and the constructor arguments match. The hash covers every source the contract imports, so without this an edit to
+// a file it only imports would redeploy identical code.
+export const deployUnlessOnlyMetadataChanged = async (
+  hre: HardhatRuntimeEnvironment,
+  name: string,
+  options: DeployOptions,
+): Promise<DeployResult> => {
+  const recorded = await hre.deployments.getOrNull(name);
+  const contract = options.contract ?? name;
+  if (recorded?.bytecode && typeof contract === "string") {
+    const artifact = await hre.deployments.getArtifact(contract);
+    const recordedCode = stripMetadata(recorded.bytecode);
+    const onlyMetadataDiffers =
+      recorded.bytecode !== artifact.bytecode &&
+      recordedCode !== undefined &&
+      recordedCode === stripMetadata(artifact.bytecode);
+    // Encoded only after the code matches, because a changed constructor may not accept the recorded arguments.
+    const constructor = new ethers.utils.Interface(artifact.abi);
+    const sameArgs =
+      onlyMetadataDiffers &&
+      constructor.encodeDeploy(recorded.args ?? []) === constructor.encodeDeploy(options.args ?? []);
+    if (sameArgs) {
+      console.log(`Reusing ${name} at ${recorded.address}: this build differs from it only in the metadata hash`);
+      return { ...recorded, newlyDeployed: false };
+    }
+  }
+  return hre.deployments.deploy(name, options);
+};

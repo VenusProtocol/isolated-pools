@@ -38,7 +38,20 @@ export type TwoKinksRateModelParams = {
 
 export type RateModelParams = WpRateModelParams | JumpRateModelParams | TwoKinksRateModelParams;
 
-export const getRateModelParams = (config: VTokenConfig): RateModelParams => {
+// The market config fields a rate model is built from.
+export type RateModelConfig = Pick<
+  VTokenConfig,
+  | "rateModel"
+  | "baseRatePerYear"
+  | "multiplierPerYear"
+  | "jumpMultiplierPerYear"
+  | "kink_"
+  | "multiplierPerYear2"
+  | "baseRatePerYear2"
+  | "kink2_"
+>;
+
+export const getRateModelParams = (config: RateModelConfig): RateModelParams => {
   if (config.rateModel === InterestRateModels.WhitePaper.toString()) {
     const { baseRatePerYear, multiplierPerYear } = config;
     return {
