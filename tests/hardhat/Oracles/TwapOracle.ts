@@ -3,7 +3,7 @@ import { loadFixture, time } from "@nomicfoundation/hardhat-network-helpers";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import chai from "chai";
 import { BigNumber, BigNumberish, constants } from "ethers";
-import { ethers, network } from "hardhat";
+import { ethers } from "hardhat";
 
 import {
   AccessControlManager,
@@ -21,8 +21,8 @@ const HOUR = 3600;
 const DAY = 24 * HOUR;
 const UPDATE_INTERVAL = HOUR;
 const PERIOD = 4 * HOUR;
-const MAX_WINDOW_START_GAP = 2 * HOUR;
-const SET_TOKEN_CONFIG = "setTokenConfig(address,uint256,uint256,uint256)";
+const SET_TOKEN_CONFIG = "setTokenConfig(address,uint256,uint256)";
+const SET_ASSET_PARAMS = "setAssetParams(address,uint256,uint256)";
 const SET_TOKEN_ENABLED = "setTokenEnabled(address,bool)";
 
 describe("TwapOracle", () => {
@@ -51,11 +51,11 @@ describe("TwapOracle", () => {
     t0 = (Math.floor((await time.latest()) / DAY) + 2) * DAY;
   });
 
-  const configure = (
-    period: BigNumberish = PERIOD,
-    updateInterval: BigNumberish = UPDATE_INTERVAL,
-    maxWindowStartGap: BigNumberish = MAX_WINDOW_START_GAP,
-  ) => twap.setTokenConfig(asset.address, period, updateInterval, maxWindowStartGap);
+  const configure = (period: BigNumberish = PERIOD, updateInterval: BigNumberish = UPDATE_INTERVAL) =>
+    twap.setTokenConfig(asset.address, period, updateInterval);
+
+  const setParams = (period: BigNumberish, updateInterval: BigNumberish) =>
+    twap.setAssetParams(asset.address, period, updateInterval);
 
   const configureAndEnable = async () => {
     await configure();
@@ -129,10 +129,8 @@ describe("TwapOracle", () => {
 
   describe("access control", () => {
     const restricted = [
-      {
-        signature: SET_TOKEN_CONFIG,
-        call: () => twap.connect(other).setTokenConfig(asset.address, PERIOD, HOUR, MAX_WINDOW_START_GAP),
-      },
+      { signature: SET_TOKEN_CONFIG, call: () => twap.connect(other).setTokenConfig(asset.address, PERIOD, HOUR) },
+      { signature: SET_ASSET_PARAMS, call: () => twap.connect(other).setAssetParams(asset.address, PERIOD, HOUR) },
       { signature: SET_TOKEN_ENABLED, call: () => twap.connect(other).setTokenEnabled(asset.address, true) },
     ];
 
@@ -155,122 +153,118 @@ describe("TwapOracle", () => {
 
   describe("setTokenConfig", () => {
     it("reverts on a zero asset", async () => {
-      await expect(
-        twap.setTokenConfig(constants.AddressZero, PERIOD, HOUR, MAX_WINDOW_START_GAP),
-      ).to.be.revertedWithCustomError(twap, "ZeroAddressNotAllowed");
+      await expect(twap.setTokenConfig(constants.AddressZero, PERIOD, HOUR)).to.be.revertedWithCustomError(
+        twap,
+        "ZeroAddressNotAllowed",
+      );
     });
 
     const invalid = [
-      { name: "a zero update interval", period: PERIOD, updateInterval: 0, maxWindowStartGap: MAX_WINDOW_START_GAP },
-      {
-        name: "a max window start gap below the update interval",
-        period: PERIOD,
-        updateInterval: HOUR,
-        maxWindowStartGap: HOUR - 1,
-      },
-      {
-        name: "a max window start gap above the period",
-        period: PERIOD,
-        updateInterval: HOUR,
-        maxWindowStartGap: PERIOD + 1,
-      },
-      {
-        name: "a period shorter than the update interval",
-        period: HOUR / 2,
-        updateInterval: HOUR,
-        maxWindowStartGap: HOUR,
-      },
+      { name: "a zero period", period: 0, updateInterval: 0 },
+      { name: "a zero update interval", period: PERIOD, updateInterval: 0 },
+      { name: "an update interval longer than the period", period: PERIOD, updateInterval: PERIOD + 1 },
     ];
 
-    for (const { name, period, updateInterval, maxWindowStartGap } of invalid) {
+    for (const { name, period, updateInterval } of invalid) {
       it(`reverts on ${name}`, async () => {
-        await expect(configure(period, updateInterval, maxWindowStartGap))
+        await expect(configure(period, updateInterval))
           .to.be.revertedWithCustomError(twap, "InvalidTokenConfig")
           .withArgs(asset.address);
       });
     }
 
-    it("accepts a period that is not a multiple of the update interval", async () => {
-      await configure(PERIOD + 1, HOUR, HOUR);
-      expect((await twap.tokenConfigs(asset.address)).period).to.equal(PERIOD + 1);
-    });
-
-    it("stores a disabled config with an empty history and emits TokenConfigUpdated", async () => {
-      await time.setNextBlockTimestamp(t0);
-      await expect(configure())
-        .to.emit(twap, "TokenConfigUpdated")
-        .withArgs(asset.address, PERIOD, UPDATE_INTERVAL, MAX_WINDOW_START_GAP);
-      expect(await twap.tokenConfigs(asset.address)).to.deep.equal([
-        false,
-        PERIOD,
-        UPDATE_INTERVAL,
-        MAX_WINDOW_START_GAP,
-        t0,
-        0,
-        0,
-        0,
-      ]);
-    });
-
-    it("accepts a period, update interval and max window start gap all equal", async () => {
-      await configure(HOUR, HOUR, HOUR);
+    it("accepts a period equal to the update interval", async () => {
+      await configure(HOUR, HOUR);
       expect((await twap.tokenConfigs(asset.address)).period).to.equal(HOUR);
     });
 
-    it("keeps the enabled flag and restarts the history", async () => {
-      await configureAndEnable();
-      await updateHourly([e18("1"), e18("2")]);
-      await time.setNextBlockTimestamp(t0 + 2 * HOUR);
-      await configure(2 * PERIOD, 2 * HOUR, 4 * HOUR);
+    it("stores a disabled config with an empty history, lists the asset and emits TokenConfigAdded", async () => {
+      await expect(configure()).to.emit(twap, "TokenConfigAdded").withArgs(asset.address, PERIOD, UPDATE_INTERVAL);
       expect(await twap.tokenConfigs(asset.address)).to.deep.equal([
-        true,
-        2 * PERIOD,
-        2 * HOUR,
-        4 * HOUR,
-        t0 + 2 * HOUR,
+        asset.address,
+        false,
+        PERIOD,
+        UPDATE_INTERVAL,
         0,
         0,
         0,
       ]);
+      expect(await twap.getAllAssets()).to.deep.equal([asset.address]);
     });
 
-    it("removes and disables the asset on a zero period, whatever the update interval and max window start gap", async () => {
-      await configureAndEnable();
-      await updateAt(t0, e18("1"));
-      await expect(configure(0, 7, 9)).to.emit(twap, "TokenConfigUpdated").withArgs(asset.address, 0, 7, 9);
-      const config = await twap.tokenConfigs(asset.address);
-      expect(config.enabled).to.equal(false);
-      expect(config.period).to.equal(0);
-      expect(config.lastUpdatedAt).to.equal(0);
-      await expectNotEnabled();
-      await expect(twap.updatePrice(asset.address))
-        .to.be.revertedWithCustomError(twap, "AssetNotConfigured")
+    it("reverts on an asset that is already configured", async () => {
+      await configure();
+      await expect(configure(2 * PERIOD, HOUR))
+        .to.be.revertedWithCustomError(twap, "AssetAlreadyConfigured")
         .withArgs(asset.address);
     });
 
-    it("re-adds a removed asset disabled", async () => {
-      await configureAndEnable();
-      await configure(0, 0, 0);
+    it("lists the assets in the order they were added", async () => {
       await configure();
-      expect((await twap.tokenConfigs(asset.address)).enabled).to.equal(false);
+      await twap.setTokenConfig(otherAsset.address, PERIOD, HOUR);
+      await setParams(2 * PERIOD, HOUR);
+      expect(await twap.getAllAssets()).to.deep.equal([asset.address, otherAsset.address]);
     });
 
     it("leaves other assets alone", async () => {
       await configureAndEnable();
       await updateAt(t0, e18("1"));
-      await twap.setTokenConfig(otherAsset.address, 2 * PERIOD, HOUR, MAX_WINDOW_START_GAP);
+      await twap.setTokenConfig(otherAsset.address, 2 * PERIOD, HOUR);
       const config = await twap.tokenConfigs(asset.address);
       expect(config.enabled).to.equal(true);
       expect(config.lastPrice).to.equal(e18("1"));
     });
   });
 
-  describe("setTokenEnabled", () => {
-    it("reverts when enabling an asset without a config", async () => {
-      await expect(twap.setTokenEnabled(asset.address, true))
+  describe("setAssetParams", () => {
+    it("reverts on an asset without a config", async () => {
+      await expect(setParams(PERIOD, HOUR))
         .to.be.revertedWithCustomError(twap, "AssetNotConfigured")
         .withArgs(asset.address);
     });
+
+    const invalid = [
+      { name: "a zero period", period: 0, updateInterval: 0 },
+      { name: "a zero update interval", period: PERIOD, updateInterval: 0 },
+      { name: "an update interval longer than the period", period: PERIOD, updateInterval: PERIOD + 1 },
+    ];
+
+    for (const { name, period, updateInterval } of invalid) {
+      it(`reverts on ${name}`, async () => {
+        await configure();
+        await expect(setParams(period, updateInterval))
+          .to.be.revertedWithCustomError(twap, "InvalidTokenConfig")
+          .withArgs(asset.address);
+      });
+    }
+
+    it("changes the period and update interval, emitting the old and new values, and keeps the rest", async () => {
+      await configureAndEnable();
+      await updateHourly([e18("1"), e18("2")]);
+      await expect(setParams(2 * PERIOD + 1, 2 * HOUR))
+        .to.emit(twap, "AssetParamsUpdated")
+        .withArgs(asset.address, PERIOD, 2 * PERIOD + 1, UPDATE_INTERVAL, 2 * HOUR);
+      expect(await twap.tokenConfigs(asset.address)).to.deep.equal([
+        asset.address,
+        true,
+        2 * PERIOD + 1,
+        2 * HOUR,
+        t0 + HOUR,
+        e18("2"),
+        e18("1").mul(HOUR),
+      ]);
+      expect(await twap.getAllAssets()).to.deep.equal([asset.address]);
+    });
+  });
+
+  describe("setTokenEnabled", () => {
+    for (const enabled of [true, false]) {
+      it(`reverts when setting ${enabled} on an asset without a config`, async () => {
+        await expect(twap.setTokenEnabled(asset.address, enabled))
+          .to.be.revertedWithCustomError(twap, "AssetNotConfigured")
+          .withArgs(asset.address);
+      });
+    }
 
     it("enables a configured asset and emits TokenEnabledUpdated", async () => {
       await configure();
@@ -292,10 +286,11 @@ describe("TwapOracle", () => {
       expect(config.lastPrice).to.equal(e18("1"));
     });
 
-    it("allows disabling an asset without a config", async () => {
-      await expect(twap.setTokenEnabled(asset.address, false))
-        .to.emit(twap, "TokenEnabledUpdated")
-        .withArgs(asset.address, false);
+    it("does nothing when the flag does not change", async () => {
+      await configure();
+      await expect(twap.setTokenEnabled(asset.address, false)).not.to.emit(twap, "TokenEnabledUpdated");
+      await twap.setTokenEnabled(asset.address, true);
+      await expect(twap.setTokenEnabled(asset.address, true)).not.to.emit(twap, "TokenEnabledUpdated");
     });
   });
 
@@ -377,18 +372,16 @@ describe("TwapOracle", () => {
       await expect(updateAt(t0, e18("5"))).to.emit(twap, "PriceUpdated");
     });
 
-    it("updates right after a config in an interval slot that already had an update", async () => {
+    it("does nothing in the same interval slot after a config change, which keeps the history", async () => {
       await configure();
       await updateAt(t0, e18("5"));
-      await configure();
-      await expect(updateAt(t0 + 10, e18("6")))
-        .to.emit(twap, "PriceUpdated")
-        .withArgs(asset.address, e18("6"), 0);
+      await setParams(2 * PERIOD, UPDATE_INTERVAL);
+      await expect(updateAt(t0 + 10, e18("6"))).not.to.emit(twap, "PriceUpdated");
     });
 
     it("keeps each asset's history separate", async () => {
       await configure();
-      await twap.setTokenConfig(otherAsset.address, PERIOD, UPDATE_INTERVAL, MAX_WINDOW_START_GAP);
+      await twap.setTokenConfig(otherAsset.address, PERIOD, UPDATE_INTERVAL);
       await updateAt(t0, e18("5"));
       resilientOracle.getPrice.whenCalledWith(otherAsset.address).returns(e18("8"));
       await expect(twap.updatePrice(otherAsset.address))
@@ -487,49 +480,30 @@ describe("TwapOracle", () => {
       await expectPrice(t0 + PERIOD + 2 * HOUR, e18("300"));
     });
 
-    it("reject once the last checkpoint before the window start is more than the max window start gap older", async () => {
+    it("bridge a gap of any length at the last price, also at the window start", async () => {
       await configureAndEnable();
       await updateAt(t0, e18("100"));
-      await updateAt(t0 + 3 * HOUR, e18("300"));
-      // The window starts exactly the max window start gap after the first update
-      await expectPrice(t0 + PERIOD + MAX_WINDOW_START_GAP, e18("250"));
-      await expectInsufficientHistory(t0 + PERIOD + MAX_WINDOW_START_GAP + 1);
-      await expectInsufficientHistory(t0 + PERIOD + 3 * HOUR - 1);
-      await expectPrice(t0 + PERIOD + 3 * HOUR, e18("300"));
+      await updateAt(t0 + 10 * HOUR, e18("300"));
+      // The window starts seven hours after the last checkpoint before it: 100 for three hours, then 300 for one
+      await expectPrice(t0 + 11 * HOUR, e18("150"));
     });
 
-    it("ignore checkpoints from before a config reset", async () => {
+    it("serve a changed period at once from the history the asset already has", async () => {
       await configureAndEnable();
-      await updateHourly([e18("100"), e18("100"), e18("100"), e18("100"), e18("100")]);
-      await expectPrice(t0 + PERIOD + 1, e18("100"));
+      await updateHourly([...Array(4).fill(e18("100")), ...Array(4).fill(e18("300"))]);
+      await time.setNextBlockTimestamp(t0 + 7 * HOUR + 60);
+      await setParams(2 * HOUR, HOUR);
+      await expectPrice(t0 + 8 * HOUR, e18("300"));
 
-      await time.setNextBlockTimestamp(t0 + PERIOD + 2);
-      await configure();
-      // Only the old history precedes the window start
-      await expectInsufficientHistory(t0 + PERIOD + 3);
-      await updateHourly([e18("200"), e18("200"), e18("200")], t0 + 5 * HOUR);
-      // The window starts at the last old update, within the max window start gap of other old ones
-      await expectInsufficientHistory(t0 + 8 * HOUR);
-      await updateAt(t0 + 8 * HOUR + 1, e18("200"));
-      await expectPrice(t0 + 9 * HOUR, e18("200"));
-    });
+      await time.setNextBlockTimestamp(t0 + 8 * HOUR + 60);
+      await setParams(8 * HOUR, HOUR);
+      // 100 for three hours, then 300 for five
+      await expectPrice(t0 + 9 * HOUR, e18("225"));
 
-    it("ignore a checkpoint taken in the same second as the config", async () => {
-      await configureAndEnable();
-      await network.provider.send("evm_setAutomine", [false]);
-      try {
-        resilientOracle.getPrice.returns(e18("100"));
-        await time.setNextBlockTimestamp(t0);
-        await configure();
-        await twap.connect(keeper).updatePrice(asset.address, NO_ESTIMATE);
-        await network.provider.send("evm_mine", []);
-      } finally {
-        await network.provider.send("evm_setAutomine", [true]);
-      }
-      expect((await twap.tokenConfigs(asset.address)).lastUpdatedAt).to.equal(t0);
-      await updateHourly([e18("100"), e18("100"), e18("100")], t0 + HOUR);
-      await expectInsufficientHistory(t0 + PERIOD);
-      await expectPrice(t0 + PERIOD + HOUR, e18("100"));
+      // A period longer than the history waits for it
+      await time.setNextBlockTimestamp(t0 + 9 * HOUR + 60);
+      await setParams(16 * HOUR, HOUR);
+      await expectInsufficientHistory(t0 + 9 * HOUR + 120);
     });
 
     it("use the history filled while the asset was disabled", async () => {
@@ -552,8 +526,8 @@ describe("TwapOracle", () => {
       expect(await twap.getPrice(asset.address)).to.equal(e18("200"));
     });
 
-    it("use the asset's own period, update interval and max window start gap", async () => {
-      await configure(2 * HOUR, 2 * HOUR, 2 * HOUR);
+    it("use the asset's own period and update interval", async () => {
+      await configure(2 * HOUR, 2 * HOUR);
       await twap.setTokenEnabled(asset.address, true);
       await updateAt(t0, e18("100"));
       await expectInsufficientHistory(t0 + 2 * HOUR - 1);
@@ -564,7 +538,7 @@ describe("TwapOracle", () => {
     });
 
     it("price a week-long window of hourly updates with a final pump", async () => {
-      await twap.setTokenConfig(asset.address, 7 * DAY, HOUR, MAX_WINDOW_START_GAP);
+      await twap.setTokenConfig(asset.address, 7 * DAY, HOUR);
       await twap.setTokenEnabled(asset.address, true);
       const prices = [...Array(7 * 24 - 1).fill(e18("5")), e18("25")];
       await updateHourly(prices);

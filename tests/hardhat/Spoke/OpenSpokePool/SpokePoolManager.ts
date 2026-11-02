@@ -251,7 +251,7 @@ describe("SpokePoolManager", () => {
 
   /// Enables `asset` on the TWAP oracle with a TWAP of `twap`
   const setTwap = (asset: string, twap: BigNumberish) => {
-    twapOracle.tokenConfigs.whenCalledWith(asset).returns([true, 0, 0, 0, 0, 0, 0, 0]);
+    twapOracle.tokenConfigs.whenCalledWith(asset).returns([asset, true, 0, 0, 0, 0, 0]);
     twapOracle.getPrice.whenCalledWith(asset).returns(twap);
   };
 
@@ -664,7 +664,7 @@ describe("SpokePoolManager", () => {
     });
 
     it("reverts while an enabled bond asset has no TWAP", async () => {
-      twapOracle.tokenConfigs.whenCalledWith(bondToken.address).returns([true, 0, 0, 0, 0, 0, 0, 0]);
+      twapOracle.tokenConfigs.whenCalledWith(bondToken.address).returns([bondToken.address, true, 0, 0, 0, 0, 0]);
       twapOracle.getPrice.whenCalledWith(bondToken.address).reverts();
       await expect(requestPool()).to.be.reverted;
     });

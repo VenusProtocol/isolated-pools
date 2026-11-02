@@ -353,7 +353,8 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
   await give(bscmainnet.RESILIENT_ORACLE, "enableOracle(address,uint8,bool)", timelockAddress);
 
   // Bond assets' TWAP configs, set by VIPs
-  await give(f.twapOracle.address, "setTokenConfig(address,uint256,uint256,uint256)", timelockAddress);
+  await give(f.twapOracle.address, "setTokenConfig(address,uint256,uint256)", timelockAddress);
+  await give(f.twapOracle.address, "setAssetParams(address,uint256,uint256)", timelockAddress);
   await give(f.twapOracle.address, "setTokenEnabled(address,bool)", timelockAddress);
 
   // Deployer updates: the manager publishes, the keeper processes, the stewards apply

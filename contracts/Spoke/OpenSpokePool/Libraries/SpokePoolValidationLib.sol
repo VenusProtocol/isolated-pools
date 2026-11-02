@@ -262,7 +262,7 @@ library SpokePoolValidationLib {
         address asset
     ) internal view returns (uint256 price) {
         price = contracts.resilientOracle.getPrice(asset);
-        (bool isTwapEnabled, , , , , , , ) = contracts.twapOracle.tokenConfigs(asset);
+        (, bool isTwapEnabled, , , , , ) = contracts.twapOracle.tokenConfigs(asset);
         if (isTwapEnabled) {
             uint256 twap = contracts.twapOracle.getPrice(asset);
             if (twap < price) {

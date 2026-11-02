@@ -49,10 +49,8 @@ contract TwapOracleStub {
         twap = twap_;
     }
 
-    function tokenConfigs(
-        address
-    ) external view returns (bool, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
-        return (enabled, 0, 0, 0, 0, 0, 0, 0);
+    function tokenConfigs(address) external view returns (address, bool, uint256, uint256, uint256, uint256, uint256) {
+        return (address(0), enabled, 0, 0, 0, 0, 0);
     }
 
     function getPrice(address) external view returns (uint256) {
