@@ -8,14 +8,34 @@ import { bscmainnet } from "../HubSpoke/constants";
 import { grant } from "../HubSpoke/fixture";
 import {
   OpenSpokeFixture,
+  TIER_ONE,
+  TIER_ONE_BOND_USD,
+  TIER_ONE_LIMITS,
   XVS,
+  XVS_BOND_FACTOR,
   deployMockFeed,
-  deployProxy,
   e18,
   loadOpenSpokeFixture,
   setPrice,
 } from "./util/fixture";
-import { impersonate, resilientOracle } from "./util/helpers";
+import {
+  EXP_SCALE,
+  TIER_ONE_XVS_BOND,
+  borrow,
+  collateralMarket,
+  crashAndHeal,
+  fundDeployer,
+  impersonate,
+  newCollateralToken,
+  openDefaultPool,
+  openFundedPool,
+  openPool,
+  recoverFromBond,
+  resilientOracle,
+  supplyCollateral,
+  updateTier,
+  usdtLoanMarket,
+} from "./util/helpers";
 
 const FORK = process.env.FORK === "true";
 
@@ -123,10 +143,7 @@ if (FORK) {
     before(async () => {
       f = await loadOpenSpokeFixture();
       oracle = await resilientOracle();
-      twap = (await deployProxy(f.admin, "TwapOracle", [bscmainnet.RESILIENT_ORACLE])) as TwapOracle;
-      for (const signature of [SET_TOKEN_CONFIG, SET_TOKEN_ENABLED]) {
-        await grant(f.acm, f.timelock, twap.address, signature, bscmainnet.NORMAL_TIMELOCK);
-      }
+      twap = f.twapOracle;
       deployed = await takeSnapshot();
     });
 
@@ -273,6 +290,122 @@ if (FORK) {
         await fillWeek();
         await expectNoTwap(hour(HOURS_PER_WEEK) - 1);
         await expectTwap(hour(HOURS_PER_WEEK), e18("5"));
+      });
+    });
+
+    describe("the manager's XVS bond pricing", () => {
+      const REQUIRED_XVS_BOND_USD = TIER_ONE_BOND_USD.mul(XVS_BOND_FACTOR).div(EXP_SCALE);
+      /// The TWAP at hour 169 after a week at $5 and a pump to $25 in hour 168
+      const PUMPED_TWAP = hourlyTwap(["5", 167], ["25", 1]);
+
+      /// The least XVS worth `usd` at `price`, as the manager rounds a bond floor up
+      const xvsWorth = (usd: BigNumber, price: BigNumber) => usd.mul(EXP_SCALE).add(price).sub(1).div(price);
+
+      const refreshFeeds = async () => {
+        for (const feed of f.feeds) await feed.updateAnswer(await feed.latestAnswer());
+      };
+
+      /// Restarts the hourly timeline after any pool setup, fills a week at $5, enables XVS and pumps it to $25 in hour
+      /// 168, so a bond priced at hour 169 sees a $25 spot price and `PUMPED_TWAP`
+      async function enableAndPump() {
+        t0 = (Math.floor((await time.latest()) / HOUR) + 1) * HOUR;
+        await fillWeek();
+        await refreshFeeds();
+        await setEnabled(true);
+        await update(hour(HOURS_PER_WEEK), "25");
+        expect(modelTwap(hour(HOURS_PER_WEEK + 1))).to.equal(PUMPED_TWAP);
+      }
+
+      const newRequest = async () => ({
+        collateralMarkets: [collateralMarket(await newCollateralToken(f, "COL", "2"))],
+        loanMarkets: [usdtLoanMarket(f)],
+      });
+
+      it("a pumped spot price does not let a deployer bond a pool with fewer XVS", async () => {
+        await enableAndPump();
+        const request = await newRequest();
+        const enoughAtSpot = xvsWorth(REQUIRED_XVS_BOND_USD, e18("25"));
+        await fundDeployer(f, f.deployer, { ...request, bondAmount: TIER_ONE_XVS_BOND });
+        const requestPool = (bondAmount: BigNumber) =>
+          f.manager
+            .connect(f.deployer)
+            .requestPool(TIER_ONE, XVS, bondAmount, request.collateralMarkets, request.loanMarkets);
+
+        await at(hour(HOURS_PER_WEEK + 1));
+        await expect(requestPool(enoughAtSpot))
+          .to.be.revertedWithCustomError(f.manager, "InsufficientBondValue")
+          .withArgs(enoughAtSpot.mul(PUMPED_TWAP).div(EXP_SCALE), REQUIRED_XVS_BOND_USD);
+
+        const enoughAtTwap = xvsWorth(REQUIRED_XVS_BOND_USD, modelTwap(hour(HOURS_PER_WEEK + 1) + 60));
+        await at(hour(HOURS_PER_WEEK + 1) + 60);
+        await requestPool(enoughAtTwap);
+        expect((await f.manager.getRequest(1)).bondAmount).to.equal(enoughAtTwap);
+        expect(enoughAtTwap).to.be.gt(enoughAtSpot.mul(4));
+      });
+
+      it("a pumped spot price does not let a deployer withdraw more than the excess at the TWAP", async () => {
+        const bond = TIER_ONE_XVS_BOND.mul(2);
+        const pool = await openPool(f, f.deployer, { ...(await newRequest()), bondAmount: bond });
+        await enableAndPump();
+
+        const floor = xvsWorth(REQUIRED_XVS_BOND_USD, PUMPED_TWAP);
+        const xvsBefore = await f.xvs.balanceOf(f.deployer.address);
+        await at(hour(HOURS_PER_WEEK + 1));
+        await f.manager.connect(f.deployer).withdrawExcessBond(pool.comptroller.address);
+        expect((await f.xvs.balanceOf(f.deployer.address)).sub(xvsBefore)).to.equal(bond.sub(floor));
+        expect(await pool.bondAccount.currentBondAmount()).to.equal(floor);
+        // At the pumped spot price the floor would be about a fifth of it
+        expect(xvsWorth(REQUIRED_XVS_BOND_USD, e18("25"))).to.be.lt(floor.div(4));
+      });
+
+      it("a pumped spot price does not lift a bond's coverage for the deployer's risk setters", async () => {
+        const pool = await openDefaultPool(f);
+        await enableAndPump();
+        // The tier's bond rises 40%, so the bond covers about 71% of it at $5, under the 80% minimum
+        const minTierBondUsd = TIER_ONE_BOND_USD.mul(14).div(10);
+        await updateTier(f, TIER_ONE, { minTierBondUsd });
+
+        const requiredUsd = minTierBondUsd.mul(XVS_BOND_FACTOR).div(EXP_SCALE);
+        const bondUsd = TIER_ONE_XVS_BOND.mul(PUMPED_TWAP).div(EXP_SCALE);
+        await at(hour(HOURS_PER_WEEK + 1));
+        await expect(
+          f.manager
+            .connect(f.deployer)
+            .setCollateralFactor(pool.comptroller.address, pool.collateralVToken.address, e18("0.45"), e18("0.6")),
+        )
+          .to.be.revertedWithCustomError(f.manager, "CoverageTooLow")
+          .withArgs(bondUsd.mul(EXP_SCALE).div(requiredUsd), TIER_ONE_LIMITS.minCoverageRatio);
+        // At the pumped spot price the bond would cover over three times the tier's bond
+        expect(TIER_ONE_XVS_BOND.mul(25).mul(EXP_SCALE).div(requiredUsd)).to.be.gt(e18("3"));
+      });
+
+      it("a recoverer is still paid at the spot price, not the TWAP", async () => {
+        const pool = await openFundedPool(f);
+        await enableAndPump();
+        await supplyCollateral(f.borrower, pool.collateral, pool.collateralVToken, e18("1000"));
+        await borrow(f.borrower, pool.loanVToken, e18("900"));
+        const badDebt = await crashAndHeal(f, pool, f.borrower, "0.05");
+
+        // `recoverFromBond` checks the payout at the ResilientOracle's $25
+        const seized = await recoverFromBond(f, pool, badDebt);
+        const usdtPrice = await oracle.getUnderlyingPrice(pool.loanVToken.address);
+        expect(seized).to.equal(badDebt.mul(usdtPrice).div(e18("25")));
+        expect(seized).to.be.lt(badDebt.mul(usdtPrice).div(PUMPED_TWAP).div(4));
+      });
+
+      it("fails closed while an enabled XVS has no TWAP, and disabling it falls back to the spot price", async () => {
+        await setEnabled(true);
+        const request = await newRequest();
+        await fundDeployer(f, f.deployer, request);
+        const requestPool = () =>
+          f.manager
+            .connect(f.deployer)
+            .requestPool(TIER_ONE, XVS, TIER_ONE_XVS_BOND, request.collateralMarkets, request.loanMarkets);
+
+        await expect(requestPool()).to.be.revertedWithCustomError(twap, "InsufficientHistory").withArgs(XVS);
+        await setEnabled(false);
+        await requestPool();
+        expect((await f.manager.getRequest(1)).bondAmount).to.equal(TIER_ONE_XVS_BOND);
       });
     });
 

@@ -18,6 +18,7 @@ import {
   IRiskStewardReceiver,
   ISpokeBondManager,
   ISpokePoolProposalBuilder,
+  ITwapOracle,
   IYieldGroup,
   MockToken,
   MockToken__factory,
@@ -101,6 +102,7 @@ describe("SpokePoolManager", () => {
   let redstoneOracle: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
   let oracle: FakeContract<ResilientOracleInterface & IResilientOracle>;
+  let twapOracle: FakeContract<ITwapOracle>;
   let riskOracle: FakeContract<IRiskOracle>;
   let receiver: FakeContract<IRiskStewardReceiver>;
   let builder: FakeContract<ISpokePoolProposalBuilder>;
@@ -179,7 +181,7 @@ describe("SpokePoolManager", () => {
   const deployManager = async () => {
     const implementation = await (
       await managerFactory()
-    ).deploy(oracle.address, receiver.address, policyRegistry.address);
+    ).deploy(oracle.address, twapOracle.address, receiver.address, policyRegistry.address);
     return deployProxy(implementation as SpokePoolManager, acm.address);
   };
 
@@ -246,6 +248,12 @@ describe("SpokePoolManager", () => {
   };
 
   const setPrice = (asset: string, price: BigNumberish) => oracle.getPrice.whenCalledWith(asset).returns(price);
+
+  /// Enables `asset` on the TWAP oracle with a TWAP of `twap`
+  const setTwap = (asset: string, twap: BigNumberish) => {
+    twapOracle.tokenConfigs.whenCalledWith(asset).returns([true, 0, 0, 0, 0, 0, 0, 0]);
+    twapOracle.getPrice.whenCalledWith(asset).returns(twap);
+  };
 
   /// Makes `asset` unpriced by the ResilientOracle, so its feed prices it
   const unpriced = (asset: string) =>
@@ -339,6 +347,7 @@ describe("SpokePoolManager", () => {
       // Both declare `getPrice`
       ...IResilientOracle__factory.abi.filter(fragment => fragment.name !== "getPrice"),
     ]);
+    twapOracle = await smock.fake<ITwapOracle>("ITwapOracle");
     riskOracle = await smock.fake<IRiskOracle>("IRiskOracle");
     receiver = await smock.fake<IRiskStewardReceiver>("IRiskStewardReceiver");
     poolRegistry = await smock.fake<PoolRegistry>("PoolRegistry");
@@ -390,6 +399,7 @@ describe("SpokePoolManager", () => {
     resetFakes(
       acm,
       oracle,
+      twapOracle,
       riskOracle,
       receiver,
       poolRegistry,
@@ -409,6 +419,7 @@ describe("SpokePoolManager", () => {
   describe("constructor and initialize", () => {
     it("stores the immutables, the RiskOracle the receiver reads and the access control manager", async () => {
       expect(await manager.RESILIENT_ORACLE()).to.equal(oracle.address);
+      expect(await manager.TWAP_ORACLE()).to.equal(twapOracle.address);
       expect(await manager.RISK_ORACLE()).to.equal(riskOracle.address);
       expect(await manager.RISK_STEWARD_RECEIVER()).to.equal(receiver.address);
       expect(await manager.POLICY_REGISTRY()).to.equal(policyRegistry.address);
@@ -418,7 +429,7 @@ describe("SpokePoolManager", () => {
 
     it("reverts when any address is zero", async () => {
       const factory = await managerFactory();
-      const args = [oracle.address, receiver.address, policyRegistry.address];
+      const args = [oracle.address, twapOracle.address, receiver.address, policyRegistry.address];
       for (let i = 0; i < args.length; i++) {
         const zeroed = [...args];
         zeroed[i] = constants.AddressZero;
@@ -432,7 +443,7 @@ describe("SpokePoolManager", () => {
       );
       const implementation = await (
         await managerFactory()
-      ).deploy(oracle.address, receiver.address, policyRegistry.address);
+      ).deploy(oracle.address, twapOracle.address, receiver.address, policyRegistry.address);
       await expect(implementation.initialize(acm.address)).to.be.revertedWith(
         "Initializable: contract is already initialized",
       );
@@ -628,6 +639,34 @@ describe("SpokePoolManager", () => {
       await expect(requestPool())
         .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
         .withArgs(e18("999"), BOND);
+    });
+
+    it("prices a bond asset the TWAP oracle enables at the lower of its spot price and TWAP", async () => {
+      setTwap(bondToken.address, e18("0.5"));
+      await expect(requestPool())
+        .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
+        .withArgs(e18("500"), BOND);
+      expect(await requestPool(undefined, undefined, poolOf({ bondAmount: e18("2000") }))).to.equal(1);
+    });
+
+    it("keeps the spot price when it is below the TWAP", async () => {
+      setTwap(bondToken.address, e18("3"));
+      setPrice(bondToken.address, e18("0.999"));
+      await expect(requestPool())
+        .to.be.revertedWithCustomError(manager, "InsufficientBondValue")
+        .withArgs(e18("999"), BOND);
+    });
+
+    it("ignores the TWAP of a bond asset the TWAP oracle has not enabled", async () => {
+      twapOracle.getPrice.whenCalledWith(bondToken.address).returns(e18("0.5"));
+      expect(await requestPool()).to.equal(1);
+      expect(twapOracle.getPrice).not.to.have.been.called;
+    });
+
+    it("reverts while an enabled bond asset has no TWAP", async () => {
+      twapOracle.tokenConfigs.whenCalledWith(bondToken.address).returns([true, 0, 0, 0, 0, 0, 0, 0]);
+      twapOracle.getPrice.whenCalledWith(bondToken.address).reverts();
+      await expect(requestPool()).to.be.reverted;
     });
   });
 
@@ -1544,6 +1583,17 @@ describe("SpokePoolManager", () => {
           .withArgs(e18("0.5"), LIMITS.minCoverageRatio);
       });
 
+      it("checks the coverage at the lower of the bond asset's spot price and TWAP", async () => {
+        setTwap(bondToken.address, e18("0.5"));
+        await expect(set(deployer, e18("0.45"), e18("0.6")))
+          .to.be.revertedWithCustomError(manager, "CoverageTooLow")
+          .withArgs(e18("0.5"), LIMITS.minCoverageRatio);
+
+        setTwap(bondToken.address, e18("0.8"));
+        await set(deployer, e18("0.45"), e18("0.6"));
+        factorsPublished(e18("0.45"), e18("0.6"));
+      });
+
       it("publishes with the bond's coverage exactly at the tier's minimum", async () => {
         setBond(MIN_COVERED_BOND);
         await set(deployer, e18("0.45"), e18("0.6"));
@@ -1714,6 +1764,12 @@ describe("SpokePoolManager", () => {
         expect(floor).to.equal(e18("1500").mul(e18("1")).div(e18("7")).add(1));
       });
 
+      it("keeps the required bond at the lower of the bond asset's spot price and TWAP", async () => {
+        setTwap(bondToken.address, e18("0.5"));
+        await manager.connect(deployer).withdrawExcessBond(comptroller.address, NO_ESTIMATE);
+        expect(bondManager.withdrawExcess).to.have.been.calledOnceWith(comptroller.address, e18("2000"));
+      });
+
       it("reverts while the deployer's latest request is pending or built, then works once it closes", async () => {
         const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
         await expect(manager.connect(deployer).withdrawExcessBond(comptroller.address))
@@ -1772,10 +1828,27 @@ describe("SpokePoolManager", () => {
       });
     });
 
+    describe("getExcessBondAmount with a TWAP", () => {
+      it("uses the floor at the lower of the bond asset's spot price and TWAP", async () => {
+        setTwap(bondToken.address, e18("0.5"));
+        bondManager.getCurrentBondAmount.returns(e18("2500"));
+        expect(await manager.getExcessBondAmount(comptroller.address)).to.equal(e18("500"));
+      });
+    });
+
     describe("getBondValue", () => {
       it("values what the bond holds at the ResilientOracle's price of its asset", async () => {
         setBond(e18("1200"));
         setPrice(bondToken.address, e18("2.5"));
+        expect(await manager.getBondValue(comptroller.address)).to.equal(e18("3000"));
+      });
+
+      it("values the bond at the lower of its asset's spot price and TWAP", async () => {
+        setBond(e18("1200"));
+        setPrice(bondToken.address, e18("2.5"));
+        setTwap(bondToken.address, e18("2"));
+        expect(await manager.getBondValue(comptroller.address)).to.equal(e18("2400"));
+        setTwap(bondToken.address, e18("3"));
         expect(await manager.getBondValue(comptroller.address)).to.equal(e18("3000"));
       });
 

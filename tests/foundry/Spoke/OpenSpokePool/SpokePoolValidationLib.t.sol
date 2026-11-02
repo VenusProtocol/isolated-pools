@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { ITwapOracle } from "../../../../contracts/Oracles/ITwapOracle.sol";
 
 import { SpokePoolValidationLib } from "../../../../contracts/Spoke/OpenSpokePool/Libraries/SpokePoolValidationLib.sol";
 import { SpokePoolPolicyRegistry } from "../../../../contracts/Spoke/OpenSpokePool/SpokePoolPolicyRegistry.sol";
@@ -35,6 +36,27 @@ contract BondManagerStub {
 
     function setAccount(address comptroller, address account) external {
         bondAccounts[comptroller] = account;
+    }
+}
+
+/// @notice TWAP oracle stand-in: one enabled flag and TWAP for every asset
+contract TwapOracleStub {
+    bool internal enabled;
+    uint256 internal twap;
+
+    function set(bool enabled_, uint256 twap_) external {
+        enabled = enabled_;
+        twap = twap_;
+    }
+
+    function tokenConfigs(
+        address
+    ) external view returns (bool, uint256, uint256, uint256, uint256, uint256, uint256, uint256) {
+        return (enabled, 0, 0, 0, 0, 0, 0, 0);
+    }
+
+    function getPrice(address) external view returns (uint256) {
+        return twap;
     }
 }
 
@@ -77,6 +99,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
     SpokePoolPolicyRegistry internal registry;
     BondManagerStub internal bondManager;
     BondAccountStub internal bondAccount;
+    TwapOracleStub internal twapOracle;
     ISpokePoolManager.Request internal request;
 
     function setUp() public override {
@@ -87,6 +110,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         bondManager = new BondManagerStub();
         bondAccount = new BondAccountStub(bondAsset);
         bondManager.setAccount(comptroller, address(bondAccount));
+        twapOracle = new TwapOracleStub();
         address[] memory oracles = new address[](1);
         oracles[0] = supportedOracle;
         registry.setSupportedOracles(oracles);
@@ -112,6 +136,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         return
             ISpokePoolManager.Contracts({
                 resilientOracle: ResilientOracleInterface(address(oracle)),
+                twapOracle: ITwapOracle(address(twapOracle)),
                 riskOracle: IRiskOracle(address(0)),
                 riskStewardReceiver: IRiskStewardReceiver(address(0)),
                 policyRegistry: ISpokePoolPolicyRegistry(address(registry)),
@@ -183,6 +208,33 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
                 ISpokePoolManager.InsufficientBondValue.selector,
                 ((floor - 1) * price) / 1e18,
                 requiredUsd
+            )
+        );
+        this.validateBond();
+    }
+
+    /// @notice A bond asset the TWAP oracle has enabled is priced at the lower of its spot price and TWAP, any other
+    /// at its spot price, in both the floor and `validateBond`
+    function testFuzz_bondPricedAtLowerOfSpotAndTwap(uint256 spot, uint256 twap, bool isTwapEnabled) public {
+        spot = bound(spot, 1e9, 1e27);
+        twap = bound(twap, 1e9, 1e27);
+        _setTier(1_000_000e18, 0, 1e18);
+        registry.setBondAssetFactor(bondAsset, 1e18);
+        oracle.setPrice(bondAsset, spot);
+        twapOracle.set(isTwapEnabled, twap);
+        uint256 price = isTwapEnabled && twap < spot ? twap : spot;
+
+        uint256 floor = SpokePoolValidationLib.requiredBondAmount(_contracts(), TIER, comptroller);
+        assertEq(floor, (1_000_000e18 * 1e18 + price - 1) / price);
+
+        bondAccount.setAmount(floor);
+        this.validateBond();
+        bondAccount.setAmount(floor - 1);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                ISpokePoolManager.InsufficientBondValue.selector,
+                ((floor - 1) * price) / 1e18,
+                1_000_000e18
             )
         );
         this.validateBond();

@@ -23,12 +23,13 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const accessControlManager = await toAddress(preconfiguredAddresses.AccessControlManager);
   const owner = await toAddress(preconfiguredAddresses.NormalTimelock);
   const resilientOracle = await toAddress("ResilientOracle");
+  const twapOracle = await toAddress("TwapOracle");
   const riskOracle = await toAddress(preconfiguredAddresses.RiskOracle);
   const riskStewardReceiver = await toAddress(preconfiguredAddresses.RiskStewardReceiver);
   const policyRegistry = await toAddress("SpokePoolPolicyRegistry");
 
   // The manager reads its RiskOracle from the receiver; the configured one is only checked against it below
-  const args = [resilientOracle, riskStewardReceiver, policyRegistry];
+  const args = [resilientOracle, twapOracle, riskStewardReceiver, policyRegistry];
   const proxyAdmin = await hre.artifacts.readArtifact(
     "hardhat-deploy/solc_0.8/openzeppelin/proxy/transparent/ProxyAdmin.sol:ProxyAdmin",
   );
@@ -65,6 +66,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const manager = await ethers.getContract(DEPLOYMENT_NAME);
   const checks: [string, string, string][] = [
     ["RESILIENT_ORACLE", await readBackAddress(() => manager.RESILIENT_ORACLE(), resilientOracle), resilientOracle],
+    ["TWAP_ORACLE", await readBackAddress(() => manager.TWAP_ORACLE(), twapOracle), twapOracle],
     ["RISK_ORACLE", await readBackAddress(() => manager.RISK_ORACLE(), riskOracle), riskOracle],
     [
       "RISK_STEWARD_RECEIVER",
@@ -102,7 +104,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 };
 
 func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];
-func.dependencies = ["SpokePoolPolicyRegistry"];
+func.dependencies = ["SpokePoolPolicyRegistry", "TwapOracle"];
 // GovernorBravo exists on the BSC networks only
 func.skip = async (hre: HardhatRuntimeEnvironment) =>
   !(await getConfig(hre.getNetworkName())).preconfiguredAddresses.GovernorBravo;

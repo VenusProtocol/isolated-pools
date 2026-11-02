@@ -9,6 +9,7 @@ import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interf
 import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
+import { ITwapOracle } from "../../Oracles/ITwapOracle.sol";
 import { IBondAccount } from "../interfaces/IBondAccount.sol";
 import { ISpokeBondManager } from "../interfaces/ISpokeBondManager.sol";
 import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
@@ -41,6 +42,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     ResilientOracleInterface public immutable RESILIENT_ORACLE;
 
     /// @inheritdoc ISpokePoolManager
+    ITwapOracle public immutable TWAP_ORACLE;
+
+    /// @inheritdoc ISpokePoolManager
     IRiskOracle public immutable RISK_ORACLE;
 
     /// @inheritdoc ISpokePoolManager
@@ -51,20 +55,24 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /**
      * @param resilientOracle The oracle bonds, seeds, caps and debts are priced with
+     * @param twapOracle The oracle whose TWAP caps a bond asset's price, for the bond assets it has enabled
      * @param riskStewardReceiver The receiver that applies deployer updates published to the RiskOracle it reads
      * @param policyRegistry The registry of the policy pools run under
      * @custom:error ZeroAddressNotAllowed is thrown when any address is zero
      */
     constructor(
         ResilientOracleInterface resilientOracle,
+        ITwapOracle twapOracle,
         IRiskStewardReceiver riskStewardReceiver,
         ISpokePoolPolicyRegistry policyRegistry
     ) {
         ensureNonzeroAddress(address(resilientOracle));
+        ensureNonzeroAddress(address(twapOracle));
         ensureNonzeroAddress(address(riskStewardReceiver));
         ensureNonzeroAddress(address(policyRegistry));
 
         RESILIENT_ORACLE = resilientOracle;
+        TWAP_ORACLE = twapOracle;
         RISK_ORACLE = IRiskOracle(riskStewardReceiver.RISK_ORACLE());
         RISK_STEWARD_RECEIVER = riskStewardReceiver;
         POLICY_REGISTRY = policyRegistry;
@@ -722,6 +730,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         return
             Contracts(
                 RESILIENT_ORACLE,
+                TWAP_ORACLE,
                 RISK_ORACLE,
                 RISK_STEWARD_RECEIVER,
                 POLICY_REGISTRY,

@@ -9,6 +9,7 @@ import { ISpokePoolProposalBuilder } from "../../interfaces/ISpokePoolProposalBu
 import { ISpokePoolManager } from "../../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolPolicyRegistry } from "../../interfaces/ISpokePoolPolicyRegistry.sol";
 import { IRiskStewardReceiver } from "../../interfaces/external/IRiskStewardReceiver.sol";
+import { SpokePoolValidationLib } from "./SpokePoolValidationLib.sol";
 
 /**
  * @title SpokePoolGovernanceLib
@@ -320,6 +321,8 @@ library SpokePoolGovernanceLib {
     ) private view returns (address bondAsset, uint256 bondUsd) {
         IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
         bondAsset = address(bondAccount.asset());
-        bondUsd = (bondAccount.currentBondAmount() * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
+        bondUsd =
+            (bondAccount.currentBondAmount() * SpokePoolValidationLib.bondAssetPrice(contracts, bondAsset)) /
+            EXP_SCALE;
     }
 }

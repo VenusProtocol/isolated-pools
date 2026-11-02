@@ -14,6 +14,7 @@ import {
   SpokePoolPolicyRegistry,
   SpokePoolProposalBuilder,
   SpokePoolShortfall,
+  TwapOracle,
 } from "../../../../../typechain";
 import { bscmainnet } from "../../HubSpoke/constants";
 import {
@@ -152,6 +153,7 @@ export interface OpenSpokeFixture extends Actors {
   policyRegistry: SpokePoolPolicyRegistry;
   bondManager: SpokeBondManager;
   shortfall: SpokePoolShortfall;
+  twapOracle: TwapOracle;
   riskOracle: Contract;
   receiver: Contract;
   supplyPauseSteward: Contract;
@@ -349,6 +351,10 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
   await give(bscmainnet.RESILIENT_ORACLE, "setTokenConfig(TokenConfig)", timelockAddress);
   await give(bscmainnet.RESILIENT_ORACLE, "enableOracle(address,uint8,bool)", timelockAddress);
 
+  // Bond assets' TWAP configs, set by VIPs
+  await give(f.twapOracle.address, "setTokenConfig(address,uint256,uint256,uint256)", timelockAddress);
+  await give(f.twapOracle.address, "setTokenEnabled(address,bool)", timelockAddress);
+
   // Deployer updates: the manager publishes, the keeper processes, the stewards apply
   for (const signature of ["addAuthorizedSender(address)", "addUpdateType(string)"]) {
     await give(RISK_ORACLE, signature, timelockAddress);
@@ -498,10 +504,11 @@ async function deployOpenSpokeFixture(): Promise<OpenSpokeFixture> {
     SpokePoolValidationLib: (await (await ethers.getContractFactory("SpokePoolValidationLib", admin)).deploy()).address,
     SpokePoolGovernanceLib: (await (await ethers.getContractFactory("SpokePoolGovernanceLib", admin)).deploy()).address,
   };
+  const twapOracle = (await deployProxy(admin, "TwapOracle", [bscmainnet.RESILIENT_ORACLE])) as TwapOracle;
   const manager = (await deployProxy(
     admin,
     "SpokePoolManager",
-    [bscmainnet.RESILIENT_ORACLE, RISK_STEWARD_RECEIVER, policyRegistry.address],
+    [bscmainnet.RESILIENT_ORACLE, twapOracle.address, RISK_STEWARD_RECEIVER, policyRegistry.address],
     libraries,
   )) as SpokePoolManager;
   const shortfall = (await deployProxy(admin, "SpokePoolShortfall", [manager.address])) as SpokePoolShortfall;
@@ -549,6 +556,7 @@ async function deployOpenSpokeFixture(): Promise<OpenSpokeFixture> {
     policyRegistry,
     bondManager,
     shortfall,
+    twapOracle,
     riskOracle: new ethers.Contract(RISK_ORACLE, RISK_ORACLE_ABI, admin),
     receiver: new ethers.Contract(RISK_STEWARD_RECEIVER, RECEIVER_ABI, admin),
     supplyPauseSteward,

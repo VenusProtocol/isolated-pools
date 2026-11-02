@@ -135,7 +135,7 @@ library SpokePoolValidationLib {
     ) external view returns (uint256) {
         address bondAsset = address(IBondAccount(contracts.bondManager.bondAccounts(comptroller)).asset());
         uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
-        uint256 price = contracts.resilientOracle.getPrice(bondAsset);
+        uint256 price = bondAssetPrice(contracts, bondAsset);
         return (requiredBondUsd * EXP_SCALE + price - 1) / price;
     }
 
@@ -243,6 +243,32 @@ library SpokePoolValidationLib {
         _checkPoolMarkets(contracts, request, limits.maxCollateralMarkets);
         _checkCollateralMarkets(contracts, request, limits);
         _checkLoanMarkets(contracts.policyRegistry, request);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Internal functions
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * @notice Returns a bond asset's price: the lower of its spot price and its TWAP when the TWAP oracle has the asset
+     *   enabled, so a short pump cannot inflate a bond's value; its spot price otherwise
+     * @param contracts The manager's contracts
+     * @param asset The bond asset
+     * @return price The price, scaled like the ResilientOracle's
+     * @custom:error InsufficientHistory is thrown by the TWAP oracle while an enabled asset has no TWAP
+     */
+    function bondAssetPrice(
+        ISpokePoolManager.Contracts memory contracts,
+        address asset
+    ) internal view returns (uint256 price) {
+        price = contracts.resilientOracle.getPrice(asset);
+        (bool isTwapEnabled, , , , , , , ) = contracts.twapOracle.tokenConfigs(asset);
+        if (isTwapEnabled) {
+            uint256 twap = contracts.twapOracle.getPrice(asset);
+            if (twap < price) {
+                price = twap;
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -443,7 +469,7 @@ library SpokePoolValidationLib {
         uint256 amount
     ) private view {
         uint256 requiredBondUsd = contracts.policyRegistry.getRequiredBondUsd(tierId, bondAsset);
-        uint256 amountUsd = (amount * contracts.resilientOracle.getPrice(bondAsset)) / EXP_SCALE;
+        uint256 amountUsd = (amount * bondAssetPrice(contracts, bondAsset)) / EXP_SCALE;
         if (amountUsd < requiredBondUsd) {
             revert ISpokePoolManager.InsufficientBondValue(amountUsd, requiredBondUsd);
         }

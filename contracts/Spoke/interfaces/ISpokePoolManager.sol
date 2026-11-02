@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { ITwapOracle } from "../../Oracles/ITwapOracle.sol";
 
 import { ISpokeBondManager } from "./ISpokeBondManager.sol";
 import { ISpokePoolProposalBuilder } from "./ISpokePoolProposalBuilder.sol";
@@ -71,6 +72,7 @@ interface ISpokePoolManager {
     /// @notice The manager's contracts its libraries read, passed to them on each call
     struct Contracts {
         ResilientOracleInterface resilientOracle;
+        ITwapOracle twapOracle;
         IRiskOracle riskOracle;
         IRiskStewardReceiver riskStewardReceiver;
         ISpokePoolPolicyRegistry policyRegistry;
@@ -875,6 +877,13 @@ interface ISpokePoolManager {
      */
     // solhint-disable-next-line func-name-mixedcase
     function RESILIENT_ORACLE() external view returns (ResilientOracleInterface);
+
+    /**
+     * @notice Returns the oracle whose TWAP caps a bond asset's price, for the bond assets it has enabled
+     * @return The TwapOracle
+     */
+    // solhint-disable-next-line func-name-mixedcase
+    function TWAP_ORACLE() external view returns (ITwapOracle);
 
     /**
      * @notice Returns the oracle deployer updates are published to: the one `RISK_STEWARD_RECEIVER` reads
