@@ -1,3 +1,15 @@
+## 4.4.0-dev.16 (2026-11-02)
+
+* feat: add BPN Loan spoke pool and BPNC token to the deployment config ([4c29cdd](https://github.com/VenusProtocol/isolated-pools/commit/4c29cdd))
+* feat: add CustodyReceiptToken, committed as is from fixed-rate-vaults ([932b79a](https://github.com/VenusProtocol/isolated-pools/commit/932b79a))
+* feat: drop fixed-rate-vaults note from CustodyReceiptToken natspec and add its deploy script ([39d0ced](https://github.com/VenusProtocol/isolated-pools/commit/39d0ced))
+* feat: updating deployment files ([9e12345](https://github.com/VenusProtocol/isolated-pools/commit/9e12345))
+* Merge pull request #578 from VenusProtocol/feat/bpn-loan-spoke-pool ([540d0be](https://github.com/VenusProtocol/isolated-pools/commit/540d0be)), closes [#578](https://github.com/VenusProtocol/isolated-pools/issues/578)
+* test: port CustodyReceiptToken forge tests from fixed-rate-vaults ([b58db48](https://github.com/VenusProtocol/isolated-pools/commit/b58db48))
+* chore: deploy BPNC on bscmainnet ([e6cc18e](https://github.com/VenusProtocol/isolated-pools/commit/e6cc18e))
+* chore: deploy the BPN Loan spoke pool on bscmainnet ([c73a618](https://github.com/VenusProtocol/isolated-pools/commit/c73a618))
+* refactor: simplify the spoke pool deployment config into one list of pools per network ([80c0e6e](https://github.com/VenusProtocol/isolated-pools/commit/80c0e6e))
+
 ## 4.4.0-dev.15 (2026-11-02)
 
 * Merge pull request #575 from VenusProtocol/feat/bstock-bluechips-spoke-deployment ([3f05f87](https://github.com/VenusProtocol/isolated-pools/commit/3f05f87)), closes [#575](https://github.com/VenusProtocol/isolated-pools/issues/575)
