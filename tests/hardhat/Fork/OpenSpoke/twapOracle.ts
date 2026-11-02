@@ -1,4 +1,4 @@
-import { SnapshotRestorer, takeSnapshot, time } from "@nomicfoundation/hardhat-network-helpers";
+import { time } from "@nomicfoundation/hardhat-network-helpers";
 import { expect } from "chai";
 import { BigNumber, Contract, ContractTransaction, Signer } from "ethers";
 import { ethers } from "hardhat";
@@ -17,6 +17,7 @@ import {
   e18,
   loadOpenSpokeFixture,
   setPrice,
+  snapshotFixture,
 } from "./util/fixture";
 import {
   EXP_SCALE,
@@ -132,7 +133,9 @@ if (FORK) {
     let f: OpenSpokeFixture;
     let twap: TwapOracle;
     let oracle: ResilientOracleInterface;
-    let deployed: SnapshotRestorer;
+    /// Rewinds to the deployed oracle and trims the feeds and test tokens later tests deploy, so none is refreshed after
+    /// the rewind removes it
+    let deployed: { restore: () => Promise<void> };
     /// The start of a day after the setup; hour `h` of the history is `t0 + h * HOUR`
     let t0: number;
     let model: TwapModel;
@@ -144,7 +147,7 @@ if (FORK) {
       f = await loadOpenSpokeFixture();
       oracle = await resilientOracle();
       twap = f.twapOracle;
-      deployed = await takeSnapshot();
+      deployed = await snapshotFixture(f);
     });
 
     beforeEach(async () => {
