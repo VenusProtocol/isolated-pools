@@ -57,21 +57,9 @@ interface ISpokePoolManager {
         uint256 collateralFactor;
         uint256 liquidationThreshold;
         uint256 supplyCap;
-        // The asset's feeds in the ResilientOracle's order: main, pivot, fallback, each on its own supported oracle.
-        // The VIP sets them unless the ResilientOracle prices the asset already; the main feed is required then, the
-        // pivot and fallback are optional
-        OracleFeed[3] feeds;
-    }
-
-    /// @notice A collateral asset's oracle configs the Venus team set for a request, in place of the registry's
-    struct OracleOverrides {
-        // The BoundValidator deviation, scaled by 1e18; zero takes the registry's
-        uint256 boundDeviation;
-        // The DeviationBoundedOracle config; a zero trigger threshold, which that oracle never accepts, takes the
-        // registry's
-        uint64 cooldownPeriod;
-        uint256 triggerThreshold;
-        uint256 resetThreshold;
+        // The asset's feed on a supported oracle. Required unless the ResilientOracle prices the asset already,
+        // in which case it is dropped
+        OracleFeed feed;
     }
 
     /// @notice A new loan market's parameters set by the deployer; its caps come from its tier
@@ -138,34 +126,12 @@ interface ISpokePoolManager {
     event RequestCanceled(uint256 indexed requestId);
 
     /**
-     * @notice Emitted when the Venus team replaces a request's collateral market oracle feeds
+     * @notice Emitted when the Venus team replaces a request's collateral market oracle feed
      * @param requestId The request
      * @param asset The collateral market's asset
-     * @param feeds The new feeds: main, pivot, fallback; a zero feed for no pivot or fallback
-     * @param boundDeviation The new BoundValidator deviation; zero for the registry's
+     * @param feed The new feed
      */
-    event OracleFeedsUpdated(
-        uint256 indexed requestId,
-        address indexed asset,
-        OracleFeed[3] feeds,
-        uint256 boundDeviation
-    );
-
-    /**
-     * @notice Emitted when the Venus team sets a request's collateral asset's DeviationBoundedOracle config
-     * @param requestId The request
-     * @param asset The collateral market's asset
-     * @param cooldownPeriod The new cooldown, in seconds
-     * @param triggerThreshold The new trigger threshold; zero for the registry's config
-     * @param resetThreshold The new reset threshold
-     */
-    event DeviationBoundedOracleParamsUpdated(
-        uint256 indexed requestId,
-        address indexed asset,
-        uint64 cooldownPeriod,
-        uint256 triggerThreshold,
-        uint256 resetThreshold
-    );
+    event OracleFeedUpdated(uint256 indexed requestId, address indexed asset, OracleFeed feed);
 
     /**
      * @notice Emitted when a request's VIP payload is built and stored
@@ -275,13 +241,6 @@ interface ISpokePoolManager {
      * @param newYieldGroup The new YieldGroup
      */
     event HubYieldGroupUpdated(address indexed asset, address oldYieldGroup, address newYieldGroup);
-
-    /**
-     * @notice Emitted when the oracles new collateral feeds may be set on are changed
-     * @param oldOracles The previous oracles
-     * @param newOracles The new oracles
-     */
-    event SupportedOraclesUpdated(address[] oldOracles, address[] newOracles);
 
     /**
      * @notice Emitted when the wind-down period is changed
@@ -410,15 +369,20 @@ interface ISpokePoolManager {
     error InvalidRequestStatus(uint256 requestId);
 
     /**
-     * @notice Thrown when a collateral asset has no main feed, its main feed has no live positive answer, it or its
-     *   main feed has more than 18 decimals, a set feed has no staleness limit, two of its feeds share an oracle, it
-     *   has a fallback feed without a pivot feed, or a bound deviation of 1e18 or above
+     * @notice Thrown when a collateral asset the ResilientOracle does not price has no feed, its feed has no staleness
+     *   limit or no live positive answer, or it or its feed has more than 18 decimals
      * @param asset The asset
      */
     error InvalidOracleFeed(address asset);
 
     /**
-     * @notice Thrown when a collateral asset's feed is set on an oracle the manager does not support
+     * @notice Thrown when the Venus team sets a feed for a collateral asset the ResilientOracle already prices
+     * @param asset The asset
+     */
+    error OracleAlreadySet(address asset);
+
+    /**
+     * @notice Thrown when a collateral asset's feed is set on an oracle the registry does not support
      * @param oracle The oracle
      */
     error UnsupportedOracle(address oracle);
@@ -560,52 +524,23 @@ interface ISpokePoolManager {
     function cancelRequest(uint256 requestId) external;
 
     /**
-     * @notice Replaces a pending request's collateral market oracle feeds and BoundValidator deviation without the
-     *   deployer's approval; a built request is final, and changing it takes a new request. The seed pulled at the
-     *   request keeps its price, so a request whose seed was priced off a bad feed is rejected rather than fixed here
+     * @notice Replaces a pending request's collateral market oracle feed without the deployer's approval; a built
+     *   request is final, and changing it takes a new request. The seed pulled at the request keeps its price, so a
+     *   request whose seed was priced off a bad feed is rejected rather than fixed here
      * @param requestId The request
      * @param asset The collateral market's asset
-     * @param feeds The new feeds: main, pivot, fallback, each on its own supported oracle; a zero feed for no pivot or
-     *   fallback
-     * @param boundDeviation The BoundValidator deviation, scaled by 1e18, used only with a pivot feed; zero for the
-     *   registry's
-     * @custom:event Emits OracleFeedsUpdated
+     * @param feed The new feed, on a supported oracle
+     * @custom:event Emits OracleFeedUpdated
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
-     * @custom:error InvalidOracleFeed is thrown when the bound deviation is 1e18 or above, or an unpriced asset's new
-     *   main feed is missing or has no live positive answer, a set feed has no staleness limit, two of its feeds share
-     *   an oracle, or it has a fallback feed without a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
+     * @custom:error OracleAlreadySet is thrown when the ResilientOracle already prices the asset
+     * @custom:error InvalidOracleFeed is thrown when the feed is missing, has no staleness limit or no live positive
+     *   answer, or it or the asset has more than 18 decimals
+     * @custom:error UnsupportedOracle is thrown when the feed is on an oracle the registry does not support
      * @custom:error ExceedsTierLimit is thrown when the supply cap, priced again, is worth more than the tier allows
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
-    function setOracleFeeds(
-        uint256 requestId,
-        address asset,
-        OracleFeed[3] calldata feeds,
-        uint256 boundDeviation
-    ) external;
-
-    /**
-     * @notice Sets a pending request's collateral asset's DeviationBoundedOracle config, in place of the registry's.
-     *   The VIP sets it even while the registry's is disabled. The DeviationBoundedOracle checks it when the VIP runs
-     * @param requestId The request
-     * @param asset The collateral market's asset
-     * @param cooldownPeriod The cooldown, in seconds
-     * @param triggerThreshold The trigger threshold, scaled by 1e18; zero for the registry's config
-     * @param resetThreshold The reset threshold, scaled by 1e18
-     * @custom:event Emits DeviationBoundedOracleParamsUpdated
-     * @custom:error InvalidRequestStatus is thrown when the request is not pending
-     * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
-     * @custom:access Controlled by AccessControlManager, granted to the Venus team
-     */
-    function setDeviationBoundedOracleParams(
-        uint256 requestId,
-        address asset,
-        uint64 cooldownPeriod,
-        uint256 triggerThreshold,
-        uint256 resetThreshold
-    ) external;
+    function setOracleFeed(uint256 requestId, address asset, OracleFeed calldata feed) external;
 
     /**
      * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. It checks the bond
@@ -889,18 +824,6 @@ interface ISpokePoolManager {
     function setHubYieldGroup(address asset, address yieldGroup) external;
 
     /**
-     * @notice Sets the oracles a new collateral asset's feeds may be set on, such as Venus's Chainlink, RedStone and
-     *   Atlas oracles, any number of them. Each must be ChainlinkOracle-compatible, with its `setTokenConfigs` batch,
-     *   and the Normal Timelock must be allowed to call its `setTokenConfig`. A removed oracle fails the build of a
-     *   request whose unpriced asset has a feed on it
-     * @param oracles The oracles
-     * @custom:event Emits SupportedOraclesUpdated
-     * @custom:error ZeroAddressNotAllowed is thrown when an oracle is zero
-     * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
-     */
-    function setSupportedOracles(address[] calldata oracles) external;
-
-    /**
      * @notice Sets the wind-down period
      * @param newWindDownPeriod The new period, in seconds
      * @custom:event Emits WindDownPeriodUpdated
@@ -1029,19 +952,6 @@ interface ISpokePoolManager {
     function hubYieldGroups(address asset) external view returns (address);
 
     /**
-     * @notice Returns every oracle a new collateral asset's feeds may be set on
-     * @return The oracles
-     */
-    function getSupportedOracles() external view returns (address[] memory);
-
-    /**
-     * @notice Returns whether a new collateral asset's feeds may be set on an oracle
-     * @param oracle The oracle
-     * @return Whether it is a supported oracle
-     */
-    function isSupportedOracle(address oracle) external view returns (bool);
-
-    /**
      * @notice Returns a deployer's latest request
      * @param deployer The deployer
      * @return The request; zero when there is none
@@ -1062,24 +972,6 @@ interface ISpokePoolManager {
      * @return The seed, in the asset; zero once the seed is released
      */
     function requestSeeds(uint256 requestId, address asset) external view returns (uint256);
-
-    /**
-     * @notice Returns a request's collateral asset's oracle configs the Venus team set, in place of the registry's
-     * @param requestId The request
-     * @param asset The collateral market's asset
-     * @return boundDeviation The BoundValidator deviation, scaled by 1e18; zero for the registry's
-     * @return cooldownPeriod The DeviationBoundedOracle cooldown, in seconds
-     * @return triggerThreshold The DeviationBoundedOracle trigger threshold, scaled by 1e18; zero for the registry's
-     *   config
-     * @return resetThreshold The DeviationBoundedOracle reset threshold, scaled by 1e18
-     */
-    function requestOracleOverrides(
-        uint256 requestId,
-        address asset
-    )
-        external
-        view
-        returns (uint256 boundDeviation, uint64 cooldownPeriod, uint256 triggerThreshold, uint256 resetThreshold);
 
     /**
      * @notice Returns a request's VIP payload, an ABI-encoded GovernorBravo `propose` call

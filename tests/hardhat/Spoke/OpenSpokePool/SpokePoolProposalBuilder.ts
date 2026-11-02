@@ -37,8 +37,8 @@ const MAX_OPERATIONS = 100;
 const MAX_POOL_MARKETS = 5;
 /// A new pool's VIP actions besides its markets': acceptOwnership, addPool and settleRequest
 const POOL_CREATION_ACTIONS = 3;
-/// One batch per supported oracle, the BoundValidator, the ResilientOracle and the DeviationBoundedOracle
-const ORACLE_CONFIG_ACTIONS = 6;
+/// One batch per supported oracle a new feed is on, at most three, and the ResilientOracle's
+const ORACLE_CONFIG_ACTIONS = 4;
 /// A loan market's four listing actions and four Hub registration actions
 const MAX_ACTIONS_PER_MARKET = 8;
 const BLOCKS_PER_YEAR = 42_048_000;
@@ -55,10 +55,6 @@ const SEED_VTOKENS = parseUnits(SEED_UNITS, 8);
 const RESERVE_FACTOR = e18("0.1");
 const REDUCE_RESERVES_BLOCK_DELTA = 28800;
 const MAX_STALE_PERIOD = 86400;
-const COOLDOWN_PERIOD = 3600;
-const TRIGGER_THRESHOLD = e18("0.1");
-const RESET_THRESHOLD = e18("0.05");
-const BOUND_DEVIATION = e18("0.05");
 /// One vToken of 8 decimals per unit of an 18-decimal underlying
 const EXCHANGE_RATE = parseUnits("1", 28);
 const POOL_PARAMS = {
@@ -84,7 +80,7 @@ type CollateralMarket = {
   collateralFactor: BigNumber;
   liquidationThreshold: BigNumber;
   supplyCap: BigNumber;
-  feeds: Feed[];
+  feed: Feed;
 };
 type Pool = { name: string; symbolSuffix: string };
 type BuilderAddresses = [string, string, string, string, string, string, string, string, string];
@@ -99,10 +95,8 @@ describe("SpokePoolProposalBuilder", () => {
   let chainlinkOracle: SignerWithAddress;
   let redstoneOracle: SignerWithAddress;
   let binanceOracle: SignerWithAddress;
-  let boundValidator: SignerWithAddress;
-  let mainFeed: SignerWithAddress;
-  let pivotFeed: SignerWithAddress;
-  let fallbackFeed: SignerWithAddress;
+  let priceFeed: SignerWithAddress;
+  let otherFeed: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
   let manager: FakeContract<SpokePoolManager>;
   let governor: FakeContract<IGovernorBravo>;
@@ -139,20 +133,19 @@ describe("SpokePoolProposalBuilder", () => {
   const listLoanAsset = (asset: MockToken) =>
     policyRegistry.setLoanAssetConfig(asset.address, { factor: e18("1"), interestRateModels: [loanIrm.address] });
 
-  const noFeed = (): Feed => ({ oracle: constants.AddressZero, feed: constants.AddressZero, maxStalePeriod: 0 });
   const feedOn = (oracle: string, feed: string): Feed => ({ oracle, feed, maxStalePeriod: MAX_STALE_PERIOD });
 
   const loanMarket = (asset: MockToken = usdt) => ({ asset: asset.address, interestRateModel: loanIrm.address });
 
   const collateralMarket = (
     asset: MockToken,
-    feeds: Feed[] = [feedOn(chainlinkOracle.address, mainFeed.address), noFeed(), noFeed()],
+    feed: Feed = feedOn(chainlinkOracle.address, priceFeed.address),
   ): CollateralMarket => ({
     asset: asset.address,
     collateralFactor: e18("0.4"),
     liquidationThreshold: e18("0.6"),
     supplyCap: e18("1000"),
-    feeds,
+    feed,
   });
 
   const request = ({
@@ -314,50 +307,28 @@ describe("SpokePoolProposalBuilder", () => {
     [feeds.map(([asset, feed, maxStalePeriod = MAX_STALE_PERIOD]) => [asset, feed, maxStalePeriod])],
   ];
 
-  const boundConfigs = (assets: string[], deviation = BOUND_DEVIATION): Action => [
-    boundValidator.address,
-    "setValidateConfigs((address,uint256,uint256)[])",
-    ["tuple(address,uint256,uint256)[]"],
-    [assets.map(asset => [asset, e18("1").add(deviation), e18("1").sub(deviation)])],
-  ];
-
-  /// The ResilientOracle's batch, each market's config enabling the oracle of each of its set feeds
+  /// The ResilientOracle's batch, each market's config with its feed's oracle as main
   const resilientConfigs = (markets: CollateralMarket[]): Action => [
     resilientOracle.address,
     "setTokenConfigs((address,address[3],bool[3],bool)[])",
     ["tuple(address,address[3],bool[3],bool)[]"],
     [
-      markets.map(({ asset, feeds }) => [
+      markets.map(({ asset, feed }) => [
         asset,
-        feeds.map(({ oracle }) => oracle),
-        feeds.map(({ feed }) => feed !== constants.AddressZero),
+        [feed.oracle, constants.AddressZero, constants.AddressZero],
+        [true, false, false],
         false,
       ]),
     ],
   ];
 
-  /// The DeviationBoundedOracle's batch, with the registry's config unless each asset is given [asset, config]
-  const boundedConfigs = (assets: (string | [string, BigNumberish[]])[]): Action => [
-    boundedOracle.address,
-    "setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])",
-    ["tuple(address,uint64,uint256,uint256,bool,bool)[]"],
-    [
-      assets.map(entry => {
-        const [asset, config] =
-          typeof entry === "string" ? [entry, [COOLDOWN_PERIOD, TRIGGER_THRESHOLD, RESET_THRESHOLD]] : entry;
-        return [asset, ...config, true, false];
-      }),
-    ],
-  ];
-
-  /// The oracle configs of new collateral markets each with only a main feed on the Chainlink oracle
-  const mainFeedConfigs = (markets: CollateralMarket[]): Action[] => [
+  /// The oracle configs of new collateral markets each with the price feed on the Chainlink oracle
+  const chainlinkFeedConfigs = (markets: CollateralMarket[]): Action[] => [
     feedConfigs(
       chainlinkOracle.address,
-      markets.map(({ asset }) => [asset, mainFeed.address]),
+      markets.map(({ asset }) => [asset, priceFeed.address]),
     ),
     resilientConfigs(markets),
-    boundedConfigs(markets.map(({ asset }) => asset)),
   ];
 
   const settlement = (): Action => [manager.address, "settleRequest(uint256)", ["uint256"], [REQUEST_ID]];
@@ -420,7 +391,6 @@ describe("SpokePoolProposalBuilder", () => {
     acm.isAllowedToCall.returns(true);
     governor.proposalMaxOperations.returns(MAX_OPERATIONS);
     governor.proposalTimelocks.whenCalledWith(0).returns(timelock.address);
-    resilientOracle.boundValidator.returns(boundValidator.address);
     resilientOracle.getPrice.returns(e18("1"));
     manager.POLICY_REGISTRY.returns(policyRegistry.address);
     manager.RESILIENT_ORACLE.returns(resilientOracle.address);
@@ -444,10 +414,8 @@ describe("SpokePoolProposalBuilder", () => {
       chainlinkOracle,
       redstoneOracle,
       binanceOracle,
-      boundValidator,
-      mainFeed,
-      pivotFeed,
-      fallbackFeed,
+      priceFeed,
+      otherFeed,
     ] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     governor = await smock.fake<IGovernorBravo>("IGovernorBravo");
@@ -485,13 +453,7 @@ describe("SpokePoolProposalBuilder", () => {
       reserveFactor: RESERVE_FACTOR,
       reduceReservesBlockDelta: REDUCE_RESERVES_BLOCK_DELTA,
     });
-    await policyRegistry.setOracleParams({
-      deviationBoundedOracleEnabled: true,
-      cooldownPeriod: COOLDOWN_PERIOD,
-      triggerThreshold: TRIGGER_THRESHOLD,
-      resetThreshold: RESET_THRESHOLD,
-      boundDeviation: BOUND_DEVIATION,
-    });
+    await policyRegistry.setSupportedOracles([chainlinkOracle.address, redstoneOracle.address, binanceOracle.address]);
     await policyRegistry.setPoolParams(POOL_PARAMS);
     await setBalance(manager.address, e18("100"));
 
@@ -595,7 +557,7 @@ describe("SpokePoolProposalBuilder", () => {
         expectActions(proposal, [
           ...poolCreation(comptroller),
           settlement(),
-          ...mainFeedConfigs([collateral]),
+          ...chainlinkFeedConfigs([collateral]),
           ...collateralListing(collateral, vTokens[0]),
           ...loanListing(comptroller, vTokens[1], LOAN_CAP),
         ]);
@@ -641,7 +603,7 @@ describe("SpokePoolProposalBuilder", () => {
         expectActions(proposal, [
           ...poolCreation(comptroller),
           settlement(),
-          ...mainFeedConfigs(markets),
+          ...chainlinkFeedConfigs(markets),
           ...markets.flatMap((market, i) => collateralListing(market, vTokens[i], seeds[i])),
         ]);
       });
@@ -657,11 +619,7 @@ describe("SpokePoolProposalBuilder", () => {
         for (const asset of loanAssets) {
           await listLoanAsset(asset);
         }
-        const collateral = collateralMarket(colA, [
-          feedOn(chainlinkOracle.address, mainFeed.address),
-          feedOn(redstoneOracle.address, pivotFeed.address),
-          feedOn(binanceOracle.address, fallbackFeed.address),
-        ]);
+        const collateral = collateralMarket(colA);
 
         const [comptroller, vTokens, proposal] = await buildRequest(
           request({ collateralMarkets: [collateral], loanMarkets: loanAssets.map(asset => loanMarket(asset)) }),
@@ -671,12 +629,7 @@ describe("SpokePoolProposalBuilder", () => {
         const actions: Action[] = [
           ...poolCreation(comptroller),
           settlement(),
-          feedConfigs(chainlinkOracle.address, [[colA.address, mainFeed.address]]),
-          feedConfigs(redstoneOracle.address, [[colA.address, pivotFeed.address]]),
-          feedConfigs(binanceOracle.address, [[colA.address, fallbackFeed.address]]),
-          boundConfigs([colA.address]),
-          resilientConfigs([collateral]),
-          boundedConfigs([colA.address]),
+          ...chainlinkFeedConfigs([collateral]),
           ...collateralListing(collateral, vTokens[0]),
           ...loanAssets.flatMap((asset, i) => loanListing(comptroller, vTokens[i + 1], LOAN_CAP, asset.address)),
         ];
@@ -695,49 +648,26 @@ describe("SpokePoolProposalBuilder", () => {
           registerPool(comptroller.address);
         });
 
-        it("batches every new asset's feeds per oracle, bounds those with a pivot, then the ResilientOracle and bounded configs", async () => {
-          const marketA = collateralMarket(colA, [
-            feedOn(chainlinkOracle.address, mainFeed.address),
-            feedOn(redstoneOracle.address, pivotFeed.address),
-            noFeed(),
-          ]);
-          const marketB = collateralMarket(colB, [
-            feedOn(redstoneOracle.address, mainFeed.address),
-            { ...feedOn(binanceOracle.address, pivotFeed.address), maxStalePeriod: 3600 },
-            feedOn(chainlinkOracle.address, fallbackFeed.address),
-          ]);
-          const marketC = collateralMarket(usdt);
+        it("batches each new asset's feed per supported oracle in the registry's order, then the ResilientOracle's", async () => {
+          const marketA = collateralMarket(colA, feedOn(redstoneOracle.address, priceFeed.address));
+          const marketB = collateralMarket(colB, {
+            ...feedOn(chainlinkOracle.address, otherFeed.address),
+            maxStalePeriod: 3600,
+          });
+          const marketC = collateralMarket(usdt, feedOn(redstoneOracle.address, otherFeed.address));
           const [, vTokens, proposal] = await buildRequest(marketsRequest([marketA, marketB, marketC]));
+          // The Binance oracle holds no new feed, so it gets no batch
           expectActions(proposal, [
             settlement(),
-            feedConfigs(chainlinkOracle.address, [
-              [colA.address, mainFeed.address],
-              [colB.address, fallbackFeed.address],
-              [usdt.address, mainFeed.address],
-            ]),
+            feedConfigs(chainlinkOracle.address, [[colB.address, otherFeed.address, 3600]]),
             feedConfigs(redstoneOracle.address, [
-              [colA.address, pivotFeed.address],
-              [colB.address, mainFeed.address],
+              [colA.address, priceFeed.address],
+              [usdt.address, otherFeed.address],
             ]),
-            feedConfigs(binanceOracle.address, [[colB.address, pivotFeed.address, 3600]]),
-            boundConfigs([colA.address, colB.address]),
             resilientConfigs([marketA, marketB, marketC]),
-            boundedConfigs([colA.address, colB.address, usdt.address]),
             ...collateralListing(marketA, vTokens[0]),
             ...collateralListing(marketB, vTokens[1]),
             ...collateralListing(marketC, vTokens[2]),
-          ]);
-        });
-
-        it("skips an oracle no new feed is on", async () => {
-          const market = collateralMarket(colA, [feedOn(redstoneOracle.address, mainFeed.address), noFeed(), noFeed()]);
-          const [, vTokens, proposal] = await buildRequest(marketsRequest([market]));
-          expectActions(proposal, [
-            settlement(),
-            feedConfigs(redstoneOracle.address, [[colA.address, mainFeed.address]]),
-            resilientConfigs([market]),
-            boundedConfigs([colA.address]),
-            ...collateralListing(market, vTokens[0]),
           ]);
         });
 
@@ -748,99 +678,14 @@ describe("SpokePoolProposalBuilder", () => {
             enableFlagsForOracles: [true, false, false],
             cachingEnabled: false,
           });
-          const priced = collateralMarket(colA, [
-            feedOn(chainlinkOracle.address, mainFeed.address),
-            feedOn(redstoneOracle.address, pivotFeed.address),
-            noFeed(),
-          ]);
+          const priced = collateralMarket(colA, feedOn(binanceOracle.address, otherFeed.address));
           const unpriced = collateralMarket(colB);
           const [, vTokens, proposal] = await buildRequest(marketsRequest([priced, unpriced]));
           expectActions(proposal, [
             settlement(),
-            feedConfigs(chainlinkOracle.address, [[colB.address, mainFeed.address]]),
-            resilientConfigs([unpriced]),
-            boundedConfigs([colB.address]),
+            ...chainlinkFeedConfigs([unpriced]),
             ...collateralListing(priced, vTokens[0]),
             ...collateralListing(unpriced, vTokens[1]),
-          ]);
-        });
-
-        it("skips the bounded config of an asset the DeviationBoundedOracle has", async () => {
-          boundedOracle.assetProtectionConfig
-            .whenCalledWith(colA.address)
-            .returns([0, 0, false, true, 0, COOLDOWN_PERIOD, colA.address, 0, 0, false]);
-          const market = collateralMarket(colA);
-          const [, vTokens, proposal] = await buildRequest(marketsRequest([market]));
-          expectActions(proposal, [
-            settlement(),
-            feedConfigs(chainlinkOracle.address, [[colA.address, mainFeed.address]]),
-            resilientConfigs([market]),
-            ...collateralListing(market, vTokens[0]),
-          ]);
-        });
-
-        it("uses the Venus team's oracle bounds for the request over the registry's", async () => {
-          const teamConfig = [600, e18("0.2"), e18("0.1")];
-          manager.requestOracleOverrides.whenCalledWith(REQUEST_ID, colA.address).returns([e18("0.02"), ...teamConfig]);
-          const feeds = [
-            feedOn(chainlinkOracle.address, mainFeed.address),
-            feedOn(redstoneOracle.address, pivotFeed.address),
-            noFeed(),
-          ];
-          const marketA = collateralMarket(colA, feeds);
-          const marketB = collateralMarket(colB, feeds);
-          const [, vTokens, proposal] = await buildRequest(marketsRequest([marketA, marketB]));
-          expectActions(proposal, [
-            settlement(),
-            feedConfigs(chainlinkOracle.address, [
-              [colA.address, mainFeed.address],
-              [colB.address, mainFeed.address],
-            ]),
-            feedConfigs(redstoneOracle.address, [
-              [colA.address, pivotFeed.address],
-              [colB.address, pivotFeed.address],
-            ]),
-            [
-              boundValidator.address,
-              "setValidateConfigs((address,uint256,uint256)[])",
-              ["tuple(address,uint256,uint256)[]"],
-              [
-                [
-                  [colA.address, e18("1.02"), e18("0.98")],
-                  [colB.address, e18("1").add(BOUND_DEVIATION), e18("1").sub(BOUND_DEVIATION)],
-                ],
-              ],
-            ],
-            resilientConfigs([marketA, marketB]),
-            boundedConfigs([[colA.address, teamConfig], colB.address]),
-            ...collateralListing(marketA, vTokens[0]),
-            ...collateralListing(marketB, vTokens[1]),
-          ]);
-        });
-
-        it("sets only the Venus team's bounded configs while the registry's are disabled", async () => {
-          await policyRegistry.setOracleParams({
-            deviationBoundedOracleEnabled: false,
-            cooldownPeriod: COOLDOWN_PERIOD,
-            triggerThreshold: TRIGGER_THRESHOLD,
-            resetThreshold: RESET_THRESHOLD,
-            boundDeviation: BOUND_DEVIATION,
-          });
-          const teamConfig = [600, e18("0.2"), e18("0.1")];
-          manager.requestOracleOverrides.whenCalledWith(REQUEST_ID, colB.address).returns([0, ...teamConfig]);
-          const marketA = collateralMarket(colA);
-          const marketB = collateralMarket(colB);
-          const [, vTokens, proposal] = await buildRequest(marketsRequest([marketA, marketB]));
-          expectActions(proposal, [
-            settlement(),
-            feedConfigs(chainlinkOracle.address, [
-              [colA.address, mainFeed.address],
-              [colB.address, mainFeed.address],
-            ]),
-            resilientConfigs([marketA, marketB]),
-            boundedConfigs([[colB.address, teamConfig]]),
-            ...collateralListing(marketA, vTokens[0]),
-            ...collateralListing(marketB, vTokens[1]),
           ]);
         });
 
@@ -878,7 +723,7 @@ describe("SpokePoolProposalBuilder", () => {
         ]);
         expectActions(proposal, [
           settlement(),
-          ...mainFeedConfigs([collateral]),
+          ...chainlinkFeedConfigs([collateral]),
           ...collateralListing(collateral, vTokens[0]),
           ...loanListing(comptroller, vTokens[1], LOAN_CAP),
         ]);

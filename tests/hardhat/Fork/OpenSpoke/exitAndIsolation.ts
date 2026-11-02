@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { BigNumber, ContractTransaction } from "ethers";
 import { ethers } from "hardhat";
 
-import { IERC20, SpokeComptroller, SpokePoolManager, VToken } from "../../../../typechain";
+import { IERC20, SpokeComptroller, VToken } from "../../../../typechain";
 import { bscmainnet } from "../HubSpoke/constants";
 import {
   MAX_RESIDUAL_POOL_DEBT_USD,
@@ -727,7 +727,9 @@ if (FORK) {
         ]);
       });
 
-      it("15. reverts the second VIP onboarding the same new collateral", async () => {
+      it("15. lets a second VIP onboarding the same new collateral replace its feed", async () => {
+        // Both VIPs are built while the asset is unpriced, so each carries its feed. Governance does not propose
+        // overlapping onboardings; nothing on chain stops the second
         const shared = await newCollateralToken(f, "SHR", "2");
         const secondFeed = await deployMockFeed(f, "2");
         const firstRequest = await requestPool(f, f.deployer, {
@@ -737,11 +739,7 @@ if (FORK) {
         const secondRequest = await requestPool(f, f.secondDeployer, {
           collateralMarkets: [
             collateralMarket(shared, {
-              feeds: [
-                { oracle: bscmainnet.CHAINLINK_ORACLE, feed: secondFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
-                NO_FEED,
-                NO_FEED,
-              ],
+              feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: secondFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
             }),
           ],
           loanMarkets: [usdtLoanMarket(f)],
@@ -750,23 +748,12 @@ if (FORK) {
         const { payload: secondPayload } = await buildRequest(f, secondRequest);
 
         await executeVip(f, firstPayload);
-        const secondProposal = await proposeAndQueue(f, secondPayload);
-        await expect(f.governor.execute(secondProposal)).to.be.reverted;
-        const failure = await vipFailure(f, secondPayload);
-        expect(failure?.target).to.equal(bscmainnet.DEVIATION_BOUNDED_ORACLE);
-        expect(failure?.signature).to.equal("setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])");
-        expect(failure?.reason).to.include(
-          new ethers.utils.Interface(["error MarketAlreadyInitialized(address)"]).encodeErrorResult(
-            "MarketAlreadyInitialized",
-            [shared.token.address],
-          ),
-        );
-
-        expect((await f.manager.getRequest(secondRequest)).status).to.equal(RequestStatus.Built);
-        expect(await f.manager.activePools(f.secondDeployer.address)).to.equal(ethers.constants.AddressZero);
         expect((await f.chainlinkOracle.tokenConfigs(shared.token.address)).feed).to.equal(shared.feed.address);
+        await executeVip(f, secondPayload);
+        expect((await f.chainlinkOracle.tokenConfigs(shared.token.address)).feed).to.equal(secondFeed.address);
 
-        await f.manager.connect(f.team).rejectRequest(secondRequest);
+        expect((await f.manager.getRequest(secondRequest)).status).to.equal(RequestStatus.Settled);
+        expect(await f.manager.activePools(f.secondDeployer.address)).to.not.equal(ethers.constants.AddressZero);
         for (const token of [f.xvs, f.usdt, shared.token]) {
           expect(await token.balanceOf(f.manager.address)).to.equal(0);
         }
@@ -780,7 +767,6 @@ if (FORK) {
           bscmainnet.REDSTONE_ORACLE,
           f.thirdOracle.address,
           bscmainnet.RESILIENT_ORACLE,
-          bscmainnet.DEVIATION_BOUNDED_ORACLE,
         ];
         const oracleActions = (payload: string) =>
           vipActions(payload).filter(action => oracleTargets.includes(action.target));
@@ -882,9 +868,7 @@ if (FORK) {
           supplyCap: e18("1200000"),
         });
         await approveSeeds(f, f.deployer, { collateralMarkets: [addedMarket], loanMarkets: [] });
-        // `collateralMarket` types feeds as an array; the manager takes a fixed three
-        const addedMarkets = [addedMarket] as Parameters<SpokePoolManager["requestNewMarkets"]>[1];
-        await f.manager.connect(f.deployer).requestNewMarkets(comptroller, addedMarkets, []);
+        await f.manager.connect(f.deployer).requestNewMarkets(comptroller, [addedMarket], []);
         const { payload, vTokens } = await buildRequest(f, (await f.manager.requestCount()).toNumber());
         await executeVip(f, payload);
         const addedVToken = vTokens[0];

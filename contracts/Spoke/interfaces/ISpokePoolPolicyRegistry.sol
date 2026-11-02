@@ -52,21 +52,6 @@ interface ISpokePoolPolicyRegistry {
         uint256 reduceReservesBlockDelta;
     }
 
-    /// @notice The oracle configs a new collateral asset gets unless the Venus team set its own for the request
-    struct OracleParams {
-        // Whether the VIP sets the DeviationBoundedOracle config below; without one, that oracle returns the
-        // ResilientOracle's price unbounded
-        bool deviationBoundedOracleEnabled;
-        // Its DeviationBoundedOracle config, set for an asset neither that oracle nor the ResilientOracle has yet
-        uint64 cooldownPeriod;
-        uint256 triggerThreshold;
-        uint256 resetThreshold;
-        // Set on the BoundValidator when a pivot feed is set, as only then does the ResilientOracle compare prices: the
-        // main and fallback against the pivot, then the main against the fallback. A price passes when the other price
-        // divided by it is within 1 ± this, scaled by 1e18; 0.05e18 allows about 5% either way
-        uint256 boundDeviation;
-    }
-
     /**
      * @notice Emitted when a bond asset's factor is set
      * @param asset The bond asset
@@ -90,11 +75,11 @@ interface ISpokePoolPolicyRegistry {
     event MarketParamsUpdated(ProtocolMarketParams oldParams, ProtocolMarketParams newParams);
 
     /**
-     * @notice Emitted when the oracle configs of new collateral assets are changed
-     * @param oldParams The previous configs
-     * @param newParams The new configs
+     * @notice Emitted when the oracles new collateral assets' feeds may be set on are changed
+     * @param oldOracles The previous oracles
+     * @param newOracles The new oracles
      */
-    event OracleParamsUpdated(OracleParams oldParams, OracleParams newParams);
+    event SupportedOraclesUpdated(address[] oldOracles, address[] newOracles);
 
     /**
      * @notice Emitted when a tier is set
@@ -123,9 +108,6 @@ interface ISpokePoolPolicyRegistry {
 
     /// @notice Thrown when Venus's market parameters have a zero model or block delta, or a reserve factor above 1e18
     error InvalidProtocolMarketParams();
-
-    /// @notice Thrown when the oracle configs have a bound deviation of zero, or of 1e18 or above
-    error InvalidOracleParams();
 
     /**
      * @notice Thrown when a tier's values are zero or inconsistent
@@ -234,13 +216,16 @@ interface ISpokePoolPolicyRegistry {
     function setMarketParams(ProtocolMarketParams calldata params) external;
 
     /**
-     * @notice Sets the oracle configs every new collateral asset gets, read when a VIP is built
-     * @param params The new configs; the DeviationBoundedOracle checks its own when the VIP runs
-     * @custom:event Emits OracleParamsUpdated
-     * @custom:error InvalidOracleParams is thrown when the bound deviation is zero, or 1e18 or above
+     * @notice Sets the oracles a new collateral asset's feed may be set on, such as Venus's Chainlink, RedStone and
+     *   Atlas oracles, any number of them. Each must be ChainlinkOracle-compatible, with its `setTokenConfigs` batch,
+     *   and the Normal Timelock must be allowed to call its `setTokenConfig`. A removed oracle fails the build of a
+     *   request whose unpriced asset has a feed on it
+     * @param oracles The oracles
+     * @custom:event Emits SupportedOraclesUpdated
+     * @custom:error ZeroAddressNotAllowed is thrown when an oracle is zero
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
-    function setOracleParams(OracleParams calldata params) external;
+    function setSupportedOracles(address[] calldata oracles) external;
 
     /**
      * @notice Returns a bond asset's factor
@@ -270,25 +255,6 @@ interface ISpokePoolPolicyRegistry {
         external
         view
         returns (address collateralInterestRateModel, uint256 reserveFactor, uint256 reduceReservesBlockDelta);
-
-    /**
-     * @notice Returns the oracle configs every new collateral asset gets
-     * @return deviationBoundedOracleEnabled Whether the VIP sets the DeviationBoundedOracle config
-     * @return cooldownPeriod The DeviationBoundedOracle cooldown, in seconds
-     * @return triggerThreshold The DeviationBoundedOracle trigger threshold, scaled by 1e18
-     * @return resetThreshold The DeviationBoundedOracle reset threshold, scaled by 1e18
-     * @return boundDeviation The BoundValidator deviation, scaled by 1e18
-     */
-    function oracleParams()
-        external
-        view
-        returns (
-            bool deviationBoundedOracleEnabled,
-            uint64 cooldownPeriod,
-            uint256 triggerThreshold,
-            uint256 resetThreshold,
-            uint256 boundDeviation
-        );
 
     /**
      * @notice Returns the USD bond a tier requires for a bond in an asset: the tier's minimum bond times the asset's
@@ -324,6 +290,19 @@ interface ISpokePoolPolicyRegistry {
      * @return The loan assets, in no set order
      */
     function getLoanAssets() external view returns (address[] memory);
+
+    /**
+     * @notice Returns every oracle a new collateral asset's feed may be set on
+     * @return The oracles
+     */
+    function getSupportedOracles() external view returns (address[] memory);
+
+    /**
+     * @notice Returns whether a new collateral asset's feed may be set on an oracle
+     * @param oracle The oracle
+     * @return Whether it is a supported oracle
+     */
+    function isSupportedOracle(address oracle) external view returns (bool);
 
     /**
      * @notice Returns a loan asset's config

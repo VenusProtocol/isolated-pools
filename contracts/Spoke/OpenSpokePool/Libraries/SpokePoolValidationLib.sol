@@ -140,20 +140,20 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @notice Validates a collateral market's oracles after its feeds changed, and returns its asset's price
+     * @notice Validates a collateral market's oracle after its feed changed, and returns its asset's price
      * @param contracts The manager's contracts
      * @param market The collateral market
      * @return The asset's price, scaled like the ResilientOracle's
-     * @custom:error InvalidOracleFeed is thrown when an unpriced asset's main feed is missing or has no live positive
-     *   answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback feed without
-     *   a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's feed is missing, has no staleness
+     *   limit or no live positive answer, or it or the asset has more than 18 decimals
+     * @custom:error UnsupportedOracle is thrown when an unpriced collateral asset's feed is on an oracle the registry
+     *   does not support
      */
-    function validateOracles(
+    function validateOracle(
         ISpokePoolManager.Contracts memory contracts,
         ISpokePoolManager.CollateralMarketRequestParams memory market
     ) external view returns (uint256) {
-        return _validateOracles(contracts, market);
+        return _validateOracle(contracts, market);
     }
 
     /**
@@ -161,7 +161,7 @@ library SpokePoolValidationLib {
      * @param contracts The manager's contracts
      * @param tierId The request's tier
      * @param market The collateral market
-     * @param price The asset's price, from `validateOracles`
+     * @param price The asset's price, from `validateOracle`
      * @custom:error ExceedsTierLimit is thrown when the supply cap is worth more than the tier allows
      */
     function checkSupplyCapUsd(
@@ -183,10 +183,10 @@ library SpokePoolValidationLib {
      * @param request The pool or markets request, with its markets stored
      * @return assets The markets' assets, collateral markets first
      * @return seeds Each asset's seed
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback
-     *   feed without a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's feed is missing, has no staleness
+     *   limit or no live positive answer, or it or the asset has more than 18 decimals
+     * @custom:error UnsupportedOracle is thrown when an unpriced collateral asset's feed is on an oracle the registry
+     *   does not support
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      */
     function computeSeeds(
@@ -198,11 +198,11 @@ library SpokePoolValidationLib {
         assets = new address[](collateralCount + loanCount);
         seeds = new uint256[](collateralCount + loanCount);
 
-        // Collateral markets: priced by the ResilientOracle or their main feed, capped by the deployer
+        // Collateral markets: priced by the ResilientOracle or their feed, capped by the deployer
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
             assets[i] = market.asset;
-            seeds[i] = _seed(market.asset, _validateOracles(contracts, market), market.supplyCap);
+            seeds[i] = _seed(market.asset, _validateOracle(contracts, market), market.supplyCap);
         }
 
         // Loan markets: priced by the ResilientOracle, capped by their USD cap at that price
@@ -227,10 +227,10 @@ library SpokePoolValidationLib {
      * @custom:error InvalidMarketParams is thrown when a collateral factor is above its liquidation threshold
      * @custom:error ExceedsTierLimit is thrown when a collateral factor, liquidation threshold or supply cap's worth is
      *   above the tier's
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's main feed is missing or has no live
-     *   positive answer, a set feed has no staleness limit, two of its feeds share an oracle, or it has a fallback
-     *   feed without a pivot feed
-     * @custom:error UnsupportedOracle is thrown when one of its feeds is on an oracle the manager does not support
+     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's feed is missing, has no staleness
+     *   limit or no live positive answer, or it or the asset has more than 18 decimals
+     * @custom:error UnsupportedOracle is thrown when an unpriced collateral asset's feed is on an oracle the registry
+     *   does not support
      * @custom:error LoanAssetNotAllowed is thrown when a loan market's asset is not a loan asset
      * @custom:error InterestRateModelNotAllowed is thrown when a loan market's model is not one of its asset's
      * @custom:error DuplicateAsset is thrown when an asset repeats in the request or is already in the pool
@@ -315,7 +315,7 @@ library SpokePoolValidationLib {
             ) {
                 revert ISpokePoolManager.ExceedsTierLimit(market.asset);
             }
-            uint256 price = _validateOracles(contracts, market);
+            uint256 price = _validateOracle(contracts, market);
             if ((market.supplyCap * price) / EXP_SCALE > limits.maxCollateralSupplyCapUsd) {
                 revert ISpokePoolManager.ExceedsTierLimit(market.asset);
             }
@@ -392,12 +392,11 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @dev Validates a collateral market's oracles and returns its asset's price, scaled like the ResilientOracle's.
-     *   An asset the ResilientOracle already prices takes its price, and its requested feeds are not checked. Otherwise
-     *   every set feed's oracle is checked, and the main feed prices it: its latest answer must be positive and within
-     *   its staleness limit. The pivot and fallback feeds do not price it
+     * @dev Validates a collateral market's oracle and returns its asset's price, scaled like the ResilientOracle's.
+     *   An asset the ResilientOracle already prices takes its price. Otherwise its feed prices it: the feed must be on
+     *   a supported oracle, and its latest answer positive and within its staleness limit
      */
-    function _validateOracles(
+    function _validateOracle(
         ISpokePoolManager.Contracts memory contracts,
         ISpokePoolManager.CollateralMarketRequestParams memory market
     ) private view returns (uint256) {
@@ -406,17 +405,18 @@ library SpokePoolValidationLib {
             return contracts.resilientOracle.getPrice(asset);
         }
 
-        ISpokePoolManager.OracleFeed[3] memory feeds = market.feeds;
-        // The main feed, the first one, is required
-        if (feeds[0].feed == address(0)) {
+        ISpokePoolManager.OracleFeed memory oracleFeed = market.feed;
+        if (oracleFeed.feed == address(0) || oracleFeed.maxStalePeriod == 0) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
-        _checkFeedOracles(asset, feeds);
+        // A zero oracle is never supported
+        if (!contracts.policyRegistry.isSupportedOracle(oracleFeed.oracle)) {
+            revert ISpokePoolManager.UnsupportedOracle(oracleFeed.oracle);
+        }
 
-        // Only the main feed prices the asset here
-        IChainlinkFeed feed = IChainlinkFeed(feeds[0].feed);
+        IChainlinkFeed feed = IChainlinkFeed(oracleFeed.feed);
         (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
-        if (answer <= 0 || block.timestamp - updatedAt > feeds[0].maxStalePeriod) {
+        if (answer <= 0 || block.timestamp - updatedAt > oracleFeed.maxStalePeriod) {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
 
@@ -428,43 +428,6 @@ library SpokePoolValidationLib {
             revert ISpokePoolManager.InvalidOracleFeed(asset);
         }
         return uint256(answer) * 10 ** (36 - feedDecimals - assetDecimals);
-    }
-
-    /**
-     * @dev Checks each slot is unset or has both an oracle and a feed, and each set feed has a staleness limit and is on
-     *   one of the manager's supported oracles, and on its own: one oracle holds one feed per asset, so a second feed
-     *   would replace the first. A fallback feed needs a pivot feed, as the ResilientOracle only uses a fallback price
-     *   it can check against the pivot. Reverts with UnsupportedOracle or InvalidOracleFeed
-     */
-    function _checkFeedOracles(address asset, ISpokePoolManager.OracleFeed[3] memory feeds) private view {
-        if (feeds[2].feed != address(0) && feeds[1].feed == address(0)) {
-            revert ISpokePoolManager.InvalidOracleFeed(asset);
-        }
-
-        ISpokePoolManager manager = ISpokePoolManager(address(this));
-        for (uint256 i; i < 3; ++i) {
-            address oracle = feeds[i].oracle;
-            if (feeds[i].feed == address(0)) {
-                if (oracle != address(0)) {
-                    revert ISpokePoolManager.InvalidOracleFeed(asset);
-                }
-                continue;
-            }
-            if (feeds[i].maxStalePeriod == 0) {
-                revert ISpokePoolManager.InvalidOracleFeed(asset);
-            }
-            // A feed with no oracle fails here too, as a zero oracle is never supported
-            if (!manager.isSupportedOracle(oracle)) {
-                revert ISpokePoolManager.UnsupportedOracle(oracle);
-            }
-
-            // An oracle keeps one feed per asset, so a second feed on it would overwrite the first
-            for (uint256 j; j < i; ++j) {
-                if (feeds[j].oracle == oracle) {
-                    revert ISpokePoolManager.InvalidOracleFeed(asset);
-                }
-            }
-        }
     }
 
     /**

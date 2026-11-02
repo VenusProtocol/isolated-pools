@@ -70,6 +70,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
     address internal collateralAsset = makeAddr("collateralAsset");
     address internal loanAsset = makeAddr("loanAsset");
     address internal interestRateModel = makeAddr("interestRateModel");
+    address internal supportedOracle = makeAddr("supportedOracle");
 
     SpokePoolPolicyRegistry internal registry;
     BondManagerStub internal bondManager;
@@ -84,6 +85,9 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         bondManager = new BondManagerStub();
         bondAccount = new BondAccountStub(bondAsset);
         bondManager.setAccount(comptroller, address(bondAccount));
+        address[] memory oracles = new address[](1);
+        oracles[0] = supportedOracle;
+        registry.setSupportedOracles(oracles);
     }
 
     // ----- helpers -----
@@ -97,18 +101,9 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         return SpokePoolValidationLib.computeSeeds(_contracts(), request);
     }
 
-    function validateOracles(ISpokePoolManager.CollateralMarketRequestParams memory market) external view {
-        uint256 price = SpokePoolValidationLib.validateOracles(_contracts(), market);
+    function validateOracle(ISpokePoolManager.CollateralMarketRequestParams memory market) external view {
+        uint256 price = SpokePoolValidationLib.validateOracle(_contracts(), market);
         SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), TIER, market, price);
-    }
-
-    /// @notice The library reads the manager's supported oracles from the caller, which is this contract
-    function isSupportedOracle(address oracle) external pure returns (bool) {
-        return oracle >= supportedOracles(0) && oracle <= supportedOracles(2);
-    }
-
-    function supportedOracles(uint256 index) public pure returns (address) {
-        return address(uint160(0x5000 + index));
     }
 
     function _contracts() internal view returns (ISpokePoolManager.Contracts memory) {
@@ -267,10 +262,10 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         if (wholeTokens * usdPerToken > maxCapUsd) {
             vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.ExceedsTierLimit.selector, asset));
         }
-        this.validateOracles(_collateralMarket(asset, wholeTokens * 10 ** decimals));
+        this.validateOracle(_collateralMarket(asset, wholeTokens * 10 ** decimals));
     }
 
-    /// @notice A cap priced by its main feed passes exactly when its USD worth fits the tier, for any asset and feed
+    /// @notice A cap priced by its feed passes exactly when its USD worth fits the tier, for any asset and feed
     /// decimals
     function testFuzz_supplyCapCheckScalesFeedPrices(
         uint256 wholeTokens,
@@ -293,11 +288,11 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
             asset,
             wholeTokens * 10 ** assetDecimals
         );
-        market.feeds[0] = ISpokePoolManager.OracleFeed(supportedOracles(0), address(feed), 1 days);
+        market.feed = ISpokePoolManager.OracleFeed(supportedOracle, address(feed), 1 days);
         // `answer` is the USD price of one whole token with `feedDecimals` decimals
         if (wholeTokens * answer * 10 ** (18 - feedDecimals) > maxCapUsd) {
             vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.ExceedsTierLimit.selector, asset));
         }
-        this.validateOracles(market);
+        this.validateOracle(market);
     }
 }

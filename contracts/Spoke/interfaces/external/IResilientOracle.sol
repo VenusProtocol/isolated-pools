@@ -5,8 +5,7 @@ pragma solidity ^0.8.25;
  * @title IResilientOracle
  * @author Venus
  * @notice The ResilientOracle functions `SpokePoolManager` and its proposal builder read: whether an asset is priced
- * already, its price, and the BoundValidator a new asset's prices are checked with. The builder also encodes its
- * `setTokenConfig` actions with `TokenConfig`
+ * already, and its price. The builder also encodes its `setTokenConfig` actions with `TokenConfig`
  */
 interface IResilientOracle {
     /// @notice An asset's oracles, in the order main, pivot, fallback
@@ -30,10 +29,4 @@ interface IResilientOracle {
      * @return The price, scaled by 1e36 divided by the asset's decimals
      */
     function getPrice(address asset) external view returns (uint256);
-
-    /**
-     * @notice Returns the BoundValidator that checks the main and fallback prices against the pivot, and each other
-     * @return The BoundValidator
-     */
-    function boundValidator() external view returns (address);
 }

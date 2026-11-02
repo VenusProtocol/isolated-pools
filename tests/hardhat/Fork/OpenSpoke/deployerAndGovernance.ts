@@ -1451,15 +1451,9 @@ if (FORK) {
         const shortfall = await impersonate(f.shortfall.address);
         const teamRoles: [string, Signer[], Call<SpokePoolManager>][] = [
           [
-            "setOracleFeeds(uint256,address,OracleFeed[3],uint256)",
+            "setOracleFeed(uint256,address,OracleFeed)",
             [f.team],
-            manager => manager.callStatic.setOracleFeeds(requestId, collateral, [NO_FEED, NO_FEED, NO_FEED], 0),
-          ],
-          [
-            "setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)",
-            [f.team],
-            manager =>
-              manager.callStatic.setDeviationBoundedOracleParams(requestId, collateral, 3600, e18("0.1"), e18("0.05")),
+            manager => manager.callStatic.setOracleFeed(requestId, collateral, NO_FEED),
           ],
           [
             "buildRequestProposal(uint256,string)",
@@ -1503,16 +1497,6 @@ if (FORK) {
             "setHubYieldGroup(address,address)",
             [f.timelock],
             manager => manager.callStatic.setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address),
-          ],
-          [
-            "setSupportedOracles(address[])",
-            [f.timelock],
-            manager =>
-              manager.callStatic.setSupportedOracles([
-                bscmainnet.CHAINLINK_ORACLE,
-                bscmainnet.REDSTONE_ORACLE,
-                f.thirdOracle.address,
-              ]),
           ],
           [
             "setWindDownPeriod(uint256)",
@@ -1660,7 +1644,7 @@ if (FORK) {
       it("42. lets only the timelock configure the policy registry", async () => {
         const tier = await f.policyRegistry.getTier(TIER_ONE);
         const marketParams = await f.policyRegistry.marketParams();
-        const oracleParams = await f.policyRegistry.oracleParams();
+        const supportedOracles = await f.policyRegistry.getSupportedOracles();
         const usdtConfig = await f.policyRegistry.getLoanAssetConfig(bscmainnet.USDT);
         const roles: [string, Call<SpokePoolPolicyRegistry>][] = [
           [
@@ -1703,17 +1687,7 @@ if (FORK) {
                 reduceReservesBlockDelta: marketParams.reduceReservesBlockDelta,
               }),
           ],
-          [
-            "setOracleParams(OracleParams)",
-            registry =>
-              registry.callStatic.setOracleParams({
-                deviationBoundedOracleEnabled: oracleParams.deviationBoundedOracleEnabled,
-                cooldownPeriod: oracleParams.cooldownPeriod,
-                triggerThreshold: oracleParams.triggerThreshold,
-                resetThreshold: oracleParams.resetThreshold,
-                boundDeviation: oracleParams.boundDeviation,
-              }),
-          ],
+          ["setSupportedOracles(address[])", registry => registry.callStatic.setSupportedOracles(supportedOracles)],
         ];
         for (const [signature, call] of roles) {
           await expectOnlyHolders(f.policyRegistry, "Unauthorized", call, {

@@ -12,7 +12,7 @@ import { InterestRateModel } from "../../InterestRateModel.sol";
 import { PoolRegistry } from "../../Pool/PoolRegistry.sol";
 import { VToken } from "../../VToken.sol";
 import { VTokenInterface } from "../../VTokenInterfaces.sol";
-import { EXP_SCALE, MANTISSA_ONE } from "../../lib/constants.sol";
+import { EXP_SCALE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { SpokeComptroller } from "../SpokeComptroller.sol";
 import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
@@ -39,8 +39,7 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
  * Stewards on `setCollateralFactor` and `setMarketSupplyCaps`; to the supply pause steward on `setCollateralFactor`
  * and `setActionsPaused(address[],uint256[],bool)`. The Normal Timelock also needs `settleRequest(uint256)` and
  * `startWindDown(address)` on the manager, and, to price new collateral assets, `setTokenConfig` on every supported
- * oracle and the ResilientOracle, `setValidateConfig` on the BoundValidator, whose batch setters call these, and
- * `setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])` on the DeviationBoundedOracle
+ * oracle and the ResilientOracle, whose batch setters call it
  */
 contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     /// @dev VIP actions being assembled, with room for a fixed number of them
@@ -58,13 +57,6 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         uint256 maxStalePeriod;
     }
 
-    /// @dev An asset's bounds on the BoundValidator, as its `setValidateConfigs` takes them
-    struct BoundConfig {
-        address asset;
-        uint256 upperBoundRatio;
-        uint256 lowerBoundRatio;
-    }
-
     /// @dev GovernorBravo `ProposalType.NORMAL`, the route the VIPs use
     uint8 internal constant PROPOSAL_TYPE_NORMAL = 0;
 
@@ -78,10 +70,10 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     uint256 internal constant POOL_CREATION_ACTIONS = 3;
 
     /**
-     * @dev Most oracle actions of a request's VIP, each a batch over its new collateral assets: one per oracle its
-     *   feeds are on, three of them, the BoundValidator, the ResilientOracle and the DeviationBoundedOracle
+     * @dev Most oracle actions of a request's VIP, each a batch over its new collateral assets: one per supported oracle
+     *   their feeds are on, assuming at most three, and the ResilientOracle's
      */
-    uint256 internal constant ORACLE_CONFIG_ACTIONS = 6;
+    uint256 internal constant ORACLE_CONFIG_ACTIONS = 4;
 
     /**
      * @dev Most actions a VIP adds per new market: approve, `addMarket`, burn and `setReduceReservesBlockDelta`, plus a
@@ -420,7 +412,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         _addAction(proposal, address(SPOKE_POOL_MANAGER), "settleRequest(uint256)", abi.encode(requestId));
 
         // Before the listings: a collateral market needs a price for its collateral factor
-        _addOracleConfigs(proposal, requestId, request.collateralMarkets);
+        _addOracleConfigs(proposal, request.collateralMarkets);
 
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
@@ -463,119 +455,34 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     }
 
     /**
-     * @dev Adds the collateral assets' oracle configs, one batch per oracle. Each asset the ResilientOracle does not
-     *   price yet gets its set feeds, each on its own oracle, its BoundValidator bounds when a pivot feed is set, its
-     *   ResilientOracle config with each set feed's oracle enabled, and its DeviationBoundedOracle config unless that
-     *   oracle has it. An asset the ResilientOracle prices gets none, so a VIP of its own changes its price config
+     * @dev Adds the collateral assets' oracle configs: for each asset the ResilientOracle does not price yet, its feed
+     *   on its oracle, one batch per supported oracle, then its ResilientOracle config with that oracle as main. An
+     *   asset the ResilientOracle prices gets none, so a VIP of its own changes its price config
      */
     function _addOracleConfigs(
         Proposal memory proposal,
-        uint256 requestId,
         ISpokePoolManager.CollateralMarketRequestParams[] memory markets
     ) private view {
         IResilientOracle resilientOracle = IResilientOracle(address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE()));
         uint256 marketCount = markets.length;
-        bool[] memory unpriced = new bool[](marketCount);
-        for (uint256 i; i < marketCount; ++i) {
-            unpriced[i] = resilientOracle.getTokenConfig(markets[i].asset).asset == address(0);
-        }
-
-        // One batch per oracle the unpriced assets' feeds are on, in the order they first appear
-        address[] memory oracles = new address[](marketCount * 3);
-        uint256 oracleCount;
-        for (uint256 i; i < marketCount; ++i) {
-            if (!unpriced[i]) {
-                continue;
-            }
-            for (uint256 j; j < 3; ++j) {
-                address oracle = markets[i].feeds[j].oracle;
-                if (oracle == address(0)) {
-                    continue;
-                }
-                uint256 k;
-                while (k < oracleCount && oracles[k] != oracle) {
-                    ++k;
-                }
-                if (k == oracleCount) {
-                    oracles[oracleCount] = oracle;
-                    ++oracleCount;
-                }
-            }
-        }
-        for (uint256 i; i < oracleCount; ++i) {
-            _addFeedConfigs(proposal, markets, unpriced, oracles[i]);
-        }
-        _addBoundConfigs(proposal, requestId, markets, unpriced, resilientOracle.boundValidator());
-        _addResilientOracleConfigs(proposal, markets, unpriced);
-        _addDeviationBoundedOracleConfigs(proposal, requestId, markets, unpriced);
-    }
-
-    /**
-     * @dev Adds the BoundValidator's batch of the unpriced assets' bounds, if any, with the Venus team's deviation
-     *   for the request, else the registry's. Only a pivot makes the ResilientOracle validate prices against it, and
-     *   the manager allows a fallback only with a pivot
-     */
-    function _addBoundConfigs(
-        Proposal memory proposal,
-        uint256 requestId,
-        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
-        bool[] memory unpriced,
-        address boundValidator
-    ) private view {
-        (, , , , uint256 registryDeviation) = POLICY_REGISTRY.oracleParams();
-        uint256 marketCount = markets.length;
-        BoundConfig[] memory configs = new BoundConfig[](marketCount);
-        uint256 count;
-        for (uint256 i; i < marketCount; ++i) {
-            if (unpriced[i] && markets[i].feeds[1].feed != address(0)) {
-                address asset = markets[i].asset;
-                (uint256 boundDeviation, , , ) = SPOKE_POOL_MANAGER.requestOracleOverrides(requestId, asset);
-                if (boundDeviation == 0) {
-                    boundDeviation = registryDeviation;
-                }
-                configs[count] = BoundConfig(asset, MANTISSA_ONE + boundDeviation, MANTISSA_ONE - boundDeviation);
-                ++count;
-            }
-        }
-
-        if (count != 0) {
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                mstore(configs, count)
-            }
-            _addAction(
-                proposal,
-                boundValidator,
-                "setValidateConfigs((address,uint256,uint256)[])",
-                abi.encode(configs)
-            );
-        }
-    }
-
-    /// @dev Adds the ResilientOracle's batch of the unpriced assets' configs, each with its set feeds' oracles enabled
-    function _addResilientOracleConfigs(
-        Proposal memory proposal,
-        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
-        bool[] memory unpriced
-    ) private view {
-        uint256 marketCount = markets.length;
         IResilientOracle.TokenConfig[] memory configs = new IResilientOracle.TokenConfig[](marketCount);
         uint256 count;
         for (uint256 i; i < marketCount; ++i) {
-            if (!unpriced[i]) {
+            ISpokePoolManager.CollateralMarketRequestParams memory market = markets[i];
+            if (resilientOracle.getTokenConfig(market.asset).asset != address(0)) {
+                delete market.feed;
                 continue;
             }
-
             IResilientOracle.TokenConfig memory config = configs[count];
-            config.asset = markets[i].asset;
-            for (uint256 j; j < 3; ++j) {
-                ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
-                if (feed.feed != address(0)) {
-                    config.oracles[j] = feed.oracle;
-                    config.enableFlagsForOracles[j] = true;
-                }
-            }
+            config.asset = market.asset;
+            config.oracles[0] = market.feed.oracle;
+            config.enableFlagsForOracles[0] = true;
             ++count;
+        }
+
+        address[] memory oracles = POLICY_REGISTRY.getSupportedOracles();
+        for (uint256 i; i < oracles.length; ++i) {
+            _addFeedConfigs(proposal, markets, oracles[i]);
         }
 
         if (count != 0) {
@@ -585,63 +492,8 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
             }
             _addAction(
                 proposal,
-                address(SPOKE_POOL_MANAGER.RESILIENT_ORACLE()),
+                address(resilientOracle),
                 "setTokenConfigs((address,address[3],bool[3],bool)[])",
-                abi.encode(configs)
-            );
-        }
-    }
-
-    /**
-     * @dev Adds the DeviationBoundedOracle's batch of configs for the unpriced assets it does not have yet, if any:
-     *   the Venus team's config for the request, else the registry's while Venus enables it
-     */
-    function _addDeviationBoundedOracleConfigs(
-        Proposal memory proposal,
-        uint256 requestId,
-        ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
-        bool[] memory unpriced
-    ) private view {
-        uint256 marketCount = markets.length;
-        IDeviationBoundedOracle.TokenConfigInput[] memory configs = new IDeviationBoundedOracle.TokenConfigInput[](
-            marketCount
-        );
-        uint256 count;
-        for (uint256 i; i < marketCount; ++i) {
-            address asset = markets[i].asset;
-            if (!unpriced[i]) {
-                continue;
-            }
-            (, , , , , , address initializedAsset, , , ) = DEVIATION_BOUNDED_ORACLE.assetProtectionConfig(asset);
-            if (initializedAsset != address(0)) {
-                continue;
-            }
-
-            IDeviationBoundedOracle.TokenConfigInput memory config = configs[count];
-            (, config.cooldownPeriod, config.triggerThreshold, config.resetThreshold) = SPOKE_POOL_MANAGER
-                .requestOracleOverrides(requestId, asset);
-            if (config.triggerThreshold == 0) {
-                bool enabled;
-                (enabled, config.cooldownPeriod, config.triggerThreshold, config.resetThreshold, ) = POLICY_REGISTRY
-                    .oracleParams();
-                if (!enabled) {
-                    continue;
-                }
-            }
-            config.asset = asset;
-            config.enableBoundedPricing = true;
-            ++count;
-        }
-
-        if (count != 0) {
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                mstore(configs, count)
-            }
-            _addAction(
-                proposal,
-                address(DEVIATION_BOUNDED_ORACLE),
-                "setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])",
                 abi.encode(configs)
             );
         }
@@ -789,31 +641,20 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         return (supplyCapUsd * EXP_SCALE) / SPOKE_POOL_MANAGER.RESILIENT_ORACLE().getPrice(asset);
     }
 
-    /**
-     * @dev Adds `oracle`'s batch of the unpriced assets' feeds on it, if any. The manager checked each set feed is on a
-     *   supported oracle and that an asset's feeds are on distinct oracles
-     */
+    /// @dev Adds `oracle`'s batch of the feeds on it, if any; a priced asset's feed was cleared, so its oracle is zero
     function _addFeedConfigs(
         Proposal memory proposal,
         ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
-        bool[] memory unpriced,
         address oracle
     ) private pure {
         uint256 marketCount = markets.length;
         FeedConfig[] memory configs = new FeedConfig[](marketCount);
         uint256 count;
         for (uint256 i; i < marketCount; ++i) {
-            if (!unpriced[i]) {
-                continue;
-            }
-
-            for (uint256 j; j < 3; ++j) {
-                ISpokePoolManager.OracleFeed memory feed = markets[i].feeds[j];
-                if (feed.feed != address(0) && feed.oracle == oracle) {
-                    configs[count] = FeedConfig(markets[i].asset, feed.feed, feed.maxStalePeriod);
-                    ++count;
-                    break;
-                }
+            ISpokePoolManager.OracleFeed memory feed = markets[i].feed;
+            if (feed.oracle == oracle) {
+                configs[count] = FeedConfig(markets[i].asset, feed.feed, feed.maxStalePeriod);
+                ++count;
             }
         }
 

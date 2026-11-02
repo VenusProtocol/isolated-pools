@@ -28,7 +28,7 @@ contract ResilientOracleStub {
         return underlyingPrices[vToken];
     }
 
-    /// @dev An asset with a price has a config, so the validation library prices it here instead of from its feeds
+    /// @dev An asset with a price has a config, so the validation library prices it here instead of from its feed
     function getTokenConfig(address asset) external view returns (IResilientOracle.TokenConfig memory config) {
         if (prices[asset] != 0) {
             config.asset = asset;

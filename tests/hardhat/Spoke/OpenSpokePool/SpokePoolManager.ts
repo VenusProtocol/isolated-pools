@@ -99,7 +99,6 @@ describe("SpokePoolManager", () => {
   let yieldGroup: SignerWithAddress;
   let chainlinkOracle: SignerWithAddress;
   let redstoneOracle: SignerWithAddress;
-  let binanceOracle: SignerWithAddress;
   let acm: FakeContract<AccessControlManager>;
   let oracle: FakeContract<ResilientOracleInterface & IResilientOracle>;
   let riskOracle: FakeContract<IRiskOracle>;
@@ -109,9 +108,8 @@ describe("SpokePoolManager", () => {
   let bondManager: FakeContract<ISpokeBondManager>;
   let bondAccount: FakeContract<IBondAccount>;
   let comptroller: FakeContract<SpokeComptroller>;
-  let mainFeed: FakeContract<IChainlinkFeed>;
-  let pivotFeed: FakeContract<IChainlinkFeed>;
-  let fallbackFeed: FakeContract<IChainlinkFeed>;
+  let priceFeed: FakeContract<IChainlinkFeed>;
+  let otherFeed: FakeContract<IChainlinkFeed>;
   let vTokenA: FakeContract<VToken>;
   let vTokenB: FakeContract<VToken>;
   let vTokenC: FakeContract<VToken>;
@@ -124,26 +122,15 @@ describe("SpokePoolManager", () => {
   const noFeed = (): Feed => ({ oracle: constants.AddressZero, feed: constants.AddressZero, maxStalePeriod: 0 });
   const feedOn = (oracle: string, feed: string): Feed => ({ oracle, feed, maxStalePeriod: MAX_STALE_PERIOD });
 
-  /// A main feed on the Chainlink oracle, with no pivot or fallback
-  const mainFeedOnly = (): [Feed, Feed, Feed] => [
-    feedOn(chainlinkOracle.address, mainFeed.address),
-    noFeed(),
-    noFeed(),
-  ];
-
-  /// Main, pivot and fallback feeds, each on its own supported oracle
-  const allFeeds = (): [Feed, Feed, Feed] => [
-    feedOn(chainlinkOracle.address, mainFeed.address),
-    feedOn(redstoneOracle.address, pivotFeed.address),
-    feedOn(binanceOracle.address, fallbackFeed.address),
-  ];
+  /// The price feed on the Chainlink oracle
+  const chainlinkFeed = (): Feed => feedOn(chainlinkOracle.address, priceFeed.address);
 
   const collateralMarket = (overrides: object = {}) => ({
     asset: collateralAsset.address,
     collateralFactor: e18("0.4"),
     liquidationThreshold: e18("0.6"),
     supplyCap: e18("1000"),
-    feeds: mainFeedOnly(),
+    feed: chainlinkFeed(),
     ...overrides,
   });
 
@@ -196,19 +183,19 @@ describe("SpokePoolManager", () => {
     return deployProxy(implementation as SpokePoolManager, acm.address);
   };
 
-  const feedTuples = (feeds: Feed[]) =>
-    feeds.map(({ oracle: feedOracle, feed, maxStalePeriod }) => [
-      feedOracle,
-      feed,
-      BigNumber.from(maxStalePeriod).toNumber(),
-    ]);
+  const feedTuple = ({ oracle: feedOracle, feed, maxStalePeriod }: Feed) => [
+    feedOracle,
+    feed,
+    BigNumber.from(maxStalePeriod).toNumber(),
+  ];
 
-  const expectCollateralMarkets = (actual: { feeds: Feed[] }[], expected: ReturnType<typeof collateralMarket>[]) => {
+  /// Checks the stored collateral markets; the ResilientOracle prices every asset here, so each feed is dropped
+  const expectCollateralMarkets = (actual: { feed: Feed }[], expected: ReturnType<typeof collateralMarket>[]) => {
     expect(actual.length).to.equal(expected.length);
     actual.forEach((market, i) => {
-      const { feeds, ...fields } = expected[i];
-      expectFields(market, fields);
-      expect(feedTuples(market.feeds)).to.deep.equal(feedTuples(feeds as Feed[]));
+      const { asset, collateralFactor, liquidationThreshold, supplyCap } = expected[i];
+      expectFields(market, { asset, collateralFactor, liquidationThreshold, supplyCap });
+      expect(feedTuple(market.feed)).to.deep.equal(feedTuple(noFeed()));
     });
   };
 
@@ -260,7 +247,7 @@ describe("SpokePoolManager", () => {
 
   const setPrice = (asset: string, price: BigNumberish) => oracle.getPrice.whenCalledWith(asset).returns(price);
 
-  /// Makes `asset` unpriced by the ResilientOracle, so its main feed prices it
+  /// Makes `asset` unpriced by the ResilientOracle, so its feed prices it
   const unpriced = (asset: string) =>
     oracle.getTokenConfig.whenCalledWith(asset).returns(tokenConfig(constants.AddressZero));
 
@@ -325,7 +312,7 @@ describe("SpokePoolManager", () => {
     builder.buildForceCloseProposal.returns(FORCE_CLOSE_PROPOSAL);
     builder.MAX_POOL_MARKETS.returns(MAX_POOL_MARKETS);
     builder.POOL_REGISTRY.returns(poolRegistry.address);
-    for (const feed of [mainFeed, pivotFeed, fallbackFeed]) {
+    for (const feed of [priceFeed, otherFeed]) {
       feed.decimals.returns(FEED_DECIMALS);
     }
     bondManager.bondAccounts.returns(bondAccount.address);
@@ -338,8 +325,7 @@ describe("SpokePoolManager", () => {
   };
 
   const deployFixture = async () => {
-    [owner, deployer, timelock, other, irm, yieldGroup, chainlinkOracle, redstoneOracle, binanceOracle] =
-      await ethers.getSigners();
+    [owner, deployer, timelock, other, irm, yieldGroup, chainlinkOracle, redstoneOracle] = await ethers.getSigners();
     acm = await smock.fake<AccessControlManager>("AccessControlManager");
     oracle = await smock.fake<ResilientOracleInterface & IResilientOracle>([
       ...ResilientOracleInterface__factory.abi,
@@ -356,9 +342,8 @@ describe("SpokePoolManager", () => {
     vTokenA = await smock.fake<VToken>("contracts/VToken.sol:VToken");
     vTokenB = await smock.fake<VToken>("contracts/VToken.sol:VToken");
     vTokenC = await smock.fake<VToken>("contracts/VToken.sol:VToken");
-    mainFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
-    pivotFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
-    fallbackFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
+    priceFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
+    otherFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
 
     bondToken = await new MockToken__factory(owner).deploy("Tether", "USDT", 18);
     collateralAsset = await new MockToken__factory(owner).deploy("Collateral", "COL", 18);
@@ -386,7 +371,7 @@ describe("SpokePoolManager", () => {
     await policyRegistry.setPoolParams(POOL_PARAMS);
     await policyRegistry.setMarketParams(MARKET_PARAMS(irm.address));
     await manager.setWindDownPeriod(WIND_DOWN_PERIOD);
-    await manager.setSupportedOracles([chainlinkOracle.address, redstoneOracle.address, binanceOracle.address]);
+    await policyRegistry.setSupportedOracles([chainlinkOracle.address, redstoneOracle.address]);
   };
 
   beforeEach(async () => {
@@ -404,9 +389,8 @@ describe("SpokePoolManager", () => {
       vTokenA,
       vTokenB,
       vTokenC,
-      mainFeed,
-      pivotFeed,
-      fallbackFeed,
+      priceFeed,
+      otherFeed,
     );
     programFakes();
   });
@@ -448,12 +432,8 @@ describe("SpokePoolManager", () => {
     const m = () => manager.connect(other);
     const calls: [string, () => Promise<unknown>][] = [
       [
-        "setOracleFeeds(uint256,address,OracleFeed[3],uint256)",
-        () => m().setOracleFeeds(1, collateralAsset.address, mainFeedOnly(), 0),
-      ],
-      [
-        "setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)",
-        () => m().setDeviationBoundedOracleParams(1, collateralAsset.address, 0, 0, 0),
+        "setOracleFeed(uint256,address,OracleFeed)",
+        () => m().setOracleFeed(1, collateralAsset.address, chainlinkFeed()),
       ],
       ["buildRequestProposal(uint256,string)", () => m().buildRequestProposal(1, DESCRIPTION)],
       ["settleRequest(uint256)", () => m().settleRequest(1)],
@@ -474,7 +454,6 @@ describe("SpokePoolManager", () => {
       ["setProposalBuilder(address)", () => m().setProposalBuilder(builder.address)],
       ["setBondManager(address)", () => m().setBondManager(bondManager.address)],
       ["setHubYieldGroup(address,address)", () => m().setHubYieldGroup(loanAsset.address, yieldGroup.address)],
-      ["setSupportedOracles(address[])", () => m().setSupportedOracles([other.address])],
       ["setWindDownPeriod(uint256)", () => m().setWindDownPeriod(1)],
       ["setMaxResidualPoolDebtUsd(uint256)", () => m().setMaxResidualPoolDebtUsd(1)],
       ["sweepToken(address,address,uint256)", () => m().sweepToken(bondToken.address, other.address, 1)],
@@ -526,13 +505,13 @@ describe("SpokePoolManager", () => {
       expect(await manager.requestSeeds(1, loanAsset.address)).to.equal(e18("20"));
     });
 
-    it("prices an unpriced collateral asset's seed with its main feed", async () => {
+    it("prices an unpriced collateral asset's seed with its feed", async () => {
       const usdcUnits = (amount: string) => parseUnits(amount, 6);
       const usdc = await new MockToken__factory(owner).deploy("USD Coin", "USDC", 6);
       await usdc.connect(deployer).faucet(usdcUnits("1000"));
       await usdc.connect(deployer).approve(manager.address, constants.MaxUint256);
       unpriced(usdc.address);
-      await setAnswer(mainFeed, feedAnswer("1"));
+      await setAnswer(priceFeed, feedAnswer("1"));
 
       const seed = usdcUnits("10");
       await expect(
@@ -833,55 +812,58 @@ describe("SpokePoolManager", () => {
     });
   });
 
-  describe("setOracleFeeds", () => {
-    it("replaces a pending collateral market's feeds and bound deviation and emits OracleFeedsUpdated", async () => {
-      await requestPool();
-      const feeds = allFeeds();
-      const receipt = await (await manager.setOracleFeeds(1, collateralAsset.address, feeds, e18("0.02"))).wait();
-      const [event] = receipt.events ?? [];
-      expect(event.event).to.equal("OracleFeedsUpdated");
-      expect(event.args?.requestId).to.equal(1);
-      expect(event.args?.asset).to.equal(collateralAsset.address);
-      expect(feedTuples(event.args?.feeds)).to.deep.equal(feedTuples(feeds));
-      expect(event.args?.boundDeviation).to.equal(e18("0.02"));
-      const [market] = (await manager.getRequest(1)).collateralMarkets;
-      expect(feedTuples(market.feeds)).to.deep.equal(feedTuples(feeds));
-      expect((await manager.requestOracleOverrides(1, collateralAsset.address)).boundDeviation).to.equal(e18("0.02"));
+  describe("setOracleFeed", () => {
+    beforeEach(async () => {
+      unpriced(collateralAsset.address);
+      await setAnswer(priceFeed, feedAnswer("1"));
+      await setAnswer(otherFeed, feedAnswer("1"));
     });
 
-    it("reverts on a bound deviation of 1e18 or above", async () => {
+    it("replaces a pending collateral market's feed and emits OracleFeedUpdated", async () => {
       await requestPool();
-      await expect(manager.setOracleFeeds(1, collateralAsset.address, allFeeds(), e18("1")))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
-        .withArgs(collateralAsset.address);
+      const feed = feedOn(redstoneOracle.address, otherFeed.address);
+      const receipt = await (await manager.setOracleFeed(1, collateralAsset.address, feed)).wait();
+      const [event] = receipt.events ?? [];
+      expect(event.event).to.equal("OracleFeedUpdated");
+      expect(event.args?.requestId).to.equal(1);
+      expect(event.args?.asset).to.equal(collateralAsset.address);
+      expect(feedTuple(event.args?.feed)).to.deep.equal(feedTuple(feed));
+      const [market] = (await manager.getRequest(1)).collateralMarkets;
+      expect(feedTuple(market.feed)).to.deep.equal(feedTuple(feed));
     });
 
     it("updates the right market of several", async () => {
+      unpriced(bondToken.address);
       await requestPool([collateralMarket({ asset: bondToken.address }), collateralMarket()], []);
-      await manager.setOracleFeeds(1, collateralAsset.address, allFeeds(), 0);
+      const feed = feedOn(redstoneOracle.address, otherFeed.address);
+      await manager.setOracleFeed(1, collateralAsset.address, feed);
       const [first, second] = (await manager.getRequest(1)).collateralMarkets;
-      expect(feedTuples(first.feeds)).to.deep.equal(feedTuples(mainFeedOnly()));
-      expect(feedTuples(second.feeds)).to.deep.equal(feedTuples(allFeeds()));
+      expect(feedTuple(first.feed)).to.deep.equal(feedTuple(chainlinkFeed()));
+      expect(feedTuple(second.feed)).to.deep.equal(feedTuple(feed));
     });
 
-    it("checks an unpriced asset's new feeds and its supply cap at their price", async () => {
-      unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, feedAnswer("1"));
+    it("reverts with OracleAlreadySet once the ResilientOracle prices the asset", async () => {
+      await requestPool();
+      oracle.getTokenConfig.whenCalledWith(collateralAsset.address).returns(tokenConfig(collateralAsset.address));
+      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
+        .to.be.revertedWithCustomError(manager, "OracleAlreadySet")
+        .withArgs(collateralAsset.address);
+    });
+
+    it("checks the new feed and the supply cap at its price", async () => {
       await requestPool();
 
-      await expect(manager.setOracleFeeds(1, collateralAsset.address, [noFeed(), noFeed(), noFeed()], 0))
+      await expect(manager.setOracleFeed(1, collateralAsset.address, noFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
+      await expect(manager.setOracleFeed(1, collateralAsset.address, feedOn(other.address, otherFeed.address)))
+        .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
+        .withArgs(other.address);
 
-      // The request's 1,000 units at the new main feed's $1,000.01 are above the tier's $1,000,000
-      await setAnswer(pivotFeed, feedAnswer("1000.01"));
+      // The request's 1,000 units at the new feed's $1,000.01 are above the tier's $1,000,000
+      await setAnswer(otherFeed, feedAnswer("1000.01"));
       await expect(
-        manager.setOracleFeeds(
-          1,
-          collateralAsset.address,
-          [feedOn(chainlinkOracle.address, pivotFeed.address), noFeed(), noFeed()],
-          0,
-        ),
+        manager.setOracleFeed(1, collateralAsset.address, feedOn(chainlinkOracle.address, otherFeed.address)),
       )
         .to.be.revertedWithCustomError(manager, "ExceedsTierLimit")
         .withArgs(collateralAsset.address);
@@ -890,17 +872,11 @@ describe("SpokePoolManager", () => {
     it("keeps the seed pulled at the request, priced off the replaced feed", async () => {
       await activatePool();
       unpriced(bondToken.address);
-      await setAnswer(mainFeed, feedAnswer("1"));
       const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
 
-      await setAnswer(pivotFeed, feedAnswer("2"));
+      await setAnswer(otherFeed, feedAnswer("2"));
       await expect(
-        manager.setOracleFeeds(
-          requestId,
-          bondToken.address,
-          [feedOn(chainlinkOracle.address, pivotFeed.address), noFeed(), noFeed()],
-          0,
-        ),
+        manager.setOracleFeed(requestId, bondToken.address, feedOn(chainlinkOracle.address, otherFeed.address)),
       ).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
 
       // Still $10 at the replaced feed's $1, and the build pulls nothing more
@@ -911,55 +887,25 @@ describe("SpokePoolManager", () => {
     it("reverts on an asset that is not one of the request's collateral markets", async () => {
       await requestPool();
       for (const asset of [loanAsset.address, other.address]) {
-        await expect(manager.setOracleFeeds(1, asset, mainFeedOnly(), 0))
+        await expect(manager.setOracleFeed(1, asset, chainlinkFeed()))
           .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
           .withArgs(asset);
       }
     });
 
     it("reverts unless the request is pending", async () => {
-      await expect(manager.setOracleFeeds(1, collateralAsset.address, mainFeedOnly(), 0))
+      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
         .withArgs(1);
 
       await requestPool();
       await build(1);
-      await expect(manager.setOracleFeeds(1, collateralAsset.address, mainFeedOnly(), 0))
+      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
         .withArgs(1);
 
       await manager.rejectRequest(1);
-      await expect(manager.setOracleFeeds(1, collateralAsset.address, mainFeedOnly(), 0))
-        .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
-        .withArgs(1);
-    });
-  });
-
-  describe("setDeviationBoundedOracleParams", () => {
-    it("sets a pending collateral market's bounded config and emits DeviationBoundedOracleParamsUpdated", async () => {
-      await requestPool();
-      await manager.setOracleFeeds(1, collateralAsset.address, allFeeds(), e18("0.02"));
-      await expect(manager.setDeviationBoundedOracleParams(1, collateralAsset.address, 600, e18("0.2"), e18("0.1")))
-        .to.emit(manager, "DeviationBoundedOracleParamsUpdated")
-        .withArgs(1, collateralAsset.address, 600, e18("0.2"), e18("0.1"));
-      const overrides = await manager.requestOracleOverrides(1, collateralAsset.address);
-      expect(overrides.boundDeviation).to.equal(e18("0.02"), "the bound deviation is kept");
-      expect(overrides.cooldownPeriod).to.equal(600);
-      expect(overrides.triggerThreshold).to.equal(e18("0.2"));
-      expect(overrides.resetThreshold).to.equal(e18("0.1"));
-    });
-
-    it("reverts on an asset that is not one of the request's collateral markets", async () => {
-      await requestPool();
-      await expect(manager.setDeviationBoundedOracleParams(1, loanAsset.address, 600, e18("0.2"), e18("0.1")))
-        .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
-        .withArgs(loanAsset.address);
-    });
-
-    it("reverts unless the request is pending", async () => {
-      await requestPool();
-      await build(1);
-      await expect(manager.setDeviationBoundedOracleParams(1, collateralAsset.address, 600, e18("0.2"), e18("0.1")))
+      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
         .withArgs(1);
     });
@@ -1070,30 +1016,46 @@ describe("SpokePoolManager", () => {
     });
   });
 
-  describe("oracle feeds of an unpriced collateral asset", () => {
+  describe("the oracle feed of a collateral asset", () => {
     beforeEach(async () => {
       unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, feedAnswer("2"));
+      await setAnswer(priceFeed, feedAnswer("2"));
     });
 
-    const requestWith = (feeds: Feed[]) => requestPool([collateralMarket({ feeds })], []);
+    const requestWith = (feed: Feed) => requestPool([collateralMarket({ feed })], []);
 
-    it("price the asset with the main feed, scaled to the asset's decimals", async () => {
+    it("prices an unpriced asset, scaled to the asset's decimals", async () => {
       // 500 units at $2,000 is exactly the tier's $1,000,000, a wei more is above it
-      await setAnswer(mainFeed, feedAnswer("2000"));
+      await setAnswer(priceFeed, feedAnswer("2000"));
       await expect(requestPool([collateralMarket({ supplyCap: e18("500.000000000000000001") })], []))
         .to.be.revertedWithCustomError(manager, "ExceedsTierLimit")
         .withArgs(collateralAsset.address);
       expect(await requestPool([collateralMarket({ supplyCap: e18("500") })], [])).to.equal(1);
     });
 
-    it("reject a main feed or an asset with more than 18 decimals, which the ChainlinkOracle cannot price", async () => {
-      mainFeed.decimals.returns(19);
-      await expect(requestWith(mainFeedOnly()))
+    it("is stored with the request of an unpriced asset, on any supported oracle", async () => {
+      for (const feed of [chainlinkFeed(), feedOn(redstoneOracle.address, priceFeed.address)]) {
+        const requestId = await requestWith(feed);
+        const [market] = (await manager.getRequest(requestId)).collateralMarkets;
+        expect(feedTuple(market.feed)).to.deep.equal(feedTuple(feed));
+        await manager.connect(deployer).cancelRequest(requestId);
+      }
+    });
+
+    it("is dropped, unchecked, when the ResilientOracle prices the asset", async () => {
+      oracle.getTokenConfig.whenCalledWith(collateralAsset.address).returns(tokenConfig(collateralAsset.address));
+      const requestId = await requestWith(feedOn(other.address, otherFeed.address));
+      const [market] = (await manager.getRequest(requestId)).collateralMarkets;
+      expect(feedTuple(market.feed)).to.deep.equal(feedTuple(noFeed()));
+    });
+
+    it("rejects a feed or an asset with more than 18 decimals, which the ChainlinkOracle cannot price", async () => {
+      priceFeed.decimals.returns(19);
+      await expect(requestWith(chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
 
-      mainFeed.decimals.returns(FEED_DECIMALS);
+      priceFeed.decimals.returns(FEED_DECIMALS);
       const wide = await new MockToken__factory(owner).deploy("Wide", "WIDE", 19);
       unpriced(wide.address);
       await expect(requestPool([collateralMarket({ asset: wide.address })], []))
@@ -1101,120 +1063,62 @@ describe("SpokePoolManager", () => {
         .withArgs(wide.address);
     });
 
-    it("accept the main feed alone, or with a pivot, or with a pivot and a fallback", async () => {
-      const [main, pivot, fallback] = allFeeds();
-      for (const feeds of [
-        [main, noFeed(), noFeed()],
-        [main, pivot, noFeed()],
-        [main, pivot, fallback],
-      ]) {
-        const requestId = await requestWith(feeds);
-        await manager.connect(deployer).cancelRequest(requestId);
-      }
-    });
-
-    it("reject a slot with an oracle but no feed, or a feed but no oracle", async () => {
-      const [main, pivot] = allFeeds();
-      await expect(requestWith([main, feedOn(redstoneOracle.address, constants.AddressZero), noFeed()]))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
-        .withArgs(collateralAsset.address);
-      await expect(requestWith([main, { ...pivot, oracle: constants.AddressZero }, noFeed()]))
-        .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
-        .withArgs(constants.AddressZero);
-    });
-
-    it("reject a missing main feed", async () => {
-      const [, pivot] = allFeeds();
-      for (const feeds of [
-        [noFeed(), noFeed(), noFeed()],
-        [feedOn(chainlinkOracle.address, constants.AddressZero), pivot, noFeed()],
-      ]) {
-        await expect(requestWith(feeds))
+    it("rejects a missing feed for an unpriced asset", async () => {
+      for (const feed of [noFeed(), feedOn(chainlinkOracle.address, constants.AddressZero)]) {
+        await expect(requestWith(feed))
           .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
           .withArgs(collateralAsset.address);
       }
     });
 
-    it("reject a set feed without a staleness limit", async () => {
-      const [main, pivot] = allFeeds();
-      for (const feeds of [
-        [{ ...main, maxStalePeriod: 0 }, noFeed(), noFeed()],
-        [main, { ...pivot, maxStalePeriod: 0 }, noFeed()],
-      ]) {
-        await expect(requestWith(feeds))
-          .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
-          .withArgs(collateralAsset.address);
-      }
-    });
-
-    it("reject a fallback feed without a pivot feed", async () => {
-      const [main, , fallback] = allFeeds();
-      await expect(requestWith([main, noFeed(), fallback]))
+    it("rejects a feed without a staleness limit", async () => {
+      await expect(requestWith({ ...chainlinkFeed(), maxStalePeriod: 0 }))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
     });
 
-    it("reject two feeds on the same oracle", async () => {
-      const [main, pivot] = allFeeds();
-      for (const feeds of [
-        [main, { ...pivot, oracle: chainlinkOracle.address }, noFeed()],
-        [main, pivot, feedOn(redstoneOracle.address, fallbackFeed.address)],
-        [main, pivot, feedOn(chainlinkOracle.address, fallbackFeed.address)],
-      ]) {
-        await expect(requestWith(feeds))
-          .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
-          .withArgs(collateralAsset.address);
-      }
-    });
-
-    it("reject a feed on an unsupported oracle", async () => {
-      const [main, pivot] = allFeeds();
-      const cases: [Feed[], string][] = [
-        [[{ ...main, oracle: other.address }, noFeed(), noFeed()], other.address],
-        [[main, { ...pivot, oracle: other.address }, noFeed()], other.address],
-      ];
-      for (const [feeds, unsupported] of cases) {
-        await expect(requestWith(feeds))
+    it("rejects a feed on an oracle the registry does not support", async () => {
+      for (const unsupported of [other.address, constants.AddressZero]) {
+        await expect(requestWith({ ...chainlinkFeed(), oracle: unsupported }))
           .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
           .withArgs(unsupported);
       }
+
+      await policyRegistry.setSupportedOracles([redstoneOracle.address]);
+      await expect(requestWith(chainlinkFeed()))
+        .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
+        .withArgs(chainlinkOracle.address);
     });
 
-    it("reject a main feed whose answer is not positive", async () => {
+    it("rejects a feed whose answer is not positive", async () => {
       for (const answer of [0, -1]) {
-        await setAnswer(mainFeed, answer);
-        await expect(requestWith(mainFeedOnly()))
+        await setAnswer(priceFeed, answer);
+        await expect(requestWith(chainlinkFeed()))
           .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
           .withArgs(collateralAsset.address);
       }
     });
 
-    it("reject a main feed older than the staleness limit", async () => {
+    it("rejects a feed older than the staleness limit", async () => {
       const updatedAt = (await time.latest()) + 10;
-      mainFeed.latestRoundData.returns([1, feedAnswer("2"), 0, updatedAt, 1]);
+      priceFeed.latestRoundData.returns([1, feedAnswer("2"), 0, updatedAt, 1]);
       await time.setNextBlockTimestamp(updatedAt + MAX_STALE_PERIOD + 1);
       await expect(manager.connect(deployer).requestPool(...poolOf(), [collateralMarket()], [], NO_ESTIMATE))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
 
       const latest = await time.latest();
-      mainFeed.latestRoundData.returns([1, feedAnswer("2"), 0, latest + 1 - MAX_STALE_PERIOD, 1]);
+      priceFeed.latestRoundData.returns([1, feedAnswer("2"), 0, latest + 1 - MAX_STALE_PERIOD, 1]);
       await time.setNextBlockTimestamp(latest + 1);
-      expect(await requestWith(mainFeedOnly())).to.equal(1);
+      expect(await requestWith(chainlinkFeed())).to.equal(1);
     });
 
-    it("judge the main feed's age by its own staleness limit", async () => {
-      const [main] = mainFeedOnly();
+    it("judges the feed's age by its own staleness limit", async () => {
       const latest = await time.latest();
       // Too old for the default limit, within the feed's own
-      mainFeed.latestRoundData.returns([1, 2e8, 0, latest - MAX_STALE_PERIOD, 1]);
+      priceFeed.latestRoundData.returns([1, 2e8, 0, latest - MAX_STALE_PERIOD, 1]);
       await time.setNextBlockTimestamp(latest + 1);
-      expect(await requestWith([{ ...main, maxStalePeriod: MAX_STALE_PERIOD + 1 }, noFeed(), noFeed()])).to.equal(1);
-    });
-
-    it("are not checked once the ResilientOracle prices the asset", async () => {
-      oracle.getTokenConfig.whenCalledWith(collateralAsset.address).returns(tokenConfig(collateralAsset.address));
-      expect(await requestWith([noFeed(), noFeed(), feedOn(other.address, fallbackFeed.address)])).to.equal(1);
+      expect(await requestWith({ ...chainlinkFeed(), maxStalePeriod: MAX_STALE_PERIOD + 1 })).to.equal(1);
     });
   });
 
@@ -1258,11 +1162,11 @@ describe("SpokePoolManager", () => {
         .withArgs(collateralAsset.address);
     });
 
-    it("checks an unpriced asset's main feed again", async () => {
+    it("checks an unpriced asset's feed again", async () => {
       unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, feedAnswer("1"));
+      await setAnswer(priceFeed, feedAnswer("1"));
       await requestPool();
-      await setAnswer(mainFeed, feedAnswer("1"), MAX_STALE_PERIOD + 1);
+      await setAnswer(priceFeed, feedAnswer("1"), MAX_STALE_PERIOD + 1);
       await expect(build(1))
         .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
         .withArgs(collateralAsset.address);
@@ -2310,40 +2214,6 @@ describe("SpokePoolManager", () => {
         manager,
         "ZeroAddressNotAllowed",
       );
-    });
-
-    it("setSupportedOracles replaces the supported oracles with any number of them", async () => {
-      const oracles = [other.address, chainlinkOracle.address, redstoneOracle.address, binanceOracle.address];
-      await expect(manager.setSupportedOracles(oracles))
-        .to.emit(manager, "SupportedOraclesUpdated")
-        .withArgs([chainlinkOracle.address, redstoneOracle.address, binanceOracle.address], oracles);
-      expect(await manager.getSupportedOracles()).to.deep.equal(oracles);
-
-      for (const oracle of oracles) {
-        expect(await manager.isSupportedOracle(oracle)).to.equal(true);
-      }
-
-      await manager.setSupportedOracles([redstoneOracle.address]);
-      expect(await manager.getSupportedOracles()).to.deep.equal([redstoneOracle.address]);
-      expect(await manager.isSupportedOracle(redstoneOracle.address)).to.equal(true);
-      for (const removed of [other.address, chainlinkOracle.address, binanceOracle.address]) {
-        expect(await manager.isSupportedOracle(removed)).to.equal(false);
-      }
-    });
-
-    it("setSupportedOracles rejects a zero oracle", async () => {
-      await expect(
-        manager.setSupportedOracles([chainlinkOracle.address, constants.AddressZero]),
-      ).to.be.revertedWithCustomError(manager, "ZeroAddressNotAllowed");
-    });
-
-    it("setSupportedOracles decides which oracles a new request's feeds may use", async () => {
-      unpriced(collateralAsset.address);
-      await setAnswer(mainFeed, feedAnswer("1"));
-      await manager.setSupportedOracles([redstoneOracle.address, binanceOracle.address]);
-      await expect(requestPool())
-        .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
-        .withArgs(chainlinkOracle.address);
     });
 
     it("setWindDownPeriod sets a non-zero wind-down period", async () => {

@@ -123,7 +123,6 @@ const ORACLE_ADMIN_ABI = [
   "function tokenConfigs(address) view returns (address asset, address feed, uint256 maxStalePeriod)",
   "function setTokenConfig((address asset, address feed, uint256 maxStalePeriod))",
   "function setTokenConfig((address asset, address[3] oracles, bool[3] enableFlagsForOracles, bool cachingEnabled))",
-  "function boundValidator() view returns (address)",
   "function getTokenConfig(address) view returns ((address asset, address[3] oracles, bool[3] enableFlagsForOracles, bool cachingEnabled))",
 ];
 
@@ -279,8 +278,7 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
   const give = (target: string, signature: string, who: string) => grant(acm, timelock, target, signature, who);
 
   const teamManagerRoles = [
-    "setOracleFeeds(uint256,address,OracleFeed[3],uint256)",
-    "setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)",
+    "setOracleFeed(uint256,address,OracleFeed)",
     "buildRequestProposal(uint256,string)",
     "rejectRequest(uint256)",
     "buildExitProposal(address,uint256[],string)",
@@ -301,7 +299,6 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
     "setProposalBuilder(address)",
     "setBondManager(address)",
     "setHubYieldGroup(address,address)",
-    "setSupportedOracles(address[])",
     "setWindDownPeriod(uint256)",
     "setMaxResidualPoolDebtUsd(uint256)",
     "sweepToken(address,address,uint256)",
@@ -327,7 +324,7 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
     "setBondAssetFactor(address,uint256)",
     "setPoolParams(PoolParams)",
     "setMarketParams(ProtocolMarketParams)",
-    "setOracleParams(OracleParams)",
+    "setSupportedOracles(address[])",
   ]) {
     await give(f.policyRegistry.address, signature, timelockAddress);
   }
@@ -352,17 +349,6 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
   }
   await give(bscmainnet.RESILIENT_ORACLE, "setTokenConfig(TokenConfig)", timelockAddress);
   await give(bscmainnet.RESILIENT_ORACLE, "enableOracle(address,uint8,bool)", timelockAddress);
-  const boundValidator = await new ethers.Contract(
-    bscmainnet.RESILIENT_ORACLE,
-    ORACLE_ADMIN_ABI,
-    f.admin,
-  ).boundValidator();
-  await give(boundValidator, "setValidateConfig(ValidateConfig)", timelockAddress);
-  await give(
-    bscmainnet.DEVIATION_BOUNDED_ORACLE,
-    "setTokenConfigs((address,uint64,uint256,uint256,bool,bool)[])",
-    timelockAddress,
-  );
 
   // Deployer updates: the manager publishes, the keeper processes, the stewards apply
   for (const signature of ["addAuthorizedSender(address)", "addUpdateType(string)"]) {
@@ -384,13 +370,7 @@ async function configurePolicy(f: OpenSpokeFixture) {
     reserveFactor: e18("0.1"),
     reduceReservesBlockDelta: 100,
   });
-  await registry.setOracleParams({
-    deviationBoundedOracleEnabled: true,
-    cooldownPeriod: 3600,
-    triggerThreshold: e18("0.1"),
-    resetThreshold: e18("0.05"),
-    boundDeviation: e18("0.05"),
-  });
+  await registry.setSupportedOracles([bscmainnet.CHAINLINK_ORACLE, bscmainnet.REDSTONE_ORACLE, f.thirdOracle.address]);
   await registry.setTier(TIER_ONE, {
     enabled: true,
     minTierBondUsd: TIER_ONE_BOND_USD,
@@ -428,7 +408,6 @@ async function configurePolicy(f: OpenSpokeFixture) {
   await manager.setBondManager(f.bondManager.address);
   await manager.setProposalBuilder(f.builder.address);
   await manager.setHubYieldGroup(bscmainnet.USDT, f.yieldGroup.address);
-  await manager.setSupportedOracles([bscmainnet.CHAINLINK_ORACLE, bscmainnet.REDSTONE_ORACLE, f.thirdOracle.address]);
   await manager.setWindDownPeriod(WIND_DOWN_PERIOD);
   await manager.setMaxResidualPoolDebtUsd(MAX_RESIDUAL_POOL_DEBT_USD);
 

@@ -8,13 +8,13 @@ import { AccessControlledV8 } from "@venusprotocol/governance-contracts/contract
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
 import { ensureNonzeroValue } from "@venusprotocol/solidity-utilities/contracts/validators.sol";
 
-import { MANTISSA_ONE } from "../../lib/constants.sol";
 import { ensureNonzeroAddress } from "../../lib/validators.sol";
 import { IBondAccount } from "../interfaces/IBondAccount.sol";
 import { ISpokeBondManager } from "../interfaces/ISpokeBondManager.sol";
 import { ISpokePoolProposalBuilder } from "../interfaces/ISpokePoolProposalBuilder.sol";
 import { ISpokePoolManager } from "../interfaces/ISpokePoolManager.sol";
 import { ISpokePoolPolicyRegistry } from "../interfaces/ISpokePoolPolicyRegistry.sol";
+import { IResilientOracle } from "../interfaces/external/IResilientOracle.sol";
 import { IRiskOracle } from "../interfaces/external/IRiskOracle.sol";
 import { IRiskStewardReceiver } from "../interfaces/external/IRiskStewardReceiver.sol";
 import { SpokePoolGovernanceLib } from "./Libraries/SpokePoolGovernanceLib.sol";
@@ -164,49 +164,22 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setOracleFeeds(
-        uint256 requestId,
-        address asset,
-        OracleFeed[3] calldata feeds,
-        uint256 boundDeviation
-    ) external {
-        _checkAccessAllowed("setOracleFeeds(uint256,address,OracleFeed[3],uint256)");
-        if (boundDeviation >= MANTISSA_ONE) {
-            revert InvalidOracleFeed(asset);
-        }
+    function setOracleFeed(uint256 requestId, address asset, OracleFeed calldata feed) external {
+        _checkAccessAllowed("setOracleFeed(uint256,address,OracleFeed)");
         (Request storage request, CollateralMarketRequestParams storage market) = _ensurePendingCollateralMarket(
             requestId,
             asset
         );
-
-        for (uint256 i; i < 3; ++i) {
-            market.feeds[i] = feeds[i];
+        if (IResilientOracle(address(RESILIENT_ORACLE)).getTokenConfig(asset).asset != address(0)) {
+            revert OracleAlreadySet(asset);
         }
-        requestOracleOverrides[requestId][asset].boundDeviation = boundDeviation;
+
+        market.feed = feed;
         Contracts memory contracts = _contracts();
-        uint256 price = SpokePoolValidationLib.validateOracles(contracts, market);
+        uint256 price = SpokePoolValidationLib.validateOracle(contracts, market);
         SpokePoolValidationLib.checkSupplyCapUsd(contracts, request.tierId, market, price);
 
-        emit OracleFeedsUpdated(requestId, asset, feeds, boundDeviation);
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function setDeviationBoundedOracleParams(
-        uint256 requestId,
-        address asset,
-        uint64 cooldownPeriod,
-        uint256 triggerThreshold,
-        uint256 resetThreshold
-    ) external {
-        _checkAccessAllowed("setDeviationBoundedOracleParams(uint256,address,uint64,uint256,uint256)");
-        _ensurePendingCollateralMarket(requestId, asset);
-
-        OracleOverrides storage overrides = requestOracleOverrides[requestId][asset];
-        overrides.cooldownPeriod = cooldownPeriod;
-        overrides.triggerThreshold = triggerThreshold;
-        overrides.resetThreshold = resetThreshold;
-
-        emit DeviationBoundedOracleParamsUpdated(requestId, asset, cooldownPeriod, triggerThreshold, resetThreshold);
+        emit OracleFeedUpdated(requestId, asset, feed);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -494,24 +467,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setSupportedOracles(address[] calldata oracles) external {
-        _checkAccessAllowed("setSupportedOracles(address[])");
-
-        uint256 oldCount = supportedOracles.length;
-        for (uint256 i; i < oldCount; ++i) {
-            isSupportedOracle[supportedOracles[i]] = false;
-        }
-        uint256 count = oracles.length;
-        for (uint256 i; i < count; ++i) {
-            ensureNonzeroAddress(oracles[i]);
-            isSupportedOracle[oracles[i]] = true;
-        }
-
-        emit SupportedOraclesUpdated(supportedOracles, oracles);
-        supportedOracles = oracles;
-    }
-
-    /// @inheritdoc ISpokePoolManager
     function setWindDownPeriod(uint256 newWindDownPeriod) external {
         _checkAccessAllowed("setWindDownPeriod(uint256)");
         ensureNonzeroValue(newWindDownPeriod);
@@ -549,11 +504,6 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     /// @inheritdoc ISpokePoolManager
     function getPool(address comptroller) external view returns (Pool memory) {
         return pools[comptroller];
-    }
-
-    /// @inheritdoc ISpokePoolManager
-    function getSupportedOracles() external view returns (address[] memory) {
-        return supportedOracles;
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -597,7 +547,12 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     ) private {
         uint256 collateralCount = collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
-            request.collateralMarkets.push(collateralMarkets[i]);
+            CollateralMarketRequestParams memory market = collateralMarkets[i];
+            // A priced asset keeps its ResilientOracle config, so its feed is never used
+            if (IResilientOracle(address(RESILIENT_ORACLE)).getTokenConfig(market.asset).asset != address(0)) {
+                delete market.feed;
+            }
+            request.collateralMarkets.push(market);
         }
 
         uint256 loanCount = loanMarkets.length;

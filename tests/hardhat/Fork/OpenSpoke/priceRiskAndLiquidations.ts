@@ -306,7 +306,7 @@ if (FORK) {
           expect((await collateral.token.balanceOf(f.supplier.address)).sub(collateralBefore)).to.equal(SUPPLIED);
         });
 
-        it("4. a 5x pump does not raise borrowing power", async () => {
+        it("4. a 5x pump raises borrowing power at the spot price, as no DeviationBoundedOracle config bounds it", async () => {
           const { comptroller, collateral, collateralVToken, loanVToken } = pool;
           const dbo = await ethers.getContractAt("IDeviationBoundedOracle", bscmainnet.DEVIATION_BOUNDED_ORACLE);
           await supplyCollateral(f.borrower, collateral, collateralVToken, e18("10000"));
@@ -314,21 +314,12 @@ if (FORK) {
           expect(powerBeforePump).to.equal(e18("10000"));
 
           await setPrice(collateral.feed, "10");
-          expect((await comptroller.getBorrowingPower(f.borrower.address)).liquidity).to.equal(powerBeforePump);
-          expect((await comptroller.getAccountLiquidity(f.borrower.address)).liquidity).to.equal(e18("60000"));
-          await expect(borrow(f.borrower, loanVToken, powerBeforePump.add(1))).to.be.revertedWithCustomError(
-            comptroller,
-            "InsufficientLiquidity",
-          );
+          const pumpedPower = (await comptroller.getBorrowingPower(f.borrower.address)).liquidity;
+          expect(pumpedPower).to.equal(powerBeforePump.mul(5));
           const usdtBefore = await f.usdt.balanceOf(f.borrower.address);
-          await borrow(f.borrower, loanVToken, powerBeforePump);
-          expect((await f.usdt.balanceOf(f.borrower.address)).sub(usdtBefore)).to.equal(powerBeforePump);
-          expect(await dbo.currentlyUsingProtectedPrice(collateral.token.address)).to.equal(true);
-
-          // The protected price outlives the cooldown; only a keeper narrowing the window ends it
-          await advanceTime(f, DBO_COOLDOWN);
-          expect(await dbo.canExitProtection(collateral.token.address)).to.equal(false);
-          expect((await comptroller.getBorrowingPower(f.borrower.address)).liquidity).to.equal(0);
+          await borrow(f.borrower, loanVToken, pumpedPower);
+          expect((await f.usdt.balanceOf(f.borrower.address)).sub(usdtBefore)).to.equal(pumpedPower);
+          expect(await dbo.currentlyUsingProtectedPrice(collateral.token.address)).to.equal(false);
         });
 
         it("5. the guardian caps and pauses a pumped market", async () => {
@@ -730,68 +721,26 @@ if (FORK) {
             .withArgs(vToken, Action.MINT);
         });
 
-        it("18. the fallback feed takes over once the main feed goes stale", async () => {
-          const collateral = await newCollateralToken(f, "TRI", "2");
-          const pivotFeed = await deployMockFeed(f, "2");
-          const fallbackFeed = await deployMockFeed(f, "2");
-          const mainStalePeriod = 3600;
+        /// Opens a funded pool whose collateral feed has `maxStalePeriod`, with a borrow against it
+        async function openBorrowedPool(symbol: string, maxStalePeriod = MAX_STALE_PERIOD) {
+          const collateral = await newCollateralToken(f, symbol, "2");
           const pool = await openFundedPoolWith(f, [
             collateralMarket(collateral, {
-              feeds: [
-                {
-                  oracle: bscmainnet.CHAINLINK_ORACLE,
-                  feed: collateral.feed.address,
-                  maxStalePeriod: mainStalePeriod,
-                },
-                { oracle: bscmainnet.REDSTONE_ORACLE, feed: pivotFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
-                { oracle: f.thirdOracle.address, feed: fallbackFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
-              ],
+              feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: collateral.feed.address, maxStalePeriod },
             }),
           ]);
-          const { comptroller, collateralVToken, loanVToken } = pool;
-          await fundLiquidator(f, loanVToken);
-          await supplyCollateral(f.borrower, collateral, collateralVToken, e18("10000"));
-          await borrow(f.borrower, loanVToken, e18("5000"));
-
-          // Well within the default stale period: only the main feed's own one-hour limit makes it stale
-          await advanceTimeFreezing(f, mainStalePeriod + 1, collateral.feed);
-          await setPrice(pivotFeed, "0.81");
-          await setPrice(fallbackFeed, "0.8");
-          expect(await oracle.getUnderlyingPrice(collateralVToken.address)).to.equal(priceMantissa("0.8"));
-
-          const repay = e18("2000");
-          const { seizeTokens } = await expectedSeizure(comptroller, loanVToken, collateralVToken, repay);
-          await expect(
-            loanVToken.connect(f.liquidator).liquidateBorrow(f.borrower.address, repay, collateralVToken.address),
-          )
-            .to.emit(loanVToken, "LiquidateBorrow")
-            .withArgs(f.liquidator.address, f.borrower.address, repay, collateralVToken.address, seizeTokens);
-        });
-
-        it("19. a main feed deviating from its pivot halts borrows and liquidations", async () => {
-          const collateral = await newCollateralToken(f, "DEV", "2");
-          const pivotFeed = await deployMockFeed(f, "2");
-          const pool = await openFundedPoolWith(f, [
-            collateralMarket(collateral, {
-              feeds: [
-                {
-                  oracle: bscmainnet.CHAINLINK_ORACLE,
-                  feed: collateral.feed.address,
-                  maxStalePeriod: MAX_STALE_PERIOD,
-                },
-                { oracle: bscmainnet.REDSTONE_ORACLE, feed: pivotFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
-                NO_FEED,
-              ],
-            }),
-          ]);
-          const { comptroller, collateralVToken, loanVToken } = pool;
+          const { collateralVToken, loanVToken } = pool;
           await fundLiquidator(f, loanVToken);
           await supplyCollateral(f.borrower, collateral, collateralVToken, e18("10000"));
           await borrow(f.borrower, loanVToken, e18("5000"));
           const liquidate = () =>
             loanVToken.connect(f.liquidator).liquidateBorrow(f.borrower.address, e18("1000"), collateralVToken.address);
+          return { ...pool, collateral, liquidate };
+        }
 
-          await setPrice(collateral.feed, "0.5");
+        /// With only one feed there is no fallback: the market halts until the feed recovers
+        async function expectHaltedUntilRecovered(pool: Awaited<ReturnType<typeof openBorrowedPool>>) {
+          const { comptroller, collateral, collateralVToken, loanVToken, liquidate } = pool;
           await expect(oracle.getUnderlyingPrice(collateralVToken.address)).to.be.revertedWith(INVALID_PRICE);
           await expect(liquidate()).to.be.revertedWith(INVALID_PRICE);
           await expect(borrow(f.borrower, loanVToken, e18("1"))).to.be.revertedWith(INVALID_PRICE);
@@ -800,6 +749,20 @@ if (FORK) {
           expect(await oracle.getUnderlyingPrice(collateralVToken.address)).to.equal(priceMantissa("2"));
           await expect(liquidate()).to.be.revertedWithCustomError(comptroller, "InsufficientShortfall");
           await expect(borrow(f.borrower, loanVToken, e18("1000"))).to.not.be.reverted;
+        }
+
+        it("18. a feed past its own stale period halts borrows and liquidations until it updates", async () => {
+          const stalePeriod = 3600;
+          const pool = await openBorrowedPool("STL", stalePeriod);
+          // Well within the default stale period: only the feed's own one-hour limit makes it stale
+          await advanceTimeFreezing(f, stalePeriod + 1, pool.collateral.feed);
+          await expectHaltedUntilRecovered(pool);
+        });
+
+        it("19. a feed answering zero halts borrows and liquidations until it recovers", async () => {
+          const pool = await openBorrowedPool("ZRO");
+          await setPrice(pool.collateral.feed, "0");
+          await expectHaltedUntilRecovered(pool);
         });
 
         it("20. the team repays bad debt that an XVS bond on XVS collateral cannot cover", async () => {
@@ -810,11 +773,7 @@ if (FORK) {
               collateralFactor: e18("0.5"),
               liquidationThreshold: e18("0.6"),
               supplyCap: e18("100000"),
-              feeds: [
-                { oracle: bscmainnet.CHAINLINK_ORACLE, feed: f.xvsFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
-                NO_FEED,
-                NO_FEED,
-              ],
+              feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: f.xvsFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
             },
           ]);
           const { comptroller, collateralVToken: xvsVToken, loanVToken, bondAccount } = pool;

@@ -12,9 +12,9 @@ import { ISpokePoolPolicyRegistry } from "../interfaces/ISpokePoolPolicyRegistry
  * @author Venus
  * @notice Holds the policy open spoke pools run under, set by VIP: the tiers, each with its bond requirement and pool
  * limits, including the USD supply cap of a loan market; the loan assets, each with its factor on that cap and the
- * interest rate models its markets may pick from; the bond assets, each with the factor on a tier's minimum bond; and
- * the comptroller, market and oracle parameters new pools, markets and collateral assets get. It reads no pool state:
- * callers pass values and it checks them against the policy
+ * interest rate models its markets may pick from; the bond assets, each with the factor on a tier's minimum bond; the
+ * comptroller and market parameters new pools and markets get; and the oracles new collateral assets' feeds may be set
+ * on. It reads no pool state: callers pass values and it checks them against the policy
  * @custom:oz-upgrades-unsafe-allow constructor
  */
 contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry {
@@ -32,9 +32,6 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     /// @inheritdoc ISpokePoolPolicyRegistry
     ProtocolMarketParams public marketParams;
 
-    /// @inheritdoc ISpokePoolPolicyRegistry
-    OracleParams public oracleParams;
-
     /// @dev The tiers, by id
     mapping(uint256 tierId => Tier tier) internal tiers;
 
@@ -50,12 +47,18 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     /// @dev The ids of the tiers set; read them with `getTierIds`
     uint256[] internal tierIds;
 
+    /// @dev The oracles a new collateral asset's feed may be set on; read them with `getSupportedOracles`
+    address[] internal supportedOracles;
+
+    /// @inheritdoc ISpokePoolPolicyRegistry
+    mapping(address oracle => bool supported) public isSupportedOracle;
+
     /**
      * @dev This empty reserved space is put in place to allow future versions to add new
      * variables without shifting down storage in the inheritance chain.
      * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
-    uint256[34] private __gap;
+    uint256[36] private __gap;
 
     constructor() {
         _disableInitializers();
@@ -195,14 +198,21 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     }
 
     /// @inheritdoc ISpokePoolPolicyRegistry
-    function setOracleParams(OracleParams calldata params) external {
-        _checkAccessAllowed("setOracleParams(OracleParams)");
-        if (params.boundDeviation == 0 || params.boundDeviation >= MANTISSA_ONE) {
-            revert InvalidOracleParams();
+    function setSupportedOracles(address[] calldata oracles) external {
+        _checkAccessAllowed("setSupportedOracles(address[])");
+
+        uint256 oldCount = supportedOracles.length;
+        for (uint256 i; i < oldCount; ++i) {
+            isSupportedOracle[supportedOracles[i]] = false;
+        }
+        uint256 count = oracles.length;
+        for (uint256 i; i < count; ++i) {
+            ensureNonzeroAddress(oracles[i]);
+            isSupportedOracle[oracles[i]] = true;
         }
 
-        emit OracleParamsUpdated(oracleParams, params);
-        oracleParams = params;
+        emit SupportedOraclesUpdated(supportedOracles, oracles);
+        supportedOracles = oracles;
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -236,6 +246,11 @@ contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry
     /// @inheritdoc ISpokePoolPolicyRegistry
     function getLoanAssets() external view returns (address[] memory) {
         return loanAssets;
+    }
+
+    /// @inheritdoc ISpokePoolPolicyRegistry
+    function getSupportedOracles() external view returns (address[] memory) {
+        return supportedOracles;
     }
 
     /// @inheritdoc ISpokePoolPolicyRegistry

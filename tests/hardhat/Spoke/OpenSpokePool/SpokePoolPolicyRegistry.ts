@@ -53,13 +53,6 @@ const MARKET_PARAMS = (irm: string) => ({
   reserveFactor: e18("0.1"),
   reduceReservesBlockDelta: 28800,
 });
-const ORACLE_PARAMS = {
-  deviationBoundedOracleEnabled: true,
-  cooldownPeriod: 60 * 60,
-  triggerThreshold: e18("0.1"),
-  resetThreshold: e18("0.05"),
-  boundDeviation: e18("0.05"),
-};
 
 type Tier = { enabled: boolean; minTierBondUsd: BigNumberish; limits: typeof LIMITS };
 
@@ -145,8 +138,8 @@ describe("SpokePoolPolicyRegistry", () => {
         call: () => registry.connect(other).setMarketParams(MARKET_PARAMS(irm.address)),
       },
       {
-        signature: "setOracleParams(OracleParams)",
-        call: () => registry.connect(other).setOracleParams(ORACLE_PARAMS),
+        signature: "setSupportedOracles(address[])",
+        call: () => registry.connect(other).setSupportedOracles([other.address]),
       },
     ];
     for (const { signature, call } of restricted) {
@@ -477,37 +470,41 @@ describe("SpokePoolPolicyRegistry", () => {
     }
   });
 
-  describe("setOracleParams", () => {
-    it("sets new collateral assets' oracle configs, emitting the old and new params", async () => {
-      await expect(registry.setOracleParams(ORACLE_PARAMS))
-        .to.emit(registry, "OracleParamsUpdated")
-        .withArgs(deepEquals([false, 0, 0, 0, 0]), deepEquals(Object.values(ORACLE_PARAMS)));
-      expect(await registry.oracleParams()).to.deep.equal(Object.values(ORACLE_PARAMS));
+  describe("setSupportedOracles", () => {
+    // Signers stand in for the oracles: the registry only stores them
+    it("replaces the supported oracles with any number of them, emitting the old and new lists", async () => {
+      const oracles = [usdt.address, usdc.address, irm.address];
+      await expect(registry.setSupportedOracles(oracles))
+        .to.emit(registry, "SupportedOraclesUpdated")
+        .withArgs([], oracles);
+      expect(await registry.getSupportedOracles()).to.deep.equal(oracles);
+      for (const oracle of oracles) {
+        expect(await registry.isSupportedOracle(oracle)).to.equal(true);
+      }
 
-      const params = { ...ORACLE_PARAMS, deviationBoundedOracleEnabled: false, boundDeviation: e18("0.1") };
-      await expect(registry.setOracleParams(params))
-        .to.emit(registry, "OracleParamsUpdated")
-        .withArgs(deepEquals(Object.values(ORACLE_PARAMS)), deepEquals(Object.values(params)));
-      expect(await registry.oracleParams()).to.deep.equal(Object.values(params));
+      await expect(registry.setSupportedOracles([usdc.address]))
+        .to.emit(registry, "SupportedOraclesUpdated")
+        .withArgs(oracles, [usdc.address]);
+      expect(await registry.getSupportedOracles()).to.deep.equal([usdc.address]);
+      expect(await registry.isSupportedOracle(usdc.address)).to.equal(true);
+      for (const removed of [usdt.address, irm.address]) {
+        expect(await registry.isSupportedOracle(removed)).to.equal(false);
+      }
     });
 
-    it("accepts a bound deviation just below 100%", async () => {
-      const params = { ...ORACLE_PARAMS, boundDeviation: ONE.sub(1) };
-      await registry.setOracleParams(params);
-      expect(await registry.oracleParams()).to.deep.equal(Object.values(params));
+    it("clears the list with an empty one", async () => {
+      await registry.setSupportedOracles([usdt.address]);
+      await registry.setSupportedOracles([]);
+      expect(await registry.getSupportedOracles()).to.deep.equal([]);
+      expect(await registry.isSupportedOracle(usdt.address)).to.equal(false);
     });
 
-    for (const { name, boundDeviation } of [
-      { name: "a zero bound deviation", boundDeviation: constants.Zero },
-      { name: "a bound deviation of 100%", boundDeviation: ONE },
-    ]) {
-      it(`rejects ${name}`, async () => {
-        await expect(registry.setOracleParams({ ...ORACLE_PARAMS, boundDeviation })).to.be.revertedWithCustomError(
-          registry,
-          "InvalidOracleParams",
-        );
-      });
-    }
+    it("rejects a zero oracle", async () => {
+      await expect(registry.setSupportedOracles([usdt.address, constants.AddressZero])).to.be.revertedWithCustomError(
+        registry,
+        "ZeroAddressNotAllowed",
+      );
+    });
   });
 
   describe("isUpgrade", () => {
