@@ -383,6 +383,40 @@ if (FORK) {
           expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND.sub(payout));
         });
 
+        it("37. with an incentive, refuses a recovery the bond cannot pay and pays the largest one it can", async () => {
+          await f.shortfall.connect(f.timelock).updateIncentiveBps(1000);
+          const badDebt = await createBadDebt(f, pool, LARGE_DEFAULT);
+          await setPrice(f.xvsFeed, "1");
+          const oracle = await resilientOracle();
+          const debtPrice = await oracle.getUnderlyingPrice(pool.loanVToken.address);
+          const xvsPrice = await oracle.getPrice(XVS);
+          const payoutFor = (repaid: BigNumber) => repaid.mul(debtPrice).mul(11_000).div(xvsPrice.mul(10_000));
+
+          // The whole bad debt plus 10% is worth more than the bond
+          await expect(f.shortfall.connect(f.recoverer).recoverBadDebt(pool.loanVToken.address, badDebt))
+            .to.be.revertedWithCustomError(pool.bondAccount, "InsufficientFunds")
+            .withArgs(payoutFor(badDebt), TIER_ONE_XVS_BOND);
+
+          // The incentive shrinks how much bad debt the bond covers: about 1/1.1 of the repayment at par
+          const repayableAtPar = TIER_ONE_XVS_BOND.mul(xvsPrice).div(debtPrice);
+          const repayable = TIER_ONE_XVS_BOND.mul(xvsPrice).mul(10_000).div(debtPrice.mul(11_000));
+          expect(repayable).to.equal(repayableAtPar.mul(10).div(11));
+          const payout = payoutFor(repayable);
+          expect(payout).to.be.lte(TIER_ONE_XVS_BOND);
+          // What the bond covers at par is now too much
+          await expect(f.shortfall.connect(f.recoverer).recoverBadDebt(pool.loanVToken.address, repayableAtPar))
+            .to.be.revertedWithCustomError(pool.bondAccount, "InsufficientFunds")
+            .withArgs(payoutFor(repayableAtPar), TIER_ONE_XVS_BOND);
+
+          const xvsBefore = await f.xvs.balanceOf(f.recoverer.address);
+          await expect(f.shortfall.connect(f.recoverer).recoverBadDebt(pool.loanVToken.address, repayable))
+            .to.emit(f.shortfall, "BadDebtRecovered")
+            .withArgs(pool.comptroller.address, pool.loanVToken.address, f.recoverer.address, repayable, payout);
+          expect((await f.xvs.balanceOf(f.recoverer.address)).sub(xvsBefore)).to.equal(payout);
+          expect(await f.xvs.balanceOf(pool.bondAccount.address)).to.equal(TIER_ONE_XVS_BOND.sub(payout));
+          expect(await pool.loanVToken.badDebt()).to.equal(badDebt.sub(repayable));
+        });
+
         it("8. caps a recovery at the bad debt", async () => {
           const badDebt = await createBadDebt(f, pool, DEFAULT);
           const payout = await bondPayout(pool.loanVToken, XVS, badDebt);
