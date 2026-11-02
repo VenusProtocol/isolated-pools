@@ -1,3 +1,13 @@
+## 4.4.0-dev.15 (2026-11-02)
+
+* Merge pull request #575 from VenusProtocol/feat/bstock-bluechips-spoke-deployment ([3f05f87](https://github.com/VenusProtocol/isolated-pools/commit/3f05f87)), closes [#575](https://github.com/VenusProtocol/isolated-pools/issues/575)
+* feat: updating deployment files ([7d9dcd1](https://github.com/VenusProtocol/isolated-pools/commit/7d9dcd1))
+* feat: updating deployment files ([4bf795f](https://github.com/VenusProtocol/isolated-pools/commit/4bf795f))
+* feat(spoke): prepare the Bluechips pool for deployment ([9ca149e](https://github.com/VenusProtocol/isolated-pools/commit/9ca149e))
+* chore(spoke): deploy the Bluechips pool on bscmainnet ([da01dde](https://github.com/VenusProtocol/isolated-pools/commit/da01dde))
+* chore(spoke): deploy the bStock mainstream spoke pool on bscmainnet ([7e1fc31](https://github.com/VenusProtocol/isolated-pools/commit/7e1fc31))
+* chore(spoke): remove old bStock bluechips spoke pool deployments ([e7e736f](https://github.com/VenusProtocol/isolated-pools/commit/e7e736f))
+
 ## 4.4.0-dev.14 (2026-10-28)
 
 * Merge pull request #576 from VenusProtocol/fix/storage-layout-deployed-renames ([84ab3e6](https://github.com/VenusProtocol/isolated-pools/commit/84ab3e6)), closes [#576](https://github.com/VenusProtocol/isolated-pools/issues/576)
