@@ -133,6 +133,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
         Contracts memory contracts = _contracts();
         SpokePoolValidationLib.validateBond(contracts, comptroller, tierId);
+        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
 
         requestId = ++requestCount;
         Request storage request = _newRequest(requestId, RequestType.NewMarkets, comptroller, tierId);
@@ -152,6 +153,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
 
         SpokePoolValidationLib.validateBond(_contracts(), comptroller, tierId);
+        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
 
         requestId = ++requestCount;
         _newRequest(requestId, RequestType.TierUpgrade, comptroller, tierId);

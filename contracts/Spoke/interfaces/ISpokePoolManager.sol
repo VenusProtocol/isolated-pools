@@ -485,6 +485,7 @@ interface ISpokePoolManager {
      * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
+     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
@@ -510,6 +511,7 @@ interface ISpokePoolManager {
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the target tier
      *   requires
+     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
      * @custom:access Only the pool's deployer
      */
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);

@@ -742,6 +742,16 @@ describe("SpokePoolManager", () => {
       const requestId = await requestNewMarkets([collateralMarket()]);
       expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
     });
+
+    it("reverts while a market of the pool holds bad debt", async () => {
+      vTokenB.badDebt.returns(1);
+      await expect(requestNewMarkets([collateralMarket()]))
+        .to.be.revertedWithCustomError(manager, "BadDebtExists")
+        .withArgs(vTokenB.address);
+
+      vTokenB.badDebt.returns(0);
+      await requestNewMarkets([collateralMarket()]);
+    });
   });
 
   describe("requestTierUpgrade", () => {
@@ -791,6 +801,17 @@ describe("SpokePoolManager", () => {
       await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
         .to.be.revertedWithCustomError(manager, "OpenRequestExists")
         .withArgs(requestId);
+    });
+
+    it("reverts while a market of the pool holds bad debt", async () => {
+      setBond(TIER2_BOND);
+      vTokenA.badDebt.returns(1);
+      await expect(manager.connect(deployer).requestTierUpgrade(comptroller.address, 2))
+        .to.be.revertedWithCustomError(manager, "BadDebtExists")
+        .withArgs(vTokenA.address);
+
+      vTokenA.badDebt.returns(0);
+      await manager.connect(deployer).requestTierUpgrade(comptroller.address, 2);
     });
   });
 
