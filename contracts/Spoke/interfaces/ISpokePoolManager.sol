@@ -773,8 +773,8 @@ interface ISpokePoolManager {
     function handoverPoolToGovernance(address comptroller) external;
 
     /**
-     * @notice Pauses a pool deployer's requests, risk controls and exit request until `unpauseDeployer`; it can still
-     *   cancel open requests, withdraw the bond's excess and top up the bond
+     * @notice Pauses a pool deployer's requests, risk controls, exit request and excess bond withdrawals until
+     *   `unpauseDeployer`; it can still cancel open requests and top up the bond
      * @param comptroller The pool's comptroller
      * @custom:event Emits DeployerPausedUpdated
      * @custom:error InvalidPoolStatus is thrown when the pool does not exist

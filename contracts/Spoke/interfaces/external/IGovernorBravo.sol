@@ -5,7 +5,7 @@ pragma solidity ^0.8.25;
  * @title IGovernorBravo
  * @author Venus
  * @notice The GovernorBravo functions the proposal builder uses: it encodes `propose` calls and reads the Normal
- * route's timelock and the proposal action limit
+ * route's timelock
  */
 interface IGovernorBravo {
     /**

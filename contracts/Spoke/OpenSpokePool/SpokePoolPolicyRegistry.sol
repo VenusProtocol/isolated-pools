@@ -11,12 +11,9 @@ import { IYieldGroup } from "../interfaces/external/IYieldGroup.sol";
 /**
  * @title SpokePoolPolicyRegistry
  * @author Venus
- * @notice Holds the policy open spoke pools run under, set by VIP: the tiers, each with its bond requirement and pool
- * limits, including the USD supply cap of a loan market; the loan assets, each with its factor on that cap, the
- * interest rate models its markets may pick from and the Hub YieldGroup that supplies them; the bond assets, each with
- * the factor on a tier's minimum bond; the comptroller and market parameters new pools and markets get; the oracles
- * new collateral assets' feeds may be set on; and any symbol a new market is named with in place of its asset's own.
- * It reads no pool state: callers pass values and it checks them against the policy
+ * @notice Holds the policy open spoke pools run under, set by VIP: the tiers and their limits, the loan and bond
+ * assets, the parameters new pools and markets get, the oracles new collateral feeds may be set on and any symbol
+ * override for new markets. It reads no pool state: callers pass values and it checks them against the policy
  * @custom:oz-upgrades-unsafe-allow constructor
  */
 contract SpokePoolPolicyRegistry is AccessControlledV8, ISpokePoolPolicyRegistry {

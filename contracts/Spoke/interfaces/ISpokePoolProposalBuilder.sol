@@ -14,7 +14,7 @@ import { IGovernorBravo } from "./external/IGovernorBravo.sol";
  */
 interface ISpokePoolProposalBuilder {
     /**
-     * @notice Thrown when `MAX_POOL_MARKETS` markets would not fit a GovernorBravo proposal
+     * @notice Thrown when `MAX_POOL_MARKETS` is above the most markets a new pool's build fits in BSC's gas limit
      * @param marketCount The requested `MAX_POOL_MARKETS`
      * @param maxMarketCount The most markets a new pool's VIP can hold
      */

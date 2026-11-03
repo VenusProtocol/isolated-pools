@@ -276,8 +276,8 @@ library SpokePoolGovernanceLib {
 
     /**
      * @dev Reverts while the latest update of this kind for a market can still be applied: the receiver has not
-     *   processed it, or holds it pending, and it has not expired. A new update lands after the current values, so it
-     *   is checked against them; an expired one does not block the deployer
+     *   processed it, or holds it pending, and it has not expired. A new update is checked against the market's
+     *   applied values, which that update could still change
      */
     function _ensureNoPendingUpdate(
         ISpokePoolManager.Contracts memory contracts,

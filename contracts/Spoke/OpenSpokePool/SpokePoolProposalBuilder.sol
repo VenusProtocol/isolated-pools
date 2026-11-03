@@ -71,8 +71,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
     uint256 internal constant POOL_CREATION_ACTIONS = 3;
 
     /**
-     * @dev Most oracle actions of a request's VIP, each a batch over its new collateral assets: one per supported oracle
-     *   their feeds are on, assuming at most three, and the ResilientOracle's
+     * @dev Oracle actions of a request's VIP, each a batch over its new collateral assets: one per supported oracle
+     *   their feeds are on, and the ResilientOracle's. A fourth oracle or more still fits, as each batch needs a
+     *   collateral market, which uses only 4 of its `MAX_ACTIONS_PER_MARKET`
      */
     uint256 internal constant ORACLE_CONFIG_ACTIONS = 4;
 

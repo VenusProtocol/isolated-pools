@@ -5,7 +5,7 @@ pragma solidity ^0.8.25;
  * @title IResilientOracle
  * @author Venus
  * @notice The ResilientOracle functions `SpokePoolManager` and its proposal builder read: whether an asset is priced
- * already, and its price. The builder also encodes its `setTokenConfig` actions with `TokenConfig`
+ * already, and its price. The builder also encodes its `setTokenConfigs` actions with `TokenConfig`
  */
 interface IResilientOracle {
     /// @notice An asset's oracles, in the order main, pivot, fallback

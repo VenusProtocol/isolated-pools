@@ -457,10 +457,9 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @dev Checks a bond on every request, so a deployer short of it tops up first: `amount`, what the bond holds or
-     *   a new bond's amount, must be worth the whole bond `tierId` requires. The tier's coverage ratio, at most 100%,
-     *   only loosens the deployer's risk setters. Reverts with the registry's BondAssetNotAllowed when the asset has
-     *   no factor, or InsufficientBondValue
+     * @dev Checks `amount`, a new bond or what a live bond holds, is worth the whole bond `tierId` requires; the
+     *   deployer's risk updates need only the tier's `minCoverageRatio` of it. Reverts with the registry's
+     *   BondAssetNotAllowed when the asset has no factor, or InsufficientBondValue
      */
     function _ensureRequiredBondValue(
         ISpokePoolManager.Contracts memory contracts,
