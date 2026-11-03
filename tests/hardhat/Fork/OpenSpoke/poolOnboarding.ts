@@ -42,7 +42,7 @@ import {
   EXP_SCALE,
   LoanMarketParams,
   NO_FEED,
-  OracleFeed,
+  OracleConfig,
   PoolRequest,
   PoolStatus,
   RequestStatus,
@@ -231,13 +231,13 @@ if (FORK) {
 
       it("2. configures the feed on the supported oracle the deployer picks, with its stale period", async () => {
         const collateral = await newCollateralToken(f, "RED", "2");
-        const feed: OracleFeed = {
+        const feed: OracleConfig = {
           oracle: bscmainnet.REDSTONE_ORACLE,
           feed: collateral.feed.address,
           maxStalePeriod: 7200,
         };
         const { comptroller, collateralVTokens } = await openPool(f, f.deployer, {
-          collateralMarkets: [collateralMarket(collateral, { feed })],
+          collateralMarkets: [collateralMarket(collateral, { oracleConfig: feed })],
           loanMarkets: [usdtLoanMarket(f)],
         });
 
@@ -267,7 +267,7 @@ if (FORK) {
               collateralFactor: e18("0.5"),
               liquidationThreshold: e18("0.6"),
               supplyCap: e18("10"),
-              feed: {
+              oracleConfig: {
                 oracle: bscmainnet.CHAINLINK_ORACLE,
                 feed: unusedFeed.feed.address,
                 maxStalePeriod: MAX_STALE_PERIOD,
@@ -278,7 +278,7 @@ if (FORK) {
         });
         // The ResilientOracle prices BTCB already, so the request drops the deployer's feed
         const [storedMarket] = (await f.manager.getRequest(requestId)).collateralMarkets;
-        expect([storedMarket.feed.oracle, storedMarket.feed.feed]).to.deep.equal([ZERO, ZERO]);
+        expect([storedMarket.oracleConfig.oracle, storedMarket.oracleConfig.feed]).to.deep.equal([ZERO, ZERO]);
         const btcbFeedBefore = (await f.chainlinkOracle.tokenConfigs(bscmainnet.BTCB)).feed;
         const { payload } = await buildRequest(f, requestId);
 
@@ -437,7 +437,7 @@ if (FORK) {
           const collateral = await newCollateralToken(f, `M${i}`, "2");
           collateralMarkets.push(
             collateralMarket(collateral, {
-              feed: { oracle: oracles[i % 3], feed: collateral.feed.address, maxStalePeriod: MAX_STALE_PERIOD },
+              oracleConfig: { oracle: oracles[i % 3], feed: collateral.feed.address, maxStalePeriod: MAX_STALE_PERIOD },
             }),
           );
         }
@@ -632,7 +632,11 @@ if (FORK) {
         await snapshot.restore();
       });
 
-      const feedOn = (oracle: string, feed: string): OracleFeed => ({ oracle, feed, maxStalePeriod: MAX_STALE_PERIOD });
+      const feedOn = (oracle: string, feed: string): OracleConfig => ({
+        oracle,
+        feed,
+        maxStalePeriod: MAX_STALE_PERIOD,
+      });
 
       /// Submits a pool request with no funding, for requests refused before the bond moves
       function submitPoolRequest(request: PoolRequest) {
@@ -681,12 +685,12 @@ if (FORK) {
       /// Feeds the manager refuses for an unpriced asset, each with the error and argument it reverts with: no feed, no
       /// stale period, or a zero or unsupported oracle
       function invalidFeedCases(asset: string, feed: string) {
-        const cases: { feed: OracleFeed; error: string; arg: string }[] = [
-          { feed: NO_FEED, error: "InvalidOracleFeed", arg: asset },
-          { feed: feedOn(bscmainnet.CHAINLINK_ORACLE, ZERO), error: "InvalidOracleFeed", arg: asset },
+        const cases: { feed: OracleConfig; error: string; arg: string }[] = [
+          { feed: NO_FEED, error: "InvalidOracleConfig", arg: asset },
+          { feed: feedOn(bscmainnet.CHAINLINK_ORACLE, ZERO), error: "InvalidOracleConfig", arg: asset },
           {
             feed: { ...feedOn(bscmainnet.CHAINLINK_ORACLE, feed), maxStalePeriod: 0 },
-            error: "InvalidOracleFeed",
+            error: "InvalidOracleConfig",
             arg: asset,
           },
           { feed: feedOn(ZERO, feed), error: "UnsupportedOracle", arg: ZERO },
@@ -878,24 +882,24 @@ if (FORK) {
 
         await setPrice(collateral.feed, "0");
         await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Broken feed"))
-          .to.be.revertedWithCustomError(f.manager, "InvalidOracleFeed")
+          .to.be.revertedWithCustomError(f.manager, "InvalidOracleConfig")
           .withArgs(asset);
 
         // A replacement at another price leaves the seed pulled at the request's $2
         const replacement = await deployMockFeed(f, "4");
         const feed = feedOn(bscmainnet.CHAINLINK_ORACLE, replacement.address);
-        await expect(f.manager.connect(f.team).setOracleFeed(requestId, asset, feed)).to.emit(
+        await expect(f.manager.connect(f.team).setOracleConfig(requestId, asset, feed)).to.emit(
           f.manager,
-          "OracleFeedUpdated",
+          "OracleConfigUpdated",
         );
-        const storedFeed = (await f.manager.getRequest(requestId)).collateralMarkets[0].feed;
+        const storedFeed = (await f.manager.getRequest(requestId)).collateralMarkets[0].oracleConfig;
         expect([storedFeed.oracle, storedFeed.feed]).to.deep.equal([feed.oracle, feed.feed]);
         const seed = seedFor(priceMantissa("2"));
         expect(await f.manager.requestSeeds(requestId, asset)).to.equal(seed);
         const { payload, vTokens } = await buildRequest(f, requestId);
         expect(await f.manager.requestSeeds(requestId, asset)).to.equal(seed);
 
-        await expect(f.manager.connect(f.team).setOracleFeed(requestId, asset, feed))
+        await expect(f.manager.connect(f.team).setOracleConfig(requestId, asset, feed))
           .to.be.revertedWithCustomError(f.manager, "InvalidRequestStatus")
           .withArgs(requestId);
         await executeVip(f, payload);
@@ -915,7 +919,7 @@ if (FORK) {
         await expect(
           f.manager
             .connect(f.team)
-            .setOracleFeed(requestId, asset, feedOn(bscmainnet.REDSTONE_ORACLE, collateral.feed.address)),
+            .setOracleConfig(requestId, asset, feedOn(bscmainnet.REDSTONE_ORACLE, collateral.feed.address)),
         )
           .to.be.revertedWithCustomError(f.manager, "OracleAlreadySet")
           .withArgs(asset);
@@ -937,7 +941,7 @@ if (FORK) {
         const asset = collateral.token.address;
         const requestId = await requestPool(f, f.deployer, {
           collateralMarkets: [
-            collateralMarket(collateral, { feed: feedOn(f.thirdOracle.address, collateral.feed.address) }),
+            collateralMarket(collateral, { oracleConfig: feedOn(f.thirdOracle.address, collateral.feed.address) }),
           ],
           loanMarkets: [usdtLoanMarket(f)],
         });
@@ -951,7 +955,7 @@ if (FORK) {
 
         await f.manager
           .connect(f.team)
-          .setOracleFeed(requestId, asset, feedOn(bscmainnet.CHAINLINK_ORACLE, collateral.feed.address));
+          .setOracleConfig(requestId, asset, feedOn(bscmainnet.CHAINLINK_ORACLE, collateral.feed.address));
         const { payload } = await buildRequest(f, requestId);
         await executeVip(f, payload);
 
@@ -969,12 +973,12 @@ if (FORK) {
         const build = () => f.manager.connect(f.team).buildRequestProposal(requestId, "Bad feed");
 
         await setPrice(collateral.feed, "0");
-        await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleFeed").withArgs(asset);
+        await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleConfig").withArgs(asset);
         await setPrice(collateral.feed, "-1");
-        await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleFeed").withArgs(asset);
+        await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleConfig").withArgs(asset);
         await setPrice(collateral.feed, "2");
         await time.increase(MAX_STALE_PERIOD + 1);
-        await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleFeed").withArgs(asset);
+        await expect(build()).to.be.revertedWithCustomError(f.manager, "InvalidOracleConfig").withArgs(asset);
       });
 
       it("33. refuses a request without the seed allowance, but builds one after it is revoked", async () => {
@@ -1176,7 +1180,7 @@ if (FORK) {
         for (const { feed, error, arg } of cases) {
           await expect(
             submitPoolRequest({
-              collateralMarkets: [collateralMarket(collateral, { feed })],
+              collateralMarkets: [collateralMarket(collateral, { oracleConfig: feed })],
               loanMarkets: [usdtLoanMarket(f)],
             }),
           )
@@ -1192,8 +1196,8 @@ if (FORK) {
           collateralMarkets: [collateralMarket(collateral)],
           loanMarkets: [usdtLoanMarket(f)],
         });
-        const setFeed = (feedAsset: string, feed: OracleFeed) =>
-          f.manager.connect(f.team).setOracleFeed(requestId, feedAsset, feed);
+        const setFeed = (feedAsset: string, feed: OracleConfig) =>
+          f.manager.connect(f.team).setOracleConfig(requestId, feedAsset, feed);
 
         for (const { feed, error, arg } of invalidFeedCases(asset, collateral.feed.address)) {
           await expect(setFeed(asset, feed)).to.be.revertedWithCustomError(f.manager, error).withArgs(arg);
@@ -1207,17 +1211,18 @@ if (FORK) {
             .to.be.revertedWithCustomError(f.manager, "InvalidMarketParams")
             .withArgs(feedAsset);
         }
-        // 100,000 tokens at $11 is $1.1M, over tier one's $1M
-        const pumped = await deployMockFeed(f, "11");
-        await expect(setFeed(asset, feedOn(bscmainnet.CHAINLINK_ORACLE, pumped.address)))
-          .to.be.revertedWithCustomError(f.manager, "ExceedsTierLimit")
-          .withArgs(asset);
-
-        const storedFeed = (await f.manager.getRequest(requestId)).collateralMarkets[0].feed;
+        const storedFeed = (await f.manager.getRequest(requestId)).collateralMarkets[0].oracleConfig;
         expect([storedFeed.oracle, storedFeed.feed]).to.deep.equal([
           bscmainnet.CHAINLINK_ORACLE,
           collateral.feed.address,
         ]);
+
+        // Only the config is checked here: 100,000 tokens at $11 is $1.1M, over tier one's $1M, so the build refuses it
+        const pumped = await deployMockFeed(f, "11");
+        await setFeed(asset, feedOn(bscmainnet.CHAINLINK_ORACLE, pumped.address));
+        await expect(f.manager.connect(f.team).buildRequestProposal(requestId, "Pumped feed"))
+          .to.be.revertedWithCustomError(f.manager, "ExceedsTierLimit")
+          .withArgs(asset);
       });
 
       describe("with a live pool", () => {

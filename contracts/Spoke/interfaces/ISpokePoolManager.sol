@@ -44,8 +44,9 @@ interface ISpokePoolManager {
         GovernanceOperated
     }
 
-    /// @notice A collateral asset's Chainlink-compatible feed, the oracle it is set on and the oracle's staleness limit
-    struct OracleFeed {
+    /// @notice A collateral asset's oracle config: the oracle, the Chainlink-compatible feed set on it and its
+    ///   staleness limit
+    struct OracleConfig {
         address oracle;
         address feed;
         // In seconds; it depends on how often the feed updates
@@ -58,9 +59,9 @@ interface ISpokePoolManager {
         uint256 collateralFactor;
         uint256 liquidationThreshold;
         uint256 supplyCap;
-        // The asset's feed on a supported oracle. Required unless the ResilientOracle prices the asset already,
-        // in which case it is dropped
-        OracleFeed feed;
+        // The asset's oracle config, on a supported oracle. Required unless the ResilientOracle prices the asset
+        // already, in which case it is dropped
+        OracleConfig oracleConfig;
     }
 
     /// @notice A new loan market's parameters set by the deployer; its caps come from its tier
@@ -128,12 +129,18 @@ interface ISpokePoolManager {
     event RequestCanceled(uint256 indexed requestId);
 
     /**
-     * @notice Emitted when the Venus team replaces a request's collateral market oracle feed
+     * @notice Emitted when the Venus team replaces a request's collateral market oracle config
      * @param requestId The request
      * @param asset The collateral market's asset
-     * @param feed The new feed
+     * @param oracleConfig The new oracle config
+     * @param price The asset's price from the new feed, scaled like the ResilientOracle's
      */
-    event OracleFeedUpdated(uint256 indexed requestId, address indexed asset, OracleFeed feed);
+    event OracleConfigUpdated(
+        uint256 indexed requestId,
+        address indexed asset,
+        OracleConfig oracleConfig,
+        uint256 price
+    );
 
     /**
      * @notice Emitted when a request's VIP payload is built and stored
@@ -367,10 +374,10 @@ interface ISpokePoolManager {
      *   limit or no live positive answer, or it or its feed has more than 18 decimals
      * @param asset The asset
      */
-    error InvalidOracleFeed(address asset);
+    error InvalidOracleConfig(address asset);
 
     /**
-     * @notice Thrown when the Venus team sets a feed for a collateral asset the ResilientOracle already prices
+     * @notice Thrown when the Venus team sets an oracle config for an asset the ResilientOracle already prices
      * @param asset The asset
      */
     error OracleAlreadySet(address asset);
@@ -518,23 +525,23 @@ interface ISpokePoolManager {
     function cancelRequest(uint256 requestId) external;
 
     /**
-     * @notice Replaces a pending request's collateral market oracle feed without the deployer's approval; a built
+     * @notice Replaces a pending request's collateral market oracle config without the deployer's approval; a built
      *   request is final, and changing it takes a new request. The seed pulled at the request keeps its price, so a
-     *   request whose seed was priced off a bad feed is rejected rather than fixed here
+     *   request whose seed was priced off a bad feed is rejected rather than fixed here. Only the config is checked
+     *   here; the build checks the market's supply cap at the new price
      * @param requestId The request
      * @param asset The collateral market's asset
-     * @param feed The new feed, on a supported oracle
-     * @custom:event Emits OracleFeedUpdated
+     * @param oracleConfig The new oracle config, on a supported oracle
+     * @custom:event Emits OracleConfigUpdated
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidMarketParams is thrown when the request has no collateral market of the asset
      * @custom:error OracleAlreadySet is thrown when the ResilientOracle already prices the asset
-     * @custom:error InvalidOracleFeed is thrown when the feed is missing, has no staleness limit or no live positive
-     *   answer, or it or the asset has more than 18 decimals
-     * @custom:error UnsupportedOracle is thrown when the feed is on an oracle the registry does not support
-     * @custom:error ExceedsTierLimit is thrown when the supply cap, priced again, is worth more than the tier allows
+     * @custom:error InvalidOracleConfig is thrown when the config has no feed or no staleness limit, the feed has no
+     *   live positive answer, or it or the asset has more than 18 decimals
+     * @custom:error UnsupportedOracle is thrown when the config's oracle is not one the registry supports
      * @custom:access Controlled by AccessControlManager, granted to the Venus team
      */
-    function setOracleFeed(uint256 requestId, address asset, OracleFeed calldata feed) external;
+    function setOracleConfig(uint256 requestId, address asset, OracleConfig calldata oracleConfig) external;
 
     /**
      * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. It checks the bond

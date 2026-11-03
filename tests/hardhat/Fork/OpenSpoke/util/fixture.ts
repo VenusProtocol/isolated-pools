@@ -280,7 +280,7 @@ async function grantSetupRoles(f: OpenSpokeFixture) {
   const give = (target: string, signature: string, who: string) => grant(acm, timelock, target, signature, who);
 
   const teamManagerRoles = [
-    "setOracleFeed(uint256,address,OracleFeed)",
+    "setOracleConfig(uint256,address,OracleConfig)",
     "buildRequestProposal(uint256,string)",
     "rejectRequest(uint256)",
     "buildExitProposal(address,uint256[],string)",

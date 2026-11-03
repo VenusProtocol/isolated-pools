@@ -172,22 +172,17 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
     }
 
     /// @inheritdoc ISpokePoolManager
-    function setOracleFeed(uint256 requestId, address asset, OracleFeed calldata feed) external {
-        _checkAccessAllowed("setOracleFeed(uint256,address,OracleFeed)");
-        (Request storage request, CollateralMarketRequestParams storage market) = _ensurePendingCollateralMarket(
-            requestId,
-            asset
-        );
+    function setOracleConfig(uint256 requestId, address asset, OracleConfig calldata oracleConfig) external {
+        _checkAccessAllowed("setOracleConfig(uint256,address,OracleConfig)");
+        CollateralMarketRequestParams storage market = _ensurePendingCollateralMarket(requestId, asset);
         if (IResilientOracle(address(RESILIENT_ORACLE)).getTokenConfig(asset).asset != address(0)) {
             revert OracleAlreadySet(asset);
         }
+        uint256 price = SpokePoolValidationLib.validateOracleConfig(_contracts(), asset, oracleConfig);
 
-        market.feed = feed;
-        Contracts memory contracts = _contracts();
-        uint256 price = SpokePoolValidationLib.validateOracle(contracts, market);
-        SpokePoolValidationLib.checkSupplyCapUsd(contracts, request.tierId, market, price);
+        market.oracleConfig = oracleConfig;
 
-        emit OracleFeedUpdated(requestId, asset, feed);
+        emit OracleConfigUpdated(requestId, asset, oracleConfig, price);
     }
 
     /// @inheritdoc ISpokePoolManager
@@ -555,9 +550,9 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         uint256 collateralCount = collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             CollateralMarketRequestParams memory market = collateralMarkets[i];
-            // A priced asset keeps its ResilientOracle config, so its feed is never used
+            // A priced asset keeps its ResilientOracle config, so the requested one is never used
             if (IResilientOracle(address(RESILIENT_ORACLE)).getTokenConfig(market.asset).asset != address(0)) {
-                delete market.feed;
+                delete market.oracleConfig;
             }
             request.collateralMarkets.push(market);
         }
@@ -687,17 +682,17 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         }
     }
 
-    /// @dev Returns a pending request and its collateral market of `asset`, reverting with InvalidMarketParams if none
+    /// @dev Returns a pending request's collateral market of `asset`, reverting with InvalidMarketParams if none
     function _ensurePendingCollateralMarket(
         uint256 requestId,
         address asset
-    ) private view returns (Request storage request, CollateralMarketRequestParams storage market) {
-        request = _ensureRequestStatus(requestId, RequestStatus.Pending);
+    ) private view returns (CollateralMarketRequestParams storage market) {
+        Request storage request = _ensureRequestStatus(requestId, RequestStatus.Pending);
         uint256 collateralCount = request.collateralMarkets.length;
         for (uint256 i; i < collateralCount; ++i) {
             market = request.collateralMarkets[i];
             if (market.asset == asset) {
-                return (request, market);
+                return market;
             }
         }
         revert InvalidMarketParams(asset);

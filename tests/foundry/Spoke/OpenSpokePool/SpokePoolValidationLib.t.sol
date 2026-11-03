@@ -93,6 +93,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
     address internal interestRateModel = makeAddr("interestRateModel");
     address internal supportedOracle = makeAddr("supportedOracle");
     address internal yieldGroup = makeAddr("yieldGroup");
+    address internal proposalBuilder = makeAddr("proposalBuilder");
 
     SpokePoolPolicyRegistry internal registry;
     BondManagerStub internal bondManager;
@@ -112,6 +113,13 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         address[] memory oracles = new address[](1);
         oracles[0] = supportedOracle;
         registry.setSupportedOracles(oracles);
+        // `validateMarkets` reads these from the builder; a new pool's request never queries the PoolRegistry
+        vm.mockCall(proposalBuilder, abi.encodeCall(ISpokePoolProposalBuilder.MAX_POOL_MARKETS, ()), abi.encode(5));
+        vm.mockCall(
+            proposalBuilder,
+            abi.encodeCall(ISpokePoolProposalBuilder.POOL_REGISTRY, ()),
+            abi.encode(address(0))
+        );
     }
 
     // ----- helpers -----
@@ -125,9 +133,10 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         return SpokePoolValidationLib.computeSeeds(_contracts(), request);
     }
 
-    function validateOracle(ISpokePoolManager.CollateralMarketRequestParams memory market) external view {
-        uint256 price = SpokePoolValidationLib.validateOracle(_contracts(), market);
-        SpokePoolValidationLib.checkSupplyCapUsd(_contracts(), TIER, market, price);
+    function validateMarket(ISpokePoolManager.CollateralMarketRequestParams memory market) external {
+        request.tierId = TIER;
+        request.collateralMarkets.push(market);
+        SpokePoolValidationLib.validateMarkets(_contracts(), request);
     }
 
     function _contracts() internal view returns (ISpokePoolManager.Contracts memory) {
@@ -139,7 +148,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
                 riskStewardReceiver: IRiskStewardReceiver(address(0)),
                 policyRegistry: ISpokePoolPolicyRegistry(address(registry)),
                 bondManager: ISpokeBondManager(address(bondManager)),
-                proposalBuilder: ISpokePoolProposalBuilder(address(0))
+                proposalBuilder: ISpokePoolProposalBuilder(proposalBuilder)
             });
     }
 
@@ -318,7 +327,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         if (wholeTokens * usdPerToken > maxCapUsd) {
             vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.ExceedsTierLimit.selector, asset));
         }
-        this.validateOracle(_collateralMarket(asset, wholeTokens * 10 ** decimals));
+        this.validateMarket(_collateralMarket(asset, wholeTokens * 10 ** decimals));
     }
 
     /// @notice A cap priced by its feed passes exactly when its USD worth fits the tier, for any asset and feed
@@ -344,11 +353,25 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
             asset,
             wholeTokens * 10 ** assetDecimals
         );
-        market.feed = ISpokePoolManager.OracleFeed(supportedOracle, address(feed), 1 days);
+        market.oracleConfig = ISpokePoolManager.OracleConfig(supportedOracle, address(feed), 1 days);
         // `answer` is the USD price of one whole token with `feedDecimals` decimals
         if (wholeTokens * answer * 10 ** (18 - feedDecimals) > maxCapUsd) {
             vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.ExceedsTierLimit.selector, asset));
         }
-        this.validateOracle(market);
+        this.validateMarket(market);
+    }
+
+    /// @notice A feed answer dated after the current block is refused with the oracle error, as the ChainlinkOracle
+    /// refuses it, rather than reverting on the age's underflow
+    function test_feedAnswerFromTheFutureIsRefused() public {
+        _setTier(1e18, type(uint256).max, 1e18);
+        address asset = address(new MockToken("COL", "COL", 18));
+        FeedStub feed = new FeedStub(8);
+        feed.setAnswer(1e8, block.timestamp + 1);
+
+        ISpokePoolManager.CollateralMarketRequestParams memory market = _collateralMarket(asset, 1e18);
+        market.oracleConfig = ISpokePoolManager.OracleConfig(supportedOracle, address(feed), 1 days);
+        vm.expectRevert(abi.encodeWithSelector(ISpokePoolManager.InvalidOracleConfig.selector, asset));
+        this.validateMarket(market);
     }
 }

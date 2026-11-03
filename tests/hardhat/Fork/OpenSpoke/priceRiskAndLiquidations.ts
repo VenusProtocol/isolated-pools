@@ -726,7 +726,7 @@ if (FORK) {
           const collateral = await newCollateralToken(f, symbol, "2");
           const pool = await openFundedPoolWith(f, [
             collateralMarket(collateral, {
-              feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: collateral.feed.address, maxStalePeriod },
+              oracleConfig: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: collateral.feed.address, maxStalePeriod },
             }),
           ]);
           const { collateralVToken, loanVToken } = pool;
@@ -773,7 +773,11 @@ if (FORK) {
               collateralFactor: e18("0.5"),
               liquidationThreshold: e18("0.6"),
               supplyCap: e18("100000"),
-              feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: f.xvsFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
+              oracleConfig: {
+                oracle: bscmainnet.CHAINLINK_ORACLE,
+                feed: f.xvsFeed.address,
+                maxStalePeriod: MAX_STALE_PERIOD,
+              },
             },
           ]);
           const { comptroller, collateralVToken: xvsVToken, loanVToken, bondAccount } = pool;

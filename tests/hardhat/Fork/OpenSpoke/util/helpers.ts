@@ -56,7 +56,7 @@ export interface CollateralToken {
   feed: Contract;
 }
 
-export interface OracleFeed {
+export interface OracleConfig {
   oracle: string;
   feed: string;
   maxStalePeriod: BigNumberish;
@@ -67,7 +67,7 @@ export interface CollateralMarketParams {
   collateralFactor: BigNumberish;
   liquidationThreshold: BigNumberish;
   supplyCap: BigNumberish;
-  feed: OracleFeed;
+  oracleConfig: OracleConfig;
 }
 
 export interface LoanMarketParams {
@@ -114,7 +114,11 @@ export function collateralMarket(
     collateralFactor: e18("0.5"),
     liquidationThreshold: e18("0.6"),
     supplyCap: e18("100000"),
-    feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: collateral.feed.address, maxStalePeriod: MAX_STALE_PERIOD },
+    oracleConfig: {
+      oracle: bscmainnet.CHAINLINK_ORACLE,
+      feed: collateral.feed.address,
+      maxStalePeriod: MAX_STALE_PERIOD,
+    },
     ...overrides,
   };
 }

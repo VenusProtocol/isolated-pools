@@ -1451,9 +1451,9 @@ if (FORK) {
         const shortfall = await impersonate(f.shortfall.address);
         const teamRoles: [string, Signer[], Call<SpokePoolManager>][] = [
           [
-            "setOracleFeed(uint256,address,OracleFeed)",
+            "setOracleConfig(uint256,address,OracleConfig)",
             [f.team],
-            manager => manager.callStatic.setOracleFeed(requestId, collateral, NO_FEED),
+            manager => manager.callStatic.setOracleConfig(requestId, collateral, NO_FEED),
           ],
           [
             "buildRequestProposal(uint256,string)",

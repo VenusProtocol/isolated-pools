@@ -737,7 +737,11 @@ if (FORK) {
         const secondRequest = await requestPool(f, f.secondDeployer, {
           collateralMarkets: [
             collateralMarket(shared, {
-              feed: { oracle: bscmainnet.CHAINLINK_ORACLE, feed: secondFeed.address, maxStalePeriod: MAX_STALE_PERIOD },
+              oracleConfig: {
+                oracle: bscmainnet.CHAINLINK_ORACLE,
+                feed: secondFeed.address,
+                maxStalePeriod: MAX_STALE_PERIOD,
+              },
             }),
           ],
           loanMarkets: [usdtLoanMarket(f)],

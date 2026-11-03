@@ -81,7 +81,7 @@ type CollateralMarket = {
   collateralFactor: BigNumber;
   liquidationThreshold: BigNumber;
   supplyCap: BigNumber;
-  feed: Feed;
+  oracleConfig: Feed;
 };
 type Pool = { name: string; symbolSuffix: string };
 type BuilderAddresses = [string, string, string, string, string, string, string, string, string];
@@ -153,7 +153,7 @@ describe("SpokePoolProposalBuilder", () => {
     collateralFactor: e18("0.4"),
     liquidationThreshold: e18("0.6"),
     supplyCap: e18("1000"),
-    feed,
+    oracleConfig: feed,
   });
 
   const request = ({
@@ -321,9 +321,9 @@ describe("SpokePoolProposalBuilder", () => {
     "setTokenConfigs((address,address[3],bool[3],bool)[])",
     ["tuple(address,address[3],bool[3],bool)[]"],
     [
-      markets.map(({ asset, feed }) => [
+      markets.map(({ asset, oracleConfig }) => [
         asset,
-        [feed.oracle, constants.AddressZero, constants.AddressZero],
+        [oracleConfig.oracle, constants.AddressZero, constants.AddressZero],
         [true, false, false],
         false,
       ]),

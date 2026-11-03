@@ -153,50 +153,13 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @notice Validates a collateral market's oracle after its feed changed, and returns its asset's price
-     * @param contracts The manager's contracts
-     * @param market The collateral market
-     * @return The asset's price, scaled like the ResilientOracle's
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's feed is missing, has no staleness
-     *   limit or no live positive answer, or it or the asset has more than 18 decimals
-     * @custom:error UnsupportedOracle is thrown when an unpriced collateral asset's feed is on an oracle the registry
-     *   does not support
-     */
-    function validateOracle(
-        ISpokePoolManager.Contracts memory contracts,
-        ISpokePoolManager.CollateralMarketRequestParams memory market
-    ) external view returns (uint256) {
-        return _validateOracle(contracts, market);
-    }
-
-    /**
-     * @notice Checks a collateral market's supply cap is worth at most its tier's maximum
-     * @param contracts The manager's contracts
-     * @param tierId The request's tier
-     * @param market The collateral market
-     * @param price The asset's price, from `validateOracle`
-     * @custom:error ExceedsTierLimit is thrown when the supply cap is worth more than the tier allows
-     */
-    function checkSupplyCapUsd(
-        ISpokePoolManager.Contracts memory contracts,
-        uint256 tierId,
-        ISpokePoolManager.CollateralMarketRequestParams memory market,
-        uint256 price
-    ) external view {
-        uint256 maxSupplyCapUsd = contracts.policyRegistry.getTier(tierId).limits.maxCollateralSupplyCapUsd;
-        if ((market.supplyCap * price) / EXP_SCALE > maxSupplyCapUsd) {
-            revert ISpokePoolManager.ExceedsTierLimit(market.asset);
-        }
-    }
-
-    /**
      * @notice Returns each new market's seed, worth $10 at current prices, for the manager to pull from the request's
      *   deployer at the request
      * @param contracts The manager's contracts
      * @param request The pool or markets request, with its markets stored
      * @return assets The markets' assets, collateral markets first
      * @return seeds Each asset's seed
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's feed is missing, has no staleness
+     * @custom:error InvalidOracleConfig is thrown when an unpriced collateral asset's feed is missing, has no staleness
      *   limit or no live positive answer, or it or the asset has more than 18 decimals
      * @custom:error UnsupportedOracle is thrown when an unpriced collateral asset's feed is on an oracle the registry
      *   does not support
@@ -215,7 +178,7 @@ library SpokePoolValidationLib {
         for (uint256 i; i < collateralCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = request.collateralMarkets[i];
             assets[i] = market.asset;
-            seeds[i] = _seed(market.asset, _validateOracle(contracts, market), market.supplyCap);
+            seeds[i] = _seed(market.asset, _collateralPrice(contracts, market), market.supplyCap);
         }
 
         // Loan markets: priced by the ResilientOracle, capped by their USD cap at that price
@@ -240,7 +203,7 @@ library SpokePoolValidationLib {
      * @custom:error InvalidMarketParams is thrown when a collateral factor is above its liquidation threshold
      * @custom:error ExceedsTierLimit is thrown when a collateral factor, liquidation threshold or supply cap's worth is
      *   above the tier's
-     * @custom:error InvalidOracleFeed is thrown when an unpriced collateral asset's feed is missing, has no staleness
+     * @custom:error InvalidOracleConfig is thrown when an unpriced collateral asset's feed is missing, has no staleness
      *   limit or no live positive answer, or it or the asset has more than 18 decimals
      * @custom:error UnsupportedOracle is thrown when an unpriced collateral asset's feed is on an oracle the registry
      *   does not support
@@ -256,6 +219,48 @@ library SpokePoolValidationLib {
         _checkPoolMarkets(contracts, request, limits.maxCollateralMarkets);
         _checkCollateralMarkets(contracts, request, limits);
         _checkLoanMarkets(contracts.policyRegistry, request);
+    }
+
+    /**
+     * @notice Checks the oracle config of a collateral asset the ResilientOracle does not price, and returns the
+     *   asset's price from its feed, scaled like the ResilientOracle's. The feed must be on a supported oracle, with a
+     *   positive answer within its staleness limit
+     * @param contracts The manager's contracts
+     * @param asset The collateral asset
+     * @param oracleConfig The asset's oracle config
+     * @return The asset's price
+     * @custom:error InvalidOracleConfig is thrown when the config has no feed or no staleness limit, the feed has no
+     *   live positive answer, or it or the asset has more than 18 decimals
+     * @custom:error UnsupportedOracle is thrown when the config's oracle is not one the registry supports
+     */
+    function validateOracleConfig(
+        ISpokePoolManager.Contracts memory contracts,
+        address asset,
+        ISpokePoolManager.OracleConfig memory oracleConfig
+    ) public view returns (uint256) {
+        if (oracleConfig.feed == address(0) || oracleConfig.maxStalePeriod == 0) {
+            revert ISpokePoolManager.InvalidOracleConfig(asset);
+        }
+        // A zero oracle is never supported
+        if (!contracts.policyRegistry.isSupportedOracle(oracleConfig.oracle)) {
+            revert ISpokePoolManager.UnsupportedOracle(oracleConfig.oracle);
+        }
+
+        // The ChainlinkOracle's checks, so a feed that passes here prices the asset once the VIP sets it
+        IChainlinkFeed feed = IChainlinkFeed(oracleConfig.feed);
+        (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
+        if (answer <= 0 || updatedAt > block.timestamp || block.timestamp - updatedAt > oracleConfig.maxStalePeriod) {
+            revert ISpokePoolManager.InvalidOracleConfig(asset);
+        }
+
+        // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals. It scales each separately,
+        // so it cannot price a feed or an asset with more than 18
+        uint8 feedDecimals = feed.decimals();
+        uint8 assetDecimals = IERC20MetadataUpgradeable(asset).decimals();
+        if (feedDecimals > 18 || assetDecimals > 18) {
+            revert ISpokePoolManager.InvalidOracleConfig(asset);
+        }
+        return uint256(answer) * 10 ** (18 - feedDecimals) * 10 ** (18 - assetDecimals);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -367,11 +372,28 @@ library SpokePoolValidationLib {
             ) {
                 revert ISpokePoolManager.ExceedsTierLimit(market.asset);
             }
-            uint256 price = _validateOracle(contracts, market);
+            uint256 price = _collateralPrice(contracts, market);
             if ((market.supplyCap * price) / EXP_SCALE > limits.maxCollateralSupplyCapUsd) {
                 revert ISpokePoolManager.ExceedsTierLimit(market.asset);
             }
         }
+    }
+
+    /**
+     * @dev Returns a collateral market's price: the ResilientOracle's if it prices the asset, else its feed's, checked
+     *   by `validateOracleConfig`. The ResilientOracle is asked on every call, as another pool's VIP may price the
+     *   asset after this request
+     */
+    function _collateralPrice(
+        ISpokePoolManager.Contracts memory contracts,
+        ISpokePoolManager.CollateralMarketRequestParams memory market
+    ) private view returns (uint256) {
+        if (IResilientOracle(address(contracts.resilientOracle)).getTokenConfig(market.asset).asset != address(0)) {
+            return contracts.resilientOracle.getPrice(market.asset);
+        }
+        // The ResilientOracle has no config for the asset yet, so the VIP sets one up with this feed. The feed is
+        // checked first, so the market is never listed on a feed that cannot price it
+        return validateOracleConfig(contracts, market.asset, market.oracleConfig);
     }
 
     /**
@@ -441,45 +463,6 @@ library SpokePoolValidationLib {
         ) {
             revert ISpokePoolManager.DuplicateAsset(asset);
         }
-    }
-
-    /**
-     * @dev Validates a collateral market's oracle and returns its asset's price, scaled like the ResilientOracle's.
-     *   An asset the ResilientOracle already prices takes its price. Otherwise its feed prices it: the feed must be on
-     *   a supported oracle, and its latest answer positive and within its staleness limit
-     */
-    function _validateOracle(
-        ISpokePoolManager.Contracts memory contracts,
-        ISpokePoolManager.CollateralMarketRequestParams memory market
-    ) private view returns (uint256) {
-        address asset = market.asset;
-        if (IResilientOracle(address(contracts.resilientOracle)).getTokenConfig(asset).asset != address(0)) {
-            return contracts.resilientOracle.getPrice(asset);
-        }
-
-        ISpokePoolManager.OracleFeed memory oracleFeed = market.feed;
-        if (oracleFeed.feed == address(0) || oracleFeed.maxStalePeriod == 0) {
-            revert ISpokePoolManager.InvalidOracleFeed(asset);
-        }
-        // A zero oracle is never supported
-        if (!contracts.policyRegistry.isSupportedOracle(oracleFeed.oracle)) {
-            revert ISpokePoolManager.UnsupportedOracle(oracleFeed.oracle);
-        }
-
-        IChainlinkFeed feed = IChainlinkFeed(oracleFeed.feed);
-        (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
-        if (answer <= 0 || block.timestamp - updatedAt > oracleFeed.maxStalePeriod) {
-            revert ISpokePoolManager.InvalidOracleFeed(asset);
-        }
-
-        // As the ChainlinkOracle scales it: to 18 decimals, then by the asset's decimals. It scales each separately,
-        // so it cannot price a feed or an asset with more than 18
-        uint8 feedDecimals = feed.decimals();
-        uint8 assetDecimals = IERC20MetadataUpgradeable(asset).decimals();
-        if (feedDecimals > 18 || assetDecimals > 18) {
-            revert ISpokePoolManager.InvalidOracleFeed(asset);
-        }
-        return uint256(answer) * 10 ** (36 - feedDecimals - assetDecimals);
     }
 
     /**

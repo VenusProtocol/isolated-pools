@@ -132,7 +132,7 @@ describe("SpokePoolManager", () => {
     collateralFactor: e18("0.4"),
     liquidationThreshold: e18("0.6"),
     supplyCap: e18("1000"),
-    feed: chainlinkFeed(),
+    oracleConfig: chainlinkFeed(),
     ...overrides,
   });
 
@@ -192,12 +192,15 @@ describe("SpokePoolManager", () => {
   ];
 
   /// Checks the stored collateral markets; the ResilientOracle prices every asset here, so each feed is dropped
-  const expectCollateralMarkets = (actual: { feed: Feed }[], expected: ReturnType<typeof collateralMarket>[]) => {
+  const expectCollateralMarkets = (
+    actual: { oracleConfig: Feed }[],
+    expected: ReturnType<typeof collateralMarket>[],
+  ) => {
     expect(actual.length).to.equal(expected.length);
     actual.forEach((market, i) => {
       const { asset, collateralFactor, liquidationThreshold, supplyCap } = expected[i];
       expectFields(market, { asset, collateralFactor, liquidationThreshold, supplyCap });
-      expect(feedTuple(market.feed)).to.deep.equal(feedTuple(noFeed()));
+      expect(feedTuple(market.oracleConfig)).to.deep.equal(feedTuple(noFeed()));
     });
   };
 
@@ -454,8 +457,8 @@ describe("SpokePoolManager", () => {
     const m = () => manager.connect(other);
     const calls: [string, () => Promise<unknown>][] = [
       [
-        "setOracleFeed(uint256,address,OracleFeed)",
-        () => m().setOracleFeed(1, collateralAsset.address, chainlinkFeed()),
+        "setOracleConfig(uint256,address,OracleConfig)",
+        () => m().setOracleConfig(1, collateralAsset.address, chainlinkFeed()),
       ],
       ["buildRequestProposal(uint256,string)", () => m().buildRequestProposal(1, DESCRIPTION)],
       ["settleRequest(uint256)", () => m().settleRequest(1)],
@@ -862,59 +865,59 @@ describe("SpokePoolManager", () => {
     });
   });
 
-  describe("setOracleFeed", () => {
+  describe("setOracleConfig", () => {
     beforeEach(async () => {
       unpriced(collateralAsset.address);
       await setAnswer(priceFeed, feedAnswer("1"));
       await setAnswer(otherFeed, feedAnswer("1"));
     });
 
-    it("replaces a pending collateral market's feed and emits OracleFeedUpdated", async () => {
+    it("replaces a pending collateral market's oracle config and emits OracleConfigUpdated", async () => {
       await requestPool();
       const feed = feedOn(redstoneOracle.address, otherFeed.address);
-      const receipt = await (await manager.setOracleFeed(1, collateralAsset.address, feed)).wait();
+      const receipt = await (await manager.setOracleConfig(1, collateralAsset.address, feed)).wait();
       const [event] = receipt.events ?? [];
-      expect(event.event).to.equal("OracleFeedUpdated");
+      expect(event.event).to.equal("OracleConfigUpdated");
       expect(event.args?.requestId).to.equal(1);
       expect(event.args?.asset).to.equal(collateralAsset.address);
-      expect(feedTuple(event.args?.feed)).to.deep.equal(feedTuple(feed));
+      expect(feedTuple(event.args?.oracleConfig)).to.deep.equal(feedTuple(feed));
+      expect(event.args?.price).to.equal(e18("1"));
       const [market] = (await manager.getRequest(1)).collateralMarkets;
-      expect(feedTuple(market.feed)).to.deep.equal(feedTuple(feed));
+      expect(feedTuple(market.oracleConfig)).to.deep.equal(feedTuple(feed));
     });
 
     it("updates the right market of several", async () => {
       unpriced(bondToken.address);
       await requestPool([collateralMarket({ asset: bondToken.address }), collateralMarket()], []);
       const feed = feedOn(redstoneOracle.address, otherFeed.address);
-      await manager.setOracleFeed(1, collateralAsset.address, feed);
+      await manager.setOracleConfig(1, collateralAsset.address, feed);
       const [first, second] = (await manager.getRequest(1)).collateralMarkets;
-      expect(feedTuple(first.feed)).to.deep.equal(feedTuple(chainlinkFeed()));
-      expect(feedTuple(second.feed)).to.deep.equal(feedTuple(feed));
+      expect(feedTuple(first.oracleConfig)).to.deep.equal(feedTuple(chainlinkFeed()));
+      expect(feedTuple(second.oracleConfig)).to.deep.equal(feedTuple(feed));
     });
 
     it("reverts with OracleAlreadySet once the ResilientOracle prices the asset", async () => {
       await requestPool();
       oracle.getTokenConfig.whenCalledWith(collateralAsset.address).returns(tokenConfig(collateralAsset.address));
-      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
+      await expect(manager.setOracleConfig(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "OracleAlreadySet")
         .withArgs(collateralAsset.address);
     });
 
-    it("checks the new feed and the supply cap at its price", async () => {
+    it("checks only the new config, leaving the supply cap at its price to the build", async () => {
       await requestPool();
 
-      await expect(manager.setOracleFeed(1, collateralAsset.address, noFeed()))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+      await expect(manager.setOracleConfig(1, collateralAsset.address, noFeed()))
+        .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
         .withArgs(collateralAsset.address);
-      await expect(manager.setOracleFeed(1, collateralAsset.address, feedOn(other.address, otherFeed.address)))
+      await expect(manager.setOracleConfig(1, collateralAsset.address, feedOn(other.address, otherFeed.address)))
         .to.be.revertedWithCustomError(manager, "UnsupportedOracle")
         .withArgs(other.address);
 
       // The request's 1,000 units at the new feed's $1,000.01 are above the tier's $1,000,000
       await setAnswer(otherFeed, feedAnswer("1000.01"));
-      await expect(
-        manager.setOracleFeed(1, collateralAsset.address, feedOn(chainlinkOracle.address, otherFeed.address)),
-      )
+      await manager.setOracleConfig(1, collateralAsset.address, feedOn(chainlinkOracle.address, otherFeed.address));
+      await expect(manager.buildRequestProposal(1, DESCRIPTION))
         .to.be.revertedWithCustomError(manager, "ExceedsTierLimit")
         .withArgs(collateralAsset.address);
     });
@@ -926,7 +929,7 @@ describe("SpokePoolManager", () => {
 
       await setAnswer(otherFeed, feedAnswer("2"));
       await expect(
-        manager.setOracleFeed(requestId, bondToken.address, feedOn(chainlinkOracle.address, otherFeed.address)),
+        manager.setOracleConfig(requestId, bondToken.address, feedOn(chainlinkOracle.address, otherFeed.address)),
       ).to.changeTokenBalances(bondToken, [deployer, manager], [0, 0]);
 
       // Still $10 at the replaced feed's $1, and the build pulls nothing more
@@ -937,25 +940,25 @@ describe("SpokePoolManager", () => {
     it("reverts on an asset that is not one of the request's collateral markets", async () => {
       await requestPool();
       for (const asset of [loanAsset.address, other.address]) {
-        await expect(manager.setOracleFeed(1, asset, chainlinkFeed()))
+        await expect(manager.setOracleConfig(1, asset, chainlinkFeed()))
           .to.be.revertedWithCustomError(manager, "InvalidMarketParams")
           .withArgs(asset);
       }
     });
 
     it("reverts unless the request is pending", async () => {
-      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
+      await expect(manager.setOracleConfig(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
         .withArgs(1);
 
       await requestPool();
       await build(1);
-      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
+      await expect(manager.setOracleConfig(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
         .withArgs(1);
 
       await manager.rejectRequest(1);
-      await expect(manager.setOracleFeed(1, collateralAsset.address, chainlinkFeed()))
+      await expect(manager.setOracleConfig(1, collateralAsset.address, chainlinkFeed()))
         .to.be.revertedWithCustomError(manager, "InvalidRequestStatus")
         .withArgs(1);
     });
@@ -1072,7 +1075,7 @@ describe("SpokePoolManager", () => {
       await setAnswer(priceFeed, feedAnswer("2"));
     });
 
-    const requestWith = (feed: Feed) => requestPool([collateralMarket({ feed })], []);
+    const requestWith = (feed: Feed) => requestPool([collateralMarket({ oracleConfig: feed })], []);
 
     it("prices an unpriced asset, scaled to the asset's decimals", async () => {
       // 500 units at $2,000 is exactly the tier's $1,000,000, a wei more is above it
@@ -1087,7 +1090,7 @@ describe("SpokePoolManager", () => {
       for (const feed of [chainlinkFeed(), feedOn(redstoneOracle.address, priceFeed.address)]) {
         const requestId = await requestWith(feed);
         const [market] = (await manager.getRequest(requestId)).collateralMarkets;
-        expect(feedTuple(market.feed)).to.deep.equal(feedTuple(feed));
+        expect(feedTuple(market.oracleConfig)).to.deep.equal(feedTuple(feed));
         await manager.connect(deployer).cancelRequest(requestId);
       }
     });
@@ -1096,34 +1099,34 @@ describe("SpokePoolManager", () => {
       oracle.getTokenConfig.whenCalledWith(collateralAsset.address).returns(tokenConfig(collateralAsset.address));
       const requestId = await requestWith(feedOn(other.address, otherFeed.address));
       const [market] = (await manager.getRequest(requestId)).collateralMarkets;
-      expect(feedTuple(market.feed)).to.deep.equal(feedTuple(noFeed()));
+      expect(feedTuple(market.oracleConfig)).to.deep.equal(feedTuple(noFeed()));
     });
 
     it("rejects a feed or an asset with more than 18 decimals, which the ChainlinkOracle cannot price", async () => {
       priceFeed.decimals.returns(19);
       await expect(requestWith(chainlinkFeed()))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+        .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
         .withArgs(collateralAsset.address);
 
       priceFeed.decimals.returns(FEED_DECIMALS);
       const wide = await new MockToken__factory(owner).deploy("Wide", "WIDE", 19);
       unpriced(wide.address);
       await expect(requestPool([collateralMarket({ asset: wide.address })], []))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+        .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
         .withArgs(wide.address);
     });
 
     it("rejects a missing feed for an unpriced asset", async () => {
       for (const feed of [noFeed(), feedOn(chainlinkOracle.address, constants.AddressZero)]) {
         await expect(requestWith(feed))
-          .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+          .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
           .withArgs(collateralAsset.address);
       }
     });
 
     it("rejects a feed without a staleness limit", async () => {
       await expect(requestWith({ ...chainlinkFeed(), maxStalePeriod: 0 }))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+        .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
         .withArgs(collateralAsset.address);
     });
 
@@ -1144,7 +1147,7 @@ describe("SpokePoolManager", () => {
       for (const answer of [0, -1]) {
         await setAnswer(priceFeed, answer);
         await expect(requestWith(chainlinkFeed()))
-          .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+          .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
           .withArgs(collateralAsset.address);
       }
     });
@@ -1154,7 +1157,7 @@ describe("SpokePoolManager", () => {
       priceFeed.latestRoundData.returns([1, feedAnswer("2"), 0, updatedAt, 1]);
       await time.setNextBlockTimestamp(updatedAt + MAX_STALE_PERIOD + 1);
       await expect(manager.connect(deployer).requestPool(...poolOf(), [collateralMarket()], [], NO_ESTIMATE))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+        .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
         .withArgs(collateralAsset.address);
 
       const latest = await time.latest();
@@ -1222,7 +1225,7 @@ describe("SpokePoolManager", () => {
       await requestPool();
       await setAnswer(priceFeed, feedAnswer("1"), MAX_STALE_PERIOD + 1);
       await expect(build(1))
-        .to.be.revertedWithCustomError(manager, "InvalidOracleFeed")
+        .to.be.revertedWithCustomError(manager, "InvalidOracleConfig")
         .withArgs(collateralAsset.address);
     });
 

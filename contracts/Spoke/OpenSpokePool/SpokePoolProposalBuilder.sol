@@ -481,12 +481,12 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         for (uint256 i; i < marketCount; ++i) {
             ISpokePoolManager.CollateralMarketRequestParams memory market = markets[i];
             if (resilientOracle.getTokenConfig(market.asset).asset != address(0)) {
-                delete market.feed;
+                delete market.oracleConfig;
                 continue;
             }
             IResilientOracle.TokenConfig memory config = configs[count];
             config.asset = market.asset;
-            config.oracles[0] = market.feed.oracle;
+            config.oracles[0] = market.oracleConfig.oracle;
             config.enableFlagsForOracles[0] = true;
             ++count;
         }
@@ -652,7 +652,7 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         return (supplyCapUsd * EXP_SCALE) / RESILIENT_ORACLE.getPrice(asset);
     }
 
-    /// @dev Adds `oracle`'s batch of the feeds on it, if any; a priced asset's feed was cleared, so its oracle is zero
+    /// @dev Adds `oracle`'s batch of the feeds on it, if any; a priced asset's config is cleared, so it never matches
     function _addFeedConfigs(
         Proposal memory proposal,
         ISpokePoolManager.CollateralMarketRequestParams[] memory markets,
@@ -662,9 +662,9 @@ contract SpokePoolProposalBuilder is ISpokePoolProposalBuilder {
         FeedConfig[] memory configs = new FeedConfig[](marketCount);
         uint256 count;
         for (uint256 i; i < marketCount; ++i) {
-            ISpokePoolManager.OracleFeed memory feed = markets[i].feed;
-            if (feed.oracle == oracle) {
-                configs[count] = FeedConfig(markets[i].asset, feed.feed, feed.maxStalePeriod);
+            ISpokePoolManager.OracleConfig memory oracleConfig = markets[i].oracleConfig;
+            if (oracleConfig.oracle == oracle) {
+                configs[count] = FeedConfig(markets[i].asset, oracleConfig.feed, oracleConfig.maxStalePeriod);
                 ++count;
             }
         }
