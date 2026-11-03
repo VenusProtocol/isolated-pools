@@ -198,7 +198,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         if (requestType == RequestType.Pool) {
             SpokePoolValidationLib.validateNewBond(contracts, request.tierId, request.bondAsset, request.bondAmount);
         } else {
-            _ensurePoolStatus(request.comptroller, PoolStatus.Live);
+            _ensureLivePool(request.comptroller);
             SpokePoolValidationLib.validateBond(contracts, request.comptroller, request.tierId);
         }
         // The seeds pulled at the request stay as they are, even if their assets' prices moved
@@ -217,7 +217,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         address comptroller = request.comptroller;
         RequestType requestType = request.requestType;
         if (requestType != RequestType.Pool) {
-            _ensurePoolStatus(comptroller, PoolStatus.Live);
+            _ensureLivePool(comptroller);
         }
 
         request.status = RequestStatus.Settled;
@@ -702,13 +702,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @dev Returns a live pool after checking the caller is its deployer and is not paused
     function _ensureCallerHasLivePool(address comptroller) private view returns (Pool storage pool) {
-        pool = pools[comptroller];
-        if (msg.sender != pool.deployer) {
+        if (msg.sender != pools[comptroller].deployer) {
             revert NotDeployer(msg.sender);
         }
-        if (pool.status != PoolStatus.Live) {
-            revert InvalidPoolStatus(comptroller);
-        }
+        pool = _ensureLivePool(comptroller);
+    }
+
+    /// @dev Returns a pool after checking it is live and its deployer is not paused
+    function _ensureLivePool(address comptroller) private view returns (Pool storage pool) {
+        pool = _ensurePoolStatus(comptroller, PoolStatus.Live);
         if (pool.deployerPaused) {
             revert DeployerPaused(comptroller);
         }

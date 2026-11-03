@@ -554,6 +554,7 @@ interface ISpokePoolManager {
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error DeployerPaused is thrown when a markets or tier request's deployer is paused
      * @custom:error The `SpokePoolValidationLib.validateNewBond` errors for a pool request, else the `validateBond` ones
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error The builder's `buildRequestProposal` errors
@@ -567,6 +568,7 @@ interface ISpokePoolManager {
      * @custom:event Emits PoolActivated for a pool request, PoolTierUpgraded for a tier request, and RequestSettled
      * @custom:error InvalidRequestStatus is thrown when the request is not built
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
+     * @custom:error DeployerPaused is thrown when a markets or tier request's deployer is paused
      * @custom:error The bond manager's `createBond` errors
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
@@ -783,7 +785,8 @@ interface ISpokePoolManager {
 
     /**
      * @notice Pauses a pool deployer's requests, risk controls, exit request and excess bond withdrawals until
-     *   `unpauseDeployer`; it can still cancel open requests and top up the bond
+     *   `unpauseDeployer`; its open requests are not built or settled meanwhile. It can still cancel them and top up
+     *   the bond
      * @param comptroller The pool's comptroller
      * @custom:event Emits DeployerPausedUpdated
      * @custom:error InvalidPoolStatus is thrown when the pool does not exist

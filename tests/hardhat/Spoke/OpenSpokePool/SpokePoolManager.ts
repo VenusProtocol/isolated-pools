@@ -1315,6 +1315,15 @@ describe("SpokePoolManager", () => {
         .withArgs(comptroller.address);
     });
 
+    it("needs an unpaused deployer for a markets or tier request", async () => {
+      await activatePool();
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      await manager.pauseDeployer(comptroller.address);
+      await expect(build(requestId, [vTokenC.address]))
+        .to.be.revertedWithCustomError(manager, "DeployerPaused")
+        .withArgs(comptroller.address);
+    });
+
     it("builds a request once", async () => {
       await requestPool();
       await build(1);
@@ -1429,6 +1438,16 @@ describe("SpokePoolManager", () => {
       await buildExit();
       await expect(settle(requestId))
         .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
+        .withArgs(comptroller.address);
+    });
+
+    it("needs an unpaused deployer for a markets or tier request", async () => {
+      await activatePool();
+      const requestId = await requestTierUpgrade();
+      await build(requestId, []);
+      await manager.pauseDeployer(comptroller.address);
+      await expect(settle(requestId))
+        .to.be.revertedWithCustomError(manager, "DeployerPaused")
         .withArgs(comptroller.address);
     });
   });
