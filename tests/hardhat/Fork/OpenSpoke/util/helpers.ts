@@ -47,7 +47,7 @@ export const PoolStatus = {
   ExitProposed: 3,
   WindingDown: 4,
   Closed: 5,
-  HandedOver: 6,
+  GovernanceOperated: 6,
 };
 export const ProposalState = { Executed: 7 };
 

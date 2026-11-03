@@ -1334,9 +1334,9 @@ if (FORK) {
         it("35. hands an exit-requested pool over to governance", async () => {
           await f.manager.connect(f.deployer).requestExit(comptroller);
           await expect(f.manager.connect(f.timelock).handoverPoolToGovernance(comptroller))
-            .to.emit(f.manager, "PoolHandedOver")
+            .to.emit(f.manager, "PoolGovernanceOperated")
             .withArgs(comptroller);
-          expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.HandedOver);
+          expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.GovernanceOperated);
           expect(await f.manager.activePools(f.deployer.address)).to.equal(ethers.constants.AddressZero);
 
           await supplyCollateral(f.supplier, pool.collateral, pool.collateralVToken, e18("1000"));
@@ -1358,7 +1358,7 @@ if (FORK) {
           expect(failure?.signature).to.equal("startWindDown(address)");
           expect(failure?.reason).to.include("InvalidPoolStatus");
 
-          expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.HandedOver);
+          expect((await f.manager.getPool(comptroller)).status).to.equal(PoolStatus.GovernanceOperated);
           expect(await pool.comptroller.actionPaused(collateralVToken, Action.MINT)).to.equal(false);
           await supplyCollateral(f.borrower, pool.collateral, pool.collateralVToken, e18("1000"));
           const borrowed = e18("100");

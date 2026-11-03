@@ -2236,17 +2236,17 @@ describe("SpokePoolManager", () => {
       it("hands over a pool whose exit is requested, keeping its bond", async () => {
         await manager.connect(deployer).requestExit(comptroller.address);
         await expect(manager.handoverPoolToGovernance(comptroller.address, NO_ESTIMATE))
-          .to.emit(manager, "PoolHandedOver")
+          .to.emit(manager, "PoolGovernanceOperated")
           .withArgs(comptroller.address);
         expect(bondManager.release).to.not.have.been.called;
-        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.HandedOver);
+        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.GovernanceOperated);
         expect(await manager.activePools(deployer.address)).to.equal(constants.AddressZero);
       });
 
       it("hands over a pool whose exit VIP is built, which then fails to start the wind-down", async () => {
         await buildExit();
         await manager.handoverPoolToGovernance(comptroller.address);
-        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.HandedOver);
+        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.GovernanceOperated);
         await expect(manager.connect(timelock).startWindDown(comptroller.address))
           .to.be.revertedWithCustomError(manager, "InvalidPoolStatus")
           .withArgs(comptroller.address);
@@ -2254,7 +2254,7 @@ describe("SpokePoolManager", () => {
 
       it("hands over a live pool", async () => {
         await expect(manager.handoverPoolToGovernance(comptroller.address))
-          .to.emit(manager, "PoolHandedOver")
+          .to.emit(manager, "PoolGovernanceOperated")
           .withArgs(comptroller.address);
         expect(await manager.activePools(deployer.address)).to.equal(constants.AddressZero);
       });
@@ -2262,7 +2262,7 @@ describe("SpokePoolManager", () => {
       it("hands over a winding-down pool", async () => {
         await startWindDown();
         await manager.handoverPoolToGovernance(comptroller.address);
-        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.HandedOver);
+        expect((await manager.getPool(comptroller.address)).status).to.equal(PoolStatus.GovernanceOperated);
       });
 
       it("reverts for an unknown or handed-over pool", async () => {

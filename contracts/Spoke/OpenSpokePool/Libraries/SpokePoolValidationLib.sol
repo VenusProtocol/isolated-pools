@@ -140,6 +140,19 @@ library SpokePoolValidationLib {
     }
 
     /**
+     * @notice Returns how much a pool's bond is worth at current prices
+     * @param contracts The manager's contracts
+     * @param comptroller The pool's comptroller
+     * @return bondUsd What the bond holds, net of a loss and a Hub's exit fee, in USD scaled by 1e18
+     */
+    function getBondValue(
+        ISpokePoolManager.Contracts memory contracts,
+        address comptroller
+    ) external view returns (uint256 bondUsd) {
+        (, bondUsd) = bondValue(contracts, comptroller);
+    }
+
+    /**
      * @notice Validates a collateral market's oracle after its feed changed, and returns its asset's price
      * @param contracts The manager's contracts
      * @param market The collateral market
@@ -269,6 +282,19 @@ library SpokePoolValidationLib {
                 price = twap;
             }
         }
+    }
+
+    /**
+     * @dev Returns a pool's bond asset and what its bond holds, net of a loss and a Hub's exit fee, in USD. Internal,
+     *   so `SpokePoolGovernanceLib` compiles it in for its coverage check instead of linking this library
+     */
+    function bondValue(
+        ISpokePoolManager.Contracts memory contracts,
+        address comptroller
+    ) internal view returns (address bondAsset, uint256 bondUsd) {
+        IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
+        bondAsset = address(bondAccount.asset());
+        bondUsd = (bondAccount.currentBondAmount() * bondAssetPrice(contracts, bondAsset)) / EXP_SCALE;
     }
 
     // ──────────────────────────────────────────────────────────────────────

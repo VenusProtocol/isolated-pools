@@ -529,7 +529,7 @@ if (FORK) {
           ],
           [
             "handed over",
-            PoolStatus.HandedOver,
+            PoolStatus.GovernanceOperated,
             async pool => {
               await f.manager.connect(f.deployer).requestExit(pool.comptroller.address);
               await f.manager.connect(f.timelock).handoverPoolToGovernance(pool.comptroller.address);
@@ -539,7 +539,7 @@ if (FORK) {
         for (const [index, [label, status, enterStatus]] of statuses.entries()) {
           it(`${14 + index}. recovers from the bond while the pool is ${label}`, async () => {
             // A pool with bad debt cannot be handed over, so a handed-over pool takes its bad debt afterwards
-            const handedOver = status === PoolStatus.HandedOver;
+            const handedOver = status === PoolStatus.GovernanceOperated;
             if (handedOver) await enterStatus(pool);
             const badDebt = await createBadDebt(f, pool, SMALL_DEFAULT);
             if (!handedOver) await enterStatus(pool);

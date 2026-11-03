@@ -325,7 +325,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
         // The bond stays after a close or handover, still seizable, until governance accepts the pool's remaining debt
         PoolStatus status = pools[comptroller].status;
-        if (status != PoolStatus.Closed && status != PoolStatus.HandedOver) {
+        if (status != PoolStatus.Closed && status != PoolStatus.GovernanceOperated) {
             revert InvalidPoolStatus(comptroller);
         }
 
@@ -423,15 +423,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _checkAccessAllowed("handoverPoolToGovernance(address)");
         Pool storage pool = pools[comptroller];
         PoolStatus status = pool.status;
-        if (status == PoolStatus.None || status == PoolStatus.Closed || status == PoolStatus.HandedOver) {
+        if (status == PoolStatus.None || status == PoolStatus.Closed || status == PoolStatus.GovernanceOperated) {
             revert InvalidPoolStatus(comptroller);
         }
         SpokePoolValidationLib.ensureNoBadDebt(comptroller);
 
-        pool.status = PoolStatus.HandedOver;
+        pool.status = PoolStatus.GovernanceOperated;
         delete activePools[pool.deployer];
 
-        emit PoolHandedOver(comptroller);
+        emit PoolGovernanceOperated(comptroller);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -522,7 +522,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
 
     /// @inheritdoc ISpokePoolManager
     function getBondValue(address comptroller) external view returns (uint256) {
-        return SpokePoolGovernanceLib.getBondValue(_contracts(), comptroller);
+        return SpokePoolValidationLib.getBondValue(_contracts(), comptroller);
     }
 
     // ──────────────────────────────────────────────────────────────────────

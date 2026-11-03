@@ -41,7 +41,7 @@ interface ISpokePoolManager {
         ExitProposed,
         WindingDown,
         Closed,
-        HandedOver
+        GovernanceOperated
     }
 
     /// @notice A collateral asset's Chainlink-compatible feed, the oracle it is set on and the oracle's staleness limit
@@ -211,7 +211,7 @@ interface ISpokePoolManager {
      * @notice Emitted when a pool is handed over to governance
      * @param comptroller The pool's comptroller
      */
-    event PoolHandedOver(address indexed comptroller);
+    event PoolGovernanceOperated(address indexed comptroller);
 
     /**
      * @notice Emitted when a pool's deployer is paused or unpaused
@@ -765,7 +765,7 @@ interface ISpokePoolManager {
      *   keeps running, and a built exit, markets or tier VIP then fails. Its bond stays, still seizable for bad debt,
      *   until `releaseBond`
      * @param comptroller The pool's comptroller
-     * @custom:event Emits PoolHandedOver
+     * @custom:event Emits PoolGovernanceOperated
      * @custom:error InvalidPoolStatus is thrown when the pool is not live, exiting or winding down
      * @custom:error BadDebtExists is thrown when a market of the pool holds bad debt
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock

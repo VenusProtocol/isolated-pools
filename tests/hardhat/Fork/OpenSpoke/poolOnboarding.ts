@@ -1298,7 +1298,7 @@ if (FORK) {
           await fundDeployer(f, f.deployer, fresh);
           await f.manager.connect(f.deployer).requestExit(comptroller);
           await expect(f.manager.connect(f.timelock).handoverPoolToGovernance(comptroller))
-            .to.emit(f.manager, "PoolHandedOver")
+            .to.emit(f.manager, "PoolGovernanceOperated")
             .withArgs(comptroller);
 
           const nextRequestId = (await f.manager.requestCount()).add(1);

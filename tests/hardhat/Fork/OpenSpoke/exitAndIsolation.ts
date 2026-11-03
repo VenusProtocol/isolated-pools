@@ -526,7 +526,7 @@ if (FORK) {
         const exitProposal = await proposeAndQueue(f, await buildExit(f, comptroller, e18("0.6")));
 
         await expect(calls.handoverPoolToGovernance())
-          .to.emit(f.manager, "PoolHandedOver")
+          .to.emit(f.manager, "PoolGovernanceOperated")
           .withArgs(comptroller.address);
         expect(await f.manager.activePools(f.deployer.address)).to.equal(ethers.constants.AddressZero);
         await expect(f.governor.execute(exitProposal)).to.be.reverted;
@@ -534,7 +534,7 @@ if (FORK) {
         expect(failure?.signature).to.equal("startWindDown(address)");
         expect(failure?.reason).to.include(`InvalidPoolStatus("${comptroller.address}")`);
 
-        await expectInvalidPoolStatus(calls, comptroller.address, PoolStatus.HandedOver, [
+        await expectInvalidPoolStatus(calls, comptroller.address, PoolStatus.GovernanceOperated, [
           "requestExit",
           "buildExitProposal",
           "startWindDown",
@@ -553,7 +553,7 @@ if (FORK) {
         await expect(calls.releaseBond())
           .to.be.revertedWithCustomError(f.bondManager, "BondNotFound")
           .withArgs(comptroller.address);
-        expect((await f.manager.getPool(comptroller.address)).status).to.equal(PoolStatus.HandedOver);
+        expect((await f.manager.getPool(comptroller.address)).status).to.equal(PoolStatus.GovernanceOperated);
       });
 
       it("12. rejects a supply pause after exit or force close as redundant", async () => {

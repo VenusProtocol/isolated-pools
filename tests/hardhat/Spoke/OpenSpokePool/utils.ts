@@ -32,7 +32,7 @@ export const PoolStatus = {
   ExitProposed: 3,
   WindingDown: 4,
   Closed: 5,
-  HandedOver: 6,
+  GovernanceOperated: 6,
 };
 
 /// Puts `implementation` behind a transparent proxy initialized with `initialize(accessControlManager)` by the
