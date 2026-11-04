@@ -642,17 +642,19 @@ if (FORK) {
           const before = await twap.getPrice(XVS);
           expect(before).to.equal(hourlyTwap(["4", 56], ["6", 112]));
 
+          // Both transactions are pinned, as a fork's auto-mined blocks follow the wall clock
           const proxyAdmin = new ethers.Contract(bscmainnet.DEFAULT_PROXY_ADMIN, PROXY_ADMIN_ABI, f.admin);
-          const implementation = await (
-            await ethers.getContractFactory("TwapOracle", f.admin)
-          ).deploy(bscmainnet.RESILIENT_ORACLE);
-          await proxyAdmin
-            .connect(await impersonate(await proxyAdmin.owner()))
-            .upgrade(twap.address, implementation.address);
+          const proxyAdminOwner = await impersonate(await proxyAdmin.owner());
+          const factory = await ethers.getContractFactory("TwapOracle", f.admin);
+          await at(hour(HOURS_PER_WEEK) + 10);
+          const implementation = await factory.deploy(bscmainnet.RESILIENT_ORACLE);
+          await at(hour(HOURS_PER_WEEK) + 20);
+          await proxyAdmin.connect(proxyAdminOwner).upgrade(twap.address, implementation.address);
           expect(await proxyAdmin.getProxyImplementation(twap.address)).to.equal(implementation.address);
 
-          // The upgrade took a few seconds, which the history carries at the last price
-          expect(await twap.getPrice(XVS)).to.equal(modelTwap(await time.latest()));
+          // The upgrade took 20 seconds, which the history carries at the last price
+          expect(await time.latest()).to.equal(hour(HOURS_PER_WEEK) + 20);
+          expect(await twap.getPrice(XVS)).to.equal(modelTwap(hour(HOURS_PER_WEEK) + 20));
           expect(await twap.getPrice(XVS)).to.be.closeTo(before, before.div(10_000));
           expect(await twap.accessControlManager()).to.equal(bscmainnet.ACM);
           await update(hour(HOURS_PER_WEEK) + 60);

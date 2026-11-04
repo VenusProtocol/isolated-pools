@@ -115,6 +115,7 @@ describe("SpokePoolManager", () => {
   let vTokenA: FakeContract<VToken>;
   let vTokenB: FakeContract<VToken>;
   let vTokenC: FakeContract<VToken>;
+  let vTokenD: FakeContract<VToken>;
   let policyRegistry: SpokePoolPolicyRegistry;
   let bondToken: MockToken;
   let collateralAsset: MockToken;
@@ -361,6 +362,7 @@ describe("SpokePoolManager", () => {
     vTokenA = await smock.fake<VToken>("contracts/VToken.sol:VToken");
     vTokenB = await smock.fake<VToken>("contracts/VToken.sol:VToken");
     vTokenC = await smock.fake<VToken>("contracts/VToken.sol:VToken");
+    vTokenD = await smock.fake<VToken>("contracts/VToken.sol:VToken");
     priceFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
     otherFeed = await smock.fake<IChainlinkFeed>("IChainlinkFeed");
 
@@ -413,6 +415,7 @@ describe("SpokePoolManager", () => {
       vTokenA,
       vTokenB,
       vTokenC,
+      vTokenD,
       priceFeed,
       otherFeed,
     );
@@ -1001,7 +1004,7 @@ describe("SpokePoolManager", () => {
         .withArgs(MAX_POOL_MARKETS + 1, MAX_POOL_MARKETS);
 
       await activatePool();
-      comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address, vTokenC.address, other.address]);
+      comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address, vTokenC.address, vTokenD.address]);
       await expect(requestNewMarkets([collateralMarket()], [loanMarket()]))
         .to.be.revertedWithCustomError(manager, "TooManyMarkets")
         .withArgs(MAX_POOL_MARKETS + 1, MAX_POOL_MARKETS);
@@ -1009,8 +1012,8 @@ describe("SpokePoolManager", () => {
 
     it("leave an unlisted market out of the pool's count", async () => {
       await activatePool();
-      comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address, vTokenC.address, other.address]);
-      comptroller.isMarketListed.whenCalledWith(other.address).returns(false);
+      comptroller.getAllMarkets.returns([vTokenA.address, vTokenB.address, vTokenC.address, vTokenD.address]);
+      comptroller.isMarketListed.whenCalledWith(vTokenD.address).returns(false);
       const requestId = await requestNewMarkets([collateralMarket()], [loanMarket()]);
       expect((await manager.getRequest(requestId)).status).to.equal(RequestStatus.Pending);
     });
@@ -1315,13 +1318,30 @@ describe("SpokePoolManager", () => {
         .withArgs(comptroller.address);
     });
 
-    it("needs an unpaused deployer for a markets or tier request", async () => {
+    it("needs an unpaused deployer for a markets request", async () => {
       await activatePool();
       const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
       await manager.pauseDeployer(comptroller.address);
       await expect(build(requestId, [vTokenC.address]))
         .to.be.revertedWithCustomError(manager, "DeployerPaused")
         .withArgs(comptroller.address);
+
+      await manager.unpauseDeployer(comptroller.address);
+      await expect(build(requestId, [vTokenC.address]))
+        .to.emit(manager, "RequestBuilt")
+        .withArgs(requestId, [vTokenC.address]);
+    });
+
+    it("needs an unpaused deployer for a tier request", async () => {
+      await activatePool();
+      const requestId = await requestTierUpgrade();
+      await manager.pauseDeployer(comptroller.address);
+      await expect(build(requestId, []))
+        .to.be.revertedWithCustomError(manager, "DeployerPaused")
+        .withArgs(comptroller.address);
+
+      await manager.unpauseDeployer(comptroller.address);
+      await expect(build(requestId, [])).to.emit(manager, "RequestBuilt").withArgs(requestId, []);
     });
 
     it("builds a request once", async () => {
@@ -1441,7 +1461,20 @@ describe("SpokePoolManager", () => {
         .withArgs(comptroller.address);
     });
 
-    it("needs an unpaused deployer for a markets or tier request", async () => {
+    it("needs an unpaused deployer for a markets request", async () => {
+      await activatePool();
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      await build(requestId, [vTokenC.address]);
+      await manager.pauseDeployer(comptroller.address);
+      await expect(settle(requestId))
+        .to.be.revertedWithCustomError(manager, "DeployerPaused")
+        .withArgs(comptroller.address);
+
+      await manager.unpauseDeployer(comptroller.address);
+      await expect(settle(requestId)).to.emit(manager, "RequestSettled").withArgs(requestId, comptroller.address);
+    });
+
+    it("needs an unpaused deployer for a tier request", async () => {
       await activatePool();
       const requestId = await requestTierUpgrade();
       await build(requestId, []);
@@ -1449,6 +1482,9 @@ describe("SpokePoolManager", () => {
       await expect(settle(requestId))
         .to.be.revertedWithCustomError(manager, "DeployerPaused")
         .withArgs(comptroller.address);
+
+      await manager.unpauseDeployer(comptroller.address);
+      await expect(settle(requestId)).to.emit(manager, "RequestSettled").withArgs(requestId, comptroller.address);
     });
   });
 
