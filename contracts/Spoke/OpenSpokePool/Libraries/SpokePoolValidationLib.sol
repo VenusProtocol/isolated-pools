@@ -61,9 +61,10 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @notice Checks no market of a pool holds bad debt, which a seizure of the whole bond, excess included, may repay
+     * @notice Checks no market of a pool holds recorded bad debt. Bad debt is recorded only once an underwater account
+     *   is healed, so an account not yet healed does not fail this check
      * @param comptroller The pool's comptroller
-     * @custom:error BadDebtExists is thrown when a market of the pool holds bad debt
+     * @custom:error BadDebtExists is thrown when a market of the pool holds recorded bad debt
      */
     function ensureNoBadDebt(address comptroller) external view {
         VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();

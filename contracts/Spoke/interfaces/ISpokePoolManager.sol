@@ -435,7 +435,8 @@ interface ISpokePoolManager {
     error ResidualDebtExceeded(uint256 debtUsd);
 
     /**
-     * @notice Thrown when a market of the pool holds bad debt, which the bond, excess included, may repay
+     * @notice Thrown when a market of the pool holds bad debt, which is recorded only once an underwater account is
+     *   healed
      * @param vToken The market
      */
     error BadDebtExists(address vToken);
@@ -485,7 +486,7 @@ interface ISpokePoolManager {
      * @custom:error OpenRequestExists is thrown while the caller has an open request
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the tier requires
-     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
+     * @custom:error BadDebtExists is thrown while a market of the pool holds recorded bad debt
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error InvalidMarketParams is thrown when a seed is above its market's supply cap
      * @custom:error TransferAmountMismatch is thrown when a seed transfer delivers a different amount
@@ -511,7 +512,7 @@ interface ISpokePoolManager {
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error InsufficientBondValue is thrown when the bond is worth less than the target tier
      *   requires
-     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
+     * @custom:error BadDebtExists is thrown while a market of the pool holds recorded bad debt
      * @custom:access Only the pool's deployer
      */
     function requestTierUpgrade(address comptroller, uint256 tierId) external returns (uint256 requestId);
@@ -659,7 +660,7 @@ interface ISpokePoolManager {
      * @custom:error InvalidPoolStatus is thrown when the pool is not live
      * @custom:error DeployerPaused is thrown while the deployer is paused
      * @custom:error OpenRequestExists is thrown while the deployer's latest request is still open
-     * @custom:error BadDebtExists is thrown while a market of the pool holds bad debt
+     * @custom:error BadDebtExists is thrown while a market of the pool holds recorded bad debt
      * @custom:error BondAssetNotAllowed is thrown by the policy registry when the bond asset has no factor
      * @custom:error The bond manager's `withdrawExcess` errors
      * @custom:access Only the pool's deployer
@@ -772,13 +773,13 @@ interface ISpokePoolManager {
     function rejectExit(address comptroller) external;
 
     /**
-     * @notice Hands a pool over to governance: one that is live, exiting or winding down, with no bad debt. The pool
-     *   keeps running, and a built exit, markets or tier VIP then fails. Its bond stays, still seizable for bad debt,
-     *   until `releaseBond`
+     * @notice Hands a pool over to governance: one that is live, exiting or winding down, with no recorded bad debt.
+     *   The pool keeps running, and a built exit, markets or tier VIP then fails. Its bond stays, still seizable for bad
+     *   debt, until `releaseBond`
      * @param comptroller The pool's comptroller
      * @custom:event Emits PoolGovernanceOperated
      * @custom:error InvalidPoolStatus is thrown when the pool is not live, exiting or winding down
-     * @custom:error BadDebtExists is thrown when a market of the pool holds bad debt
+     * @custom:error BadDebtExists is thrown when a market of the pool holds recorded bad debt
      * @custom:access Controlled by AccessControlManager, granted to the Normal Timelock
      */
     function handoverPoolToGovernance(address comptroller) external;
