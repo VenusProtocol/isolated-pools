@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import { ResilientOracleInterface } from "@venusprotocol/oracle/contracts/interfaces/OracleInterface.sol";
+import { ComptrollerInterface } from "../../../../contracts/ComptrollerInterface.sol";
 import { ITwapOracle } from "../../../../contracts/Oracles/ITwapOracle.sol";
 
 import { SpokePoolValidationLib } from "../../../../contracts/Spoke/OpenSpokePool/Libraries/SpokePoolValidationLib.sol";
@@ -109,6 +110,8 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         bondManager = new BondManagerStub();
         bondAccount = new BondAccountStub(bondAsset);
         bondManager.setAccount(comptroller, address(bondAccount));
+        // A pool with no markets, so no bad debt
+        vm.mockCall(comptroller, abi.encodeCall(ComptrollerInterface.getAllMarkets, ()), abi.encode(new address[](0)));
         twapOracle = new TwapOracleStub();
         address[] memory oracles = new address[](1);
         oracles[0] = supportedOracle;
@@ -125,7 +128,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
     // ----- helpers -----
 
     // External, so a test can expect the library's reverts
-    function validateBond() external view {
+    function ensureNoBadDebtAndValidateBond() external view {
         SpokePoolValidationLib.ensureNoBadDebtAndValidateBond(_contracts(), comptroller, TIER);
     }
 
@@ -182,7 +185,8 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
 
     // ----- bond floor -----
 
-    /// @notice The floor an excess withdrawal keeps is the least bond `validateBond` accepts, and clears any coverage ratio
+    /// @notice The floor an excess withdrawal keeps is the least bond `ensureNoBadDebtAndValidateBond` accepts, and
+    /// clears any coverage ratio
     function testFuzz_requiredBondIsTheLeastAcceptedBond(
         uint256 minTierBondUsd,
         uint256 factor,
@@ -204,7 +208,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         uint256 requiredUsd = registry.getRequiredBondUsd(TIER, bondAsset);
 
         bondAccount.setAmount(floor);
-        this.validateBond();
+        this.ensureNoBadDebtAndValidateBond();
         // As SpokePoolGovernanceLib checks a deployer's risk change against the tier's coverage ratio
         uint256 bondUsd = (floor * price) / 1e18;
         assertGe(bondUsd * 1e18, requiredUsd * coverageRatio);
@@ -217,11 +221,11 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
                 requiredUsd
             )
         );
-        this.validateBond();
+        this.ensureNoBadDebtAndValidateBond();
     }
 
     /// @notice A bond asset the TWAP oracle has enabled is priced at the lower of its spot price and TWAP, any other
-    /// at its spot price, in both the floor and `validateBond`
+    /// at its spot price, in both the floor and `ensureNoBadDebtAndValidateBond`
     function testFuzz_bondPricedAtLowerOfSpotAndTwap(uint256 spot, uint256 twap, bool isTwapEnabled) public {
         spot = bound(spot, 1e9, 1e27);
         twap = bound(twap, 1e9, 1e27);
@@ -235,7 +239,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
         assertEq(floor, (1_000_000e18 * 1e18 + price - 1) / price);
 
         bondAccount.setAmount(floor);
-        this.validateBond();
+        this.ensureNoBadDebtAndValidateBond();
         bondAccount.setAmount(floor - 1);
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -244,7 +248,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
                 1_000_000e18
             )
         );
-        this.validateBond();
+        this.ensureNoBadDebtAndValidateBond();
     }
 
     // ----- seeds -----

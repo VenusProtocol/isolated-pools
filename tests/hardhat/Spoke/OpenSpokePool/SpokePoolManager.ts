@@ -1276,6 +1276,18 @@ describe("SpokePoolManager", () => {
         .withArgs(BOND.sub(1), BOND);
     });
 
+    it("checks a markets request's pool for bad debt again", async () => {
+      await activatePool();
+      const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
+      vTokenB.badDebt.returns(1);
+      await expect(build(requestId, [vTokenC.address]))
+        .to.be.revertedWithCustomError(manager, "BadDebtExists")
+        .withArgs(vTokenB.address);
+
+      vTokenB.badDebt.returns(0);
+      await expect(build(requestId, [vTokenC.address])).to.emit(manager, "RequestBuilt");
+    });
+
     it("builds a markets request, keeping its seeds, and needs a live pool", async () => {
       await activatePool();
       const requestId = await requestNewMarkets([collateralMarket({ asset: bondToken.address })]);
