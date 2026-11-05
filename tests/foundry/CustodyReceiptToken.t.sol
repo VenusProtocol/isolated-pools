@@ -3,9 +3,7 @@ pragma solidity 0.8.25;
 
 import { Test } from "forge-std/Test.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {
-    AccessControlManager
-} from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
+import { AccessControlManager } from "@venusprotocol/governance-contracts/contracts/Governance/AccessControlManager.sol";
 
 import { CustodyReceiptToken } from "../../contracts/CustodyReceiptToken.sol";
 
@@ -40,17 +38,12 @@ contract CustodyReceiptTokenTest is Test {
     }
 
     /// @dev Deploy helper so tests can exercise the overridden `decimals()` for several values.
-    function _deployToken(
-        uint8 decimals_
-    ) internal returns (CustodyReceiptToken) {
+    function _deployToken(uint8 decimals_) internal returns (CustodyReceiptToken) {
         return new CustodyReceiptToken(TOKEN_NAME, TOKEN_SYMBOL, decimals_, address(acm));
     }
 
     /// @dev Mints `amount` to `to` through the ACM-gated mint path.
-    function _mintTo(
-        address to,
-        uint256 amount
-    ) internal {
+    function _mintTo(address to, uint256 amount) internal {
         acm.giveCallPermission(address(0), MINT_SIG, minter);
         vm.prank(minter);
         token.mint(to, amount);
