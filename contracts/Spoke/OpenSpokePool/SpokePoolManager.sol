@@ -132,8 +132,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         uint256 tierId = _ensureCallerHasLivePool(comptroller).tierId;
 
         Contracts memory contracts = _contracts();
-        SpokePoolValidationLib.validateBond(contracts, comptroller, tierId);
-        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
+        SpokePoolValidationLib.ensureNoBadDebtAndValidateBond(contracts, comptroller, tierId);
 
         requestId = ++requestCount;
         Request storage request = _newRequest(requestId, RequestType.NewMarkets, comptroller, tierId);
@@ -152,8 +151,7 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
             revert InvalidTierUpgrade(fromTierId, tierId);
         }
 
-        SpokePoolValidationLib.validateBond(_contracts(), comptroller, tierId);
-        SpokePoolValidationLib.ensureNoBadDebt(comptroller);
+        SpokePoolValidationLib.ensureNoBadDebtAndValidateBond(_contracts(), comptroller, tierId);
 
         requestId = ++requestCount;
         _newRequest(requestId, RequestType.TierUpgrade, comptroller, tierId);
@@ -192,14 +190,15 @@ contract SpokePoolManager is AccessControlledV8, ReentrancyGuardUpgradeable, Spo
         _checkAccessAllowed("buildRequestProposal(uint256,string)");
         Request storage request = _ensureRequestStatus(requestId, RequestStatus.Pending);
 
-        // The bond may have lost value or the tier changed since the request, so it is checked again
+        // The bond may have lost value, the tier changed or a live pool recorded bad debt since the request, so the
+        // checks run again
         RequestType requestType = request.requestType;
         Contracts memory contracts = _contracts();
         if (requestType == RequestType.Pool) {
             SpokePoolValidationLib.validateNewBond(contracts, request.tierId, request.bondAsset, request.bondAmount);
         } else {
             _ensureLivePool(request.comptroller);
-            SpokePoolValidationLib.validateBond(contracts, request.comptroller, request.tierId);
+            SpokePoolValidationLib.ensureNoBadDebtAndValidateBond(contracts, request.comptroller, request.tierId);
         }
         // The seeds pulled at the request stay as they are, even if their assets' prices moved
         if (requestType != RequestType.TierUpgrade) {

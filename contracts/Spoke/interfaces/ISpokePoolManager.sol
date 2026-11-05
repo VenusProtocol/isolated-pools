@@ -548,15 +548,17 @@ interface ISpokePoolManager {
 
     /**
      * @notice Builds a pending request's VIP, once; a built request is only settled or rejected. It checks the bond
-     *   against the request's tier again at current prices. For a pool or markets request it also checks the markets
-     *   again, but keeps the seeds pulled at the request
+     *   against the request's tier again at current prices, and for a markets or tier request that the pool has no
+     *   recorded bad debt. For a pool or markets request it also checks the markets again, but keeps the seeds pulled
+     *   at the request
      * @param requestId The request
      * @param description The VIP's description
      * @custom:event Emits RequestBuilt
      * @custom:error InvalidRequestStatus is thrown when the request is not pending
      * @custom:error InvalidPoolStatus is thrown when a markets or tier request's pool is not live
      * @custom:error DeployerPaused is thrown when a markets or tier request's deployer is paused
-     * @custom:error The `SpokePoolValidationLib.validateNewBond` errors for a pool request, else the `validateBond` ones
+     * @custom:error The `SpokePoolValidationLib.validateNewBond` errors for a pool request, else the
+     *   `ensureNoBadDebtAndValidateBond` ones
      * @custom:error The `SpokePoolValidationLib.validateMarkets` errors
      * @custom:error The builder's `buildRequestProposal` errors
      * @custom:access Controlled by AccessControlManager, granted to the Venus team

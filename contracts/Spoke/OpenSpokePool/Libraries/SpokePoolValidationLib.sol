@@ -66,7 +66,7 @@ library SpokePoolValidationLib {
      * @param comptroller The pool's comptroller
      * @custom:error BadDebtExists is thrown when a market of the pool holds recorded bad debt
      */
-    function ensureNoBadDebt(address comptroller) external view {
+    function ensureNoBadDebt(address comptroller) public view {
         VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
         uint256 marketCount = vTokens.length;
         for (uint256 i; i < marketCount; ++i) {
@@ -103,20 +103,22 @@ library SpokePoolValidationLib {
     }
 
     /**
-     * @notice Checks a live pool's bond against a tier before a markets or tier request, as
-     *   `_ensureRequiredBondValue` does
+     * @notice Checks a live pool has no recorded bad debt and its bond is worth what a tier requires, before a markets
+     *   or tier request and again when it is built
      * @param contracts The manager's contracts
      * @param comptroller The pool's comptroller
      * @param tierId The pool's tier, or a tier request's target tier
+     * @custom:error BadDebtExists is thrown when a market of the pool holds recorded bad debt
      * @custom:error The `_ensureRequiredBondValue` errors
      */
-    function validateBond(
+    function ensureNoBadDebtAndValidateBond(
         ISpokePoolManager.Contracts memory contracts,
         address comptroller,
         uint256 tierId
     ) external view {
-        IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
+        ensureNoBadDebt(comptroller);
 
+        IBondAccount bondAccount = IBondAccount(contracts.bondManager.bondAccounts(comptroller));
         _ensureRequiredBondValue(contracts, tierId, address(bondAccount.asset()), bondAccount.currentBondAmount());
     }
 

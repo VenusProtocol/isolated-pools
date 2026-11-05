@@ -126,7 +126,7 @@ contract SpokePoolValidationLibFuzzTest is OpenSpokeFuzzBase {
 
     // External, so a test can expect the library's reverts
     function validateBond() external view {
-        SpokePoolValidationLib.validateBond(_contracts(), comptroller, TIER);
+        SpokePoolValidationLib.ensureNoBadDebtAndValidateBond(_contracts(), comptroller, TIER);
     }
 
     function computeSeeds() external view returns (address[] memory, uint256[] memory) {
