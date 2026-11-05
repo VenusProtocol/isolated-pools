@@ -60,22 +60,6 @@ library SpokePoolValidationLib {
         }
     }
 
-    /**
-     * @notice Checks no market of a pool holds recorded bad debt. Bad debt is recorded only once an underwater account
-     *   is healed, so an account not yet healed does not fail this check
-     * @param comptroller The pool's comptroller
-     * @custom:error BadDebtExists is thrown when a market of the pool holds recorded bad debt
-     */
-    function ensureNoBadDebt(address comptroller) public view {
-        VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
-        uint256 marketCount = vTokens.length;
-        for (uint256 i; i < marketCount; ++i) {
-            if (vTokens[i].badDebt() != 0) {
-                revert ISpokePoolManager.BadDebtExists(address(vTokens[i]));
-            }
-        }
-    }
-
     // ──────────────────────────────────────────────────────────────────────
     // Request checks
     // ──────────────────────────────────────────────────────────────────────
@@ -264,6 +248,22 @@ library SpokePoolValidationLib {
             revert ISpokePoolManager.InvalidOracleConfig(asset);
         }
         return uint256(answer) * 10 ** (18 - feedDecimals) * 10 ** (18 - assetDecimals);
+    }
+
+    /**
+     * @notice Checks no market of a pool holds recorded bad debt. Bad debt is recorded only once an underwater account
+     *   is healed, so an account not yet healed does not fail this check
+     * @param comptroller The pool's comptroller
+     * @custom:error BadDebtExists is thrown when a market of the pool holds recorded bad debt
+     */
+    function ensureNoBadDebt(address comptroller) public view {
+        VToken[] memory vTokens = SpokeComptroller(comptroller).getAllMarkets();
+        uint256 marketCount = vTokens.length;
+        for (uint256 i; i < marketCount; ++i) {
+            if (vTokens[i].badDebt() != 0) {
+                revert ISpokePoolManager.BadDebtExists(address(vTokens[i]));
+            }
+        }
     }
 
     // ──────────────────────────────────────────────────────────────────────
