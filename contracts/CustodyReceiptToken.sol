@@ -3,9 +3,7 @@ pragma solidity 0.8.25;
 
 import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import { Ownable2Step } from "@openzeppelin/contracts/access/Ownable2Step.sol";
-import {
-    IAccessControlManagerV8
-} from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
+import { IAccessControlManagerV8 } from "@venusprotocol/governance-contracts/contracts/Governance/IAccessControlManagerV8.sol";
 
 /**
  * @title CustodyReceiptToken
@@ -78,10 +76,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * @param amount_ Amount of tokens to be minted.
      * @custom:access Controlled by AccessControlManager.
      */
-    function mint(
-        address account_,
-        uint256 amount_
-    ) external {
+    function mint(address account_, uint256 amount_) external {
         _ensureAllowed("mint(address,uint256)");
         _mint(account_, amount_);
     }
@@ -94,10 +89,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * @param amount_ Amount of tokens to be burned.
      * @custom:access Controlled by AccessControlManager.
      */
-    function burn(
-        address account_,
-        uint256 amount_
-    ) external {
+    function burn(address account_, uint256 amount_) external {
         _ensureAllowed("burn(address,uint256)");
         _burn(account_, amount_);
     }
@@ -139,9 +131,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * @custom:access Only owner.
      * @custom:event Emits NewAccessControlManager.
      */
-    function setAccessControlManager(
-        address newAccessControlManager_
-    ) external onlyOwner {
+    function setAccessControlManager(address newAccessControlManager_) external onlyOwner {
         _ensureNonZeroAddress(newAccessControlManager_);
         emit NewAccessControlManager(accessControlManager, newAccessControlManager_);
         accessControlManager = newAccessControlManager_;
@@ -152,7 +142,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * lock `setAccessControlManager`.
      * @dev Overridden with an empty body so renouncing ownership is a no-op.
      */
-    function renounceOwnership() public override { }
+    function renounceOwnership() public override {}
 
     /**
      * @notice Returns the number of decimals used to get its user representation.
@@ -170,11 +160,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * @param to_ Address tokens are moving to (zero on burn).
      * @custom:error ActionPaused is thrown when a holder-to-holder transfer is attempted while paused.
      */
-    function _beforeTokenTransfer(
-        address from_,
-        address to_,
-        uint256
-    ) internal view override {
+    function _beforeTokenTransfer(address from_, address to_, uint256) internal view override {
         if (from_ != address(0) && to_ != address(0) && paused) {
             revert ActionPaused();
         }
@@ -185,9 +171,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * @param functionSig_ Function signature on which access is to be checked.
      * @custom:error Unauthorized is thrown when the caller is not allowed to call `functionSig_`.
      */
-    function _ensureAllowed(
-        string memory functionSig_
-    ) internal view {
+    function _ensureAllowed(string memory functionSig_) internal view {
         if (!IAccessControlManagerV8(accessControlManager).isAllowedToCall(msg.sender, functionSig_)) {
             revert Unauthorized();
         }
@@ -198,9 +182,7 @@ contract CustodyReceiptToken is ERC20, Ownable2Step {
      * @param address_ Address to validate.
      * @custom:error ZeroAddressNotAllowed is thrown when `address_` is the zero address.
      */
-    function _ensureNonZeroAddress(
-        address address_
-    ) internal pure {
+    function _ensureNonZeroAddress(address address_) internal pure {
         if (address_ == address(0)) {
             revert ZeroAddressNotAllowed();
         }
