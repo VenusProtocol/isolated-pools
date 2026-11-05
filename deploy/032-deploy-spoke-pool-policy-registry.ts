@@ -66,7 +66,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 };
 
-func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];
+func.tags = [DEPLOYMENT_NAME, "OpenSpokePool"];
 // The SpokePoolManager it serves exists on the BSC networks only
 func.skip = async (hre: HardhatRuntimeEnvironment) =>
   !(await getConfig(hre.getNetworkName())).preconfiguredAddresses.GovernorBravo;

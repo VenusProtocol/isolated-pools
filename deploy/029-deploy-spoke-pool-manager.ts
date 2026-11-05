@@ -103,7 +103,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   }
 };
 
-func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];
+func.tags = [DEPLOYMENT_NAME, "OpenSpokePool"];
 func.dependencies = ["SpokePoolPolicyRegistry", "TwapOracle"];
 // GovernorBravo exists on the BSC networks only
 func.skip = async (hre: HardhatRuntimeEnvironment) =>

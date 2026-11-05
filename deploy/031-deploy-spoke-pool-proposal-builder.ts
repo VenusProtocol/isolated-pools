@@ -96,7 +96,7 @@ const func: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   console.log(`Verified ${DEPLOYMENT_NAME} MAX_POOL_MARKETS: ${maxPoolMarkets}`);
 };
 
-func.tags = [DEPLOYMENT_NAME, "OpenSpokePool", "HubSpoke"];
+func.tags = [DEPLOYMENT_NAME, "OpenSpokePool"];
 func.dependencies = [
   "SpokePoolRegistry",
   "SpokePoolManager",
