@@ -177,9 +177,15 @@ export const verifyProxyDeployment = async (
   hre: HardhatRuntimeEnvironment,
   name: string,
   deployment: DeployResult,
+  implementationArgs: unknown[] = [],
 ): Promise<void> => {
   if (deployment.implementation) {
-    await verifyDeployment(hre, `${name} implementation`, { ...deployment, address: deployment.implementation }, []);
+    await verifyDeployment(
+      hre,
+      `${name} implementation`,
+      { ...deployment, address: deployment.implementation },
+      implementationArgs,
+    );
   }
   await verifyDeployment(hre, `${name} proxy`, deployment, deployment.args ?? []);
 };
