@@ -3856,26 +3856,26 @@ __metadata:
   linkType: hard
 
 "ajv@npm:^6.12.4, ajv@npm:^6.12.6":
-  version: 6.12.6
-  resolution: "ajv@npm:6.12.6"
+  version: 6.15.0
+  resolution: "ajv@npm:6.15.0"
   dependencies:
     fast-deep-equal: ^3.1.1
     fast-json-stable-stringify: ^2.0.0
     json-schema-traverse: ^0.4.1
     uri-js: ^4.2.2
-  checksum: 874972efe5c4202ab0a68379481fbd3d1b5d0a7bd6d3cc21d40d3536ebff3352a2a1fabb632d4fd2cc7fe4cbdcd5ed6782084c9bbf7f32a1536d18f9da5007d4
+  checksum: a8e0308f1b44c3dfd1143911353be51bf8aedc2f2bcd595061755ad241c8450a10e4b657af8ba764c5ec9ae2162010f21d5e0d43763e20d782a8171da99b967a
   languageName: node
   linkType: hard
 
 "ajv@npm:^8.0.1, ajv@npm:^8.11.0":
-  version: 8.17.1
-  resolution: "ajv@npm:8.17.1"
+  version: 8.20.0
+  resolution: "ajv@npm:8.20.0"
   dependencies:
     fast-deep-equal: ^3.1.3
     fast-uri: ^3.0.1
     json-schema-traverse: ^1.0.0
     require-from-string: ^2.0.2
-  checksum: 1797bf242cfffbaf3b870d13565bd1716b73f214bb7ada9a497063aada210200da36e3ed40237285f3255acc4feeae91b1fb183625331bad27da95973f7253d9
+  checksum: 4f18ca5fcccff8c8b9a4d6f1a6a3a70ffc888e787624ca66f2d0162e04e8f9f2d289d8a1acdb9520d18bffcee975e7a789a9f8292b5c2c577c408cd2c3308cad
   languageName: node
   linkType: hard
 
@@ -5575,23 +5575,23 @@ __metadata:
   linkType: hard
 
 "diff@npm:^4.0.1":
-  version: 4.0.2
-  resolution: "diff@npm:4.0.2"
-  checksum: f2c09b0ce4e6b301c221addd83bf3f454c0bc00caa3dd837cf6c127d6edf7223aa2bbe3b688feea110b7f262adbfc845b757c44c8a9f8c0c5b15d8fa9ce9d20d
+  version: 4.0.4
+  resolution: "diff@npm:4.0.4"
+  checksum: e3f1c368778b16f9e7e4fd4199d04913bba9b017c37fbca7642b3613ebefcf3b18a4bd55e5f7074dc023fc95c96bd265f72114044e62cebae7f9a0f53bc36ace
   languageName: node
   linkType: hard
 
 "diff@npm:^5.0.0, diff@npm:^5.2.0":
-  version: 5.2.0
-  resolution: "diff@npm:5.2.0"
-  checksum: 12b63ca9c36c72bafa3effa77121f0581b4015df18bc16bac1f8e263597735649f1a173c26f7eba17fb4162b073fee61788abe49610e6c70a2641fe1895443fd
+  version: 5.2.2
+  resolution: "diff@npm:5.2.2"
+  checksum: a1af5d6322ca6312279369665b5a9e6d54cd2aed42729a30523e174ccd14661a752bf10d75deec8763964cab3df3787fe816f88e9de7ee8fe774852007269d88
   languageName: node
   linkType: hard
 
 "diff@npm:^8.0.2":
-  version: 8.0.2
-  resolution: "diff@npm:8.0.2"
-  checksum: 0d5556beff9aa688117ef79b1c88eb663df9959bc59946122330932c01e8db5529f914dcc87bf00fd1fecbca75731e6be7c8fabe1e34e10d6557e0536b7c856c
+  version: 8.0.4
+  resolution: "diff@npm:8.0.4"
+  checksum: 98cdeba4d4244fd38d23fdd50f55745128f754509ecbca1281e466b62446e470e12a121f6b039d987a255abb1b8bcbe14a61818b389dc28145b34cb0c15395db
   languageName: node
   linkType: hard
 
@@ -10355,9 +10355,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pacote@npm:^21.0.0, pacote@npm:^21.0.2":
-  version: 21.4.0
-  resolution: "pacote@npm:21.4.0"
+"pacote@npm:^21.0.0, pacote@npm:^21.0.2, pacote@npm:^21.0.4":
+  version: 21.5.1
+  resolution: "pacote@npm:21.5.1"
   dependencies:
     "@gar/promise-retry": ^1.0.0
     "@npmcli/git": ^7.0.0
@@ -10378,34 +10378,7 @@ __metadata:
     tar: ^7.4.3
   bin:
     pacote: bin/index.js
-  checksum: 95f3123ab239df17b3fb53b16644fb1b37dd5c77451a65ca33ea038f2e0bf807a44802b2d1191223ad31eeea2dc7e937f2f77c9f299f89b5a491e48f5b8fe473
-  languageName: node
-  linkType: hard
-
-"pacote@npm:^21.0.4":
-  version: 21.0.4
-  resolution: "pacote@npm:21.0.4"
-  dependencies:
-    "@npmcli/git": ^7.0.0
-    "@npmcli/installed-package-contents": ^4.0.0
-    "@npmcli/package-json": ^7.0.0
-    "@npmcli/promise-spawn": ^9.0.0
-    "@npmcli/run-script": ^10.0.0
-    cacache: ^20.0.0
-    fs-minipass: ^3.0.0
-    minipass: ^7.0.2
-    npm-package-arg: ^13.0.0
-    npm-packlist: ^10.0.1
-    npm-pick-manifest: ^11.0.1
-    npm-registry-fetch: ^19.0.0
-    proc-log: ^6.0.0
-    promise-retry: ^2.0.1
-    sigstore: ^4.0.0
-    ssri: ^13.0.0
-    tar: ^7.4.3
-  bin:
-    pacote: bin/index.js
-  checksum: 09e86b71376cbc2d8089e3028d52b6ba41cb034f7f1d2a0a7f8958376eba36426ec75424b94d04672dcfb2fa2fe2120e0ac1dd6c61d64a2b8fd438a0346cc67a
+  checksum: b82c3b32bf33e19eaf1a1599aa6e8fd322de64947589332f62a7a5022dbf1abaf35e90fcdc286454027918c70df4e2fb3142c643c2f653262c14fcf690296db6
   languageName: node
   linkType: hard
 
@@ -10600,9 +10573,9 @@ __metadata:
   linkType: hard
 
 "path-to-regexp@npm:^8.1.0":
-  version: 8.2.0
-  resolution: "path-to-regexp@npm:8.2.0"
-  checksum: 56e13e45962e776e9e7cd72e87a441cfe41f33fd539d097237ceb16adc922281136ca12f5a742962e33d8dda9569f630ba594de56d8b7b6e49adf31803c5e771
+  version: 8.4.2
+  resolution: "path-to-regexp@npm:8.4.2"
+  checksum: c30fba443e413cc736b7b28056a4b60b537ae1caa80152da21e8093bd41deba7c408a4ac6f11a1bf594e089d8fd8d87ed31476c55c50983719fb355826370ade
   languageName: node
   linkType: hard
 
