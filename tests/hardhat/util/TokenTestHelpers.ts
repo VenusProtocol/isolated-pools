@@ -87,9 +87,11 @@ export const deployVTokenBeacon = async <VTokenFactory extends AnyVTokenFactory 
   return vTokenBeacon;
 };
 
+// eslint-disable-next-line complexity -- predates the complexity gates, tracked for refactor
 const deployVTokenDependencies = async <VTokenFactory extends AnyVTokenFactory = VToken__factory>(
   params: Partial<VTokenParameters>,
   { kind }: { kind: string } = { kind: "VToken" },
+  // eslint-disable-next-line sonarjs/cognitive-complexity -- predates the complexity gates, tracked for refactor
 ): Promise<VTokenParameters> => {
   let underlyingName = "SomeMockToken";
   let underlyingSymbol = "MOCK";

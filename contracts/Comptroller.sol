@@ -1398,16 +1398,13 @@ contract Comptroller is
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
         uint256 exchangeRateMantissa = VToken(vTokenCollateral).exchangeRateStored(); // Note: reverts on error
-        uint256 seizeTokens;
-        Exp memory numerator;
-        Exp memory denominator;
-        Exp memory ratio;
 
-        numerator = mul_(Exp({ mantissa: liquidationIncentiveMantissa }), Exp({ mantissa: priceBorrowedMantissa }));
-        denominator = mul_(Exp({ mantissa: priceCollateralMantissa }), Exp({ mantissa: exchangeRateMantissa }));
-        ratio = div_(numerator, denominator);
-
-        seizeTokens = mul_ScalarTruncate(ratio, actualRepayAmount);
+        // All factors are multiplied before the single division, so the result is truncated only once.
+        // Dividing first would round the ratio to 18 decimals, which drops part or all of the seize amount
+        // when the borrowed asset has a small price mantissa, e.g. a 24-decimal token priced at 1e12.
+        uint256 numerator = mul_(mul_(actualRepayAmount, liquidationIncentiveMantissa), priceBorrowedMantissa);
+        uint256 denominator = mul_(priceCollateralMantissa, exchangeRateMantissa);
+        uint256 seizeTokens = div_(numerator, denominator);
 
         return (NO_ERROR, seizeTokens);
     }

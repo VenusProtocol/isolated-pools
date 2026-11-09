@@ -9,6 +9,8 @@ cache
 cache-zk
 artifacts
 artifacts-zk
+/cache-foundry
+/out
 
 #Compound
 allFiredEvents
@@ -64,3 +66,10 @@ deployments/localhost
 
 # OSX
 .DS_Store
+
+tmp/*
+.vscode
+
+# Foundry
+out
+cache-foundry

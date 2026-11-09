@@ -772,6 +772,14 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 6,
+        tokenAddress: "0x16227D60f7a0e586C66B005219dfc887D13C9531",
+        faucetInitialLiquidity: false,
+      },
+      {
+        isMock: false,
         name: "lisUSD",
         symbol: "lisUSD",
         decimals: 18,
@@ -2108,6 +2116,181 @@ export const globalConfig: NetworkConfig = {
         symbol: "asBNB",
         decimals: 18,
         tokenAddress: "0x77734e70b6E88b4d82fE632a168EDf6e700912b6",
+      },
+      {
+        isMock: false,
+        name: "USD Coin",
+        symbol: "USDC",
+        decimals: 18,
+        tokenAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+      },
+      {
+        isMock: false,
+        name: "United Stables",
+        symbol: "U",
+        decimals: 18,
+        tokenAddress: "0xcE24439F2D9C6a2289F741120FE202248B666666",
+      },
+      {
+        isMock: false,
+        name: "Invesqo QQQ",
+        symbol: "QQQB",
+        decimals: 18,
+        tokenAddress: "0x205812CdBed920aFf76C6580abD681a46D11efc7",
+      },
+      {
+        isMock: false,
+        name: "SPY",
+        symbol: "SPYB",
+        decimals: 18,
+        tokenAddress: "0x7138b48df7D98D7e3cc221BfE7192D0a178182D8",
+      },
+      {
+        isMock: false,
+        name: "NVIDIA Corp",
+        symbol: "NVDAB",
+        decimals: 18,
+        tokenAddress: "0x02Fca66C1D1aFB4E2A7884261eB00F63598a7436",
+      },
+      {
+        isMock: false,
+        name: "Tesla, Inc.",
+        symbol: "TSLAB",
+        decimals: 18,
+        tokenAddress: "0x5b1910eAaD6450E50f816082Aa078C41F10C292f",
+      },
+      {
+        isMock: false,
+        name: "SpaceX",
+        symbol: "SPCXB",
+        decimals: 18,
+        tokenAddress: "0xbe9D156892E55e7154BcD3cB0FEA677F9D3103E1",
+      },
+      {
+        isMock: false,
+        name: "SK Hynix",
+        symbol: "SKHYB",
+        decimals: 18,
+        tokenAddress: "0xCA750eF65f295BBECd685Abf54e82CAf297BDB61",
+      },
+      {
+        isMock: false,
+        name: "Circle Internet Group Inc.",
+        symbol: "CRCLB",
+        decimals: 18,
+        tokenAddress: "0x80f3D493EBCe97e343c53D29a137942416B4ffC0",
+      },
+      {
+        isMock: false,
+        name: "Alphabet",
+        symbol: "GOOGLB",
+        decimals: 18,
+        tokenAddress: "0x3F53De71c126BdaBAe20f9cD64848d317f6C3238",
+      },
+      {
+        isMock: false,
+        name: "Apple",
+        symbol: "AAPLB",
+        decimals: 18,
+        tokenAddress: "0x431a3BEE82E2ca41e49895CbECE5bB0F76A89b7A",
+      },
+      {
+        isMock: false,
+        name: "Strategy Inc.",
+        symbol: "MSTRB",
+        decimals: 18,
+        tokenAddress: "0xE87afb3076AeB0f9B14E368DE8145ae6a2826A14",
+      },
+      {
+        isMock: false,
+        name: "Sandisk Corporation",
+        symbol: "SNDKB",
+        decimals: 18,
+        tokenAddress: "0x3eE4dF61bd4F867E349BEaE8bFE07bc31b4850fb",
+      },
+      {
+        isMock: false,
+        name: "Meta Platforms",
+        symbol: "METAB",
+        decimals: 18,
+        tokenAddress: "0x7425889FE94F9d693E8daefE88BCCed6AcFEf4c0",
+      },
+      {
+        isMock: false,
+        name: "Microsoft",
+        symbol: "MSFTB",
+        decimals: 18,
+        tokenAddress: "0x80106cb3EAD06659A5ad19DF39D9b4733863B9b0",
+      },
+      {
+        isMock: false,
+        name: "Nebius",
+        symbol: "NBISB",
+        decimals: 18,
+        tokenAddress: "0xE256BC2A4F5297F8ba6f043F180a46300eCbCbB1",
+      },
+      {
+        isMock: false,
+        name: "Bloom Energy",
+        symbol: "BEB",
+        decimals: 18,
+        tokenAddress: "0x5519de00F5388c17d886b97Cb5D2D43a812a82bC",
+      },
+      {
+        isMock: false,
+        name: "Advanced Micro Devices Inc",
+        symbol: "AMDB",
+        decimals: 18,
+        tokenAddress: "0x75Fd4cF6f8392E41E70391D60c90C0D5211603a1",
+      },
+      {
+        isMock: false,
+        name: "Moderna",
+        symbol: "MRNAB",
+        decimals: 18,
+        tokenAddress: "0x5fd86da9B05abE396fe9d02a4A213A7c00556503",
+      },
+      {
+        isMock: false,
+        name: "Micron Technology Inc",
+        symbol: "MUB",
+        decimals: 18,
+        tokenAddress: "0xcdf2f3e0fa43C47A6662a91C9E4a7C5f69762699",
+      },
+      {
+        isMock: false,
+        name: "Intel Corporation",
+        symbol: "INTCB",
+        decimals: 18,
+        tokenAddress: "0xe614E2fc6C787035FF51f452e8E826Bfd32D5283",
+      },
+      {
+        isMock: false,
+        name: "Roundhill Memory ETF",
+        symbol: "DRAMB",
+        decimals: 18,
+        tokenAddress: "0x93862d63fd9Fd488B1328E9b47717d75e994a84B",
+      },
+      {
+        isMock: false,
+        name: "TSMC",
+        symbol: "TSMB",
+        decimals: 18,
+        tokenAddress: "0xAB78b89B5bb00236Be0B4B20704cBfa04EfC711c",
+      },
+      {
+        isMock: false,
+        name: "Coinbase",
+        symbol: "COINB",
+        decimals: 18,
+        tokenAddress: "0x585BDE7C54ABB5cCD7791F923D6c2187635f3952",
+      },
+      {
+        isMock: false,
+        name: "BPN Credit Token",
+        symbol: "BPNC",
+        decimals: 18,
+        tokenAddress: "0x6d7C501cF2603d8A3d9aE10Fee8809fd4EA9D689",
       },
     ],
     poolConfig: [
@@ -7919,47 +8102,16 @@ export const globalConfig: NetworkConfig = {
   },
 };
 
+// Every supported network maps to the globalConfig entry of the same name; the only
+// exception is "development", which reuses the bsctestnet config.
+const CONFIG_ALIASES = new Map<string, keyof NetworkConfig>([["development", "bsctestnet"]]);
+
 export async function getConfig(networkName: string): Promise<DeploymentConfig> {
-  switch (networkName) {
-    case "hardhat":
-      return globalConfig.hardhat;
-    case "bsctestnet":
-      return globalConfig.bsctestnet;
-    case "bscmainnet":
-      return globalConfig.bscmainnet;
-    case "sepolia":
-      return globalConfig.sepolia;
-    case "ethereum":
-      return globalConfig.ethereum;
-    case "opbnbtestnet":
-      return globalConfig.opbnbtestnet;
-    case "opbnbmainnet":
-      return globalConfig.opbnbmainnet;
-    case "arbitrumsepolia":
-      return globalConfig.arbitrumsepolia;
-    case "arbitrumone":
-      return globalConfig.arbitrumone;
-    case "zksyncsepolia":
-      return globalConfig.zksyncsepolia;
-    case "zksyncmainnet":
-      return globalConfig.zksyncmainnet;
-    case "opsepolia":
-      return globalConfig.opsepolia;
-    case "opmainnet":
-      return globalConfig.opmainnet;
-    case "basesepolia":
-      return globalConfig.basesepolia;
-    case "basemainnet":
-      return globalConfig.basemainnet;
-    case "unichainsepolia":
-      return globalConfig.unichainsepolia;
-    case "unichainmainnet":
-      return globalConfig.unichainmainnet;
-    case "development":
-      return globalConfig.bsctestnet;
-    default:
-      throw new Error(`config for network ${networkName} is not available.`);
+  const key = CONFIG_ALIASES.get(networkName) ?? networkName;
+  if (!Object.prototype.hasOwnProperty.call(globalConfig, key)) {
+    throw new Error(`config for network ${networkName} is not available.`);
   }
+  return globalConfig[key as keyof NetworkConfig];
 }
 
 export function getTokenConfig(tokenSymbol: string, tokens: TokenConfig[]): TokenConfig {

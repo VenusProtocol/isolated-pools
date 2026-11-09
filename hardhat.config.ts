@@ -267,6 +267,31 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+    overrides: {
+      // SpokeComptroller exceeds the EIP-170 contract size limit (24,576 bytes) at the default 200 runs. Fewer runs
+      // tells the optimizer to favor smaller bytecode over cheaper calls, and 30 brings the contract under the limit
+      // for a small gas cost. This holds with the yul optimizer on, as in every build except CI. Going below 30 frees
+      // little more space. If the contract needs more room, move code into an external library instead of lowering
+      // runs again.
+      "contracts/Spoke/SpokeComptroller.sol": {
+        version: "0.8.25",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 30,
+            details: {
+              yul: !process.env.CI,
+            },
+          },
+          evmVersion: "paris",
+          outputSelection: {
+            "*": {
+              "*": ["storageLayout"],
+            },
+          },
+        },
+      },
+    },
   },
   networks: {
     hardhat: {
@@ -278,6 +303,13 @@ const config: HardhatUserConfig = {
           hardforkHistory: {
             berlin: 0,
             london: 13000000,
+            // BSC activates its hardforks on a timestamp, which `hardforkHistory` cannot express, so these are the
+            // first blocks at or after each activation time in `bnb-chain/bsc` `params/config.go`: ShanghaiTime
+            // 1705996800 and CancunTime 1718863500. Without them a fork of a recent block runs the London EVM and
+            // every live contract compiled for a later target - the ResilientOracle and the DeviationBoundedOracle
+            // among them - reverts with "invalid opcode" on PUSH0 or TSTORE.
+            shanghai: 35490444,
+            cancun: 39769787,
           },
         },
         8453: {

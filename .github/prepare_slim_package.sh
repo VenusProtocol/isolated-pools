@@ -1,3 +1,5 @@
+set -euo pipefail
+
 # Create a slim folder with the minium content we want, and remove unneeded files
 mkdir slim && cp -r artifacts* package.json README.md deployments slim && cd slim
 find deployments -mindepth 1 -depth -not -name "*_addresses.json*" -exec rm -r "{}" +
