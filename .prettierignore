@@ -3,6 +3,9 @@ artifacts
 artifacts-zk
 cache
 cache-zk
+/cache-foundry
+/lib
+/out
 coverage*
 gasReporterOutput.json
 dist
@@ -10,3 +13,6 @@ scenario
 typechain
 contracts/oracle
 CHANGELOG.md
+tmp
+out
+cache-foundry

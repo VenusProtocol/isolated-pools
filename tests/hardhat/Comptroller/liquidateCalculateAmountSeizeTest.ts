@@ -155,5 +155,50 @@ describe("Comptroller", () => {
         expect(Number(result)).to.be.approximately(Number(seizeTokens), 1e7);
       });
     });
+
+    describe("precision for low price mantissas", () => {
+      // A 24-decimal token priced at $1 has a price mantissa of 1e12 (scaled by 10^(36 - 24)).
+      const vhStablePrice = 10n ** 12n;
+      const incentive = 11n * 10n ** 17n; // 1.1
+
+      async function seize(borrowedPrice: bigint, collateralPrice: bigint, exchangeRate: bigint, repay: bigint) {
+        await setOraclePrice(vTokenBorrowed, borrowedPrice);
+        await setOraclePrice(vTokenCollateral, collateralPrice);
+        await comptroller.setLiquidationIncentive(incentive);
+        vTokenCollateral.exchangeRateStored.returns(exchangeRate);
+        const [err, result] = await calculateSeizeTokens(comptroller, vTokenBorrowed, vTokenCollateral, repay);
+        expect(err).to.equal(Error.NO_ERROR);
+        return result.toBigInt();
+      }
+
+      it("seizes a non-zero amount of high-priced collateral for a 24-decimal debt token", async () => {
+        const repay = 100n * 10n ** 24n; // 100 tokens with 24 decimals
+        const btcPrice = 100_000n * 10n ** 28n; // $100,000, 8 decimals -> scaled by 1e28
+        const exchangeRate = 2n * 10n ** 16n;
+
+        const expected = (repay * incentive * vhStablePrice) / (btcPrice * exchangeRate);
+        const result = await seize(vhStablePrice, btcPrice, exchangeRate, repay);
+
+        expect(expected).to.be.gt(0n);
+        expect(result).to.equal(expected);
+      });
+
+      it("does not lose precision for mid-priced collateral", async () => {
+        const repay = 100n * 10n ** 24n;
+        const bnbPrice = 600n * 10n ** 18n; // $600, 18 decimals
+        const exchangeRate = 2n * 10n ** 26n;
+
+        const expected = (repay * incentive * vhStablePrice) / (bnbPrice * exchangeRate);
+        expect(await seize(vhStablePrice, bnbPrice, exchangeRate, repay)).to.equal(expected);
+      });
+
+      it("matches the single-division formula for 24-decimal debt against 24-decimal collateral", async () => {
+        const repay = 123_456n * 10n ** 24n;
+        const exchangeRate = 10n ** 28n;
+
+        const expected = (repay * incentive * vhStablePrice) / (vhStablePrice * exchangeRate);
+        expect(await seize(vhStablePrice, vhStablePrice, exchangeRate, repay)).to.equal(expected);
+      });
+    });
   });
 });
