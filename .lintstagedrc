@@ -1,0 +1,6 @@
+{
+  "contracts/**/*.sol": ["prettier --write", "solhint"],
+  "!(contracts)/**/*.sol": ["prettier --write"],
+  "*.{js,ts}": ["prettier --write", "eslint --ext .js,.ts"],
+  "*.{json,md,yaml,yml}": ["prettier --write"]
+}
