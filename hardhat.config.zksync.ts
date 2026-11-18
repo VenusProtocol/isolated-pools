@@ -63,7 +63,7 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           evmVersion: "paris",
@@ -80,7 +80,7 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           outputSelection: {
@@ -96,7 +96,7 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           outputSelection: {
