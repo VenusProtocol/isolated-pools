@@ -125,6 +125,7 @@ const spokePools: Record<string, SpokePool[]> = {
         { asset: "DRAMB", rateModel: ZERO_RATE },
         { asset: "TSMB", rateModel: ZERO_RATE },
         { asset: "COINB", rateModel: ZERO_RATE },
+        { asset: "ANTB", rateModel: ZERO_RATE },
       ],
     },
     {
