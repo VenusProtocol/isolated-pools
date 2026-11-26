@@ -223,7 +223,7 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           evmVersion: "paris",
@@ -240,7 +240,7 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           outputSelection: {
@@ -256,7 +256,7 @@ const config: HardhatUserConfig = {
           optimizer: {
             enabled: true,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           outputSelection: {
@@ -270,7 +270,7 @@ const config: HardhatUserConfig = {
     overrides: {
       // SpokeComptroller exceeds the EIP-170 contract size limit (24,576 bytes) at the default 200 runs. Fewer runs
       // tells the optimizer to favor smaller bytecode over cheaper calls, and 30 brings the contract under the limit
-      // for a small gas cost. This holds with the yul optimizer on, as in every build except CI. Going below 30 frees
+      // for a small gas cost. This holds with the yul optimizer on, as in every build. Going below 30 frees
       // little more space. If the contract needs more room, move code into an external library instead of lowering
       // runs again.
       "contracts/Spoke/SpokeComptroller.sol": {
@@ -280,7 +280,7 @@ const config: HardhatUserConfig = {
             enabled: true,
             runs: 30,
             details: {
-              yul: !process.env.CI,
+              yul: true,
             },
           },
           evmVersion: "paris",
