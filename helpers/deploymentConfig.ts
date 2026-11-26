@@ -2287,6 +2287,13 @@ export const globalConfig: NetworkConfig = {
       },
       {
         isMock: false,
+        name: "Anthropic",
+        symbol: "ANTB",
+        decimals: 18,
+        tokenAddress: "0x38Dd26788Cf2d901E3aBf04efE3007d459d0Fc53",
+      },
+      {
+        isMock: false,
         name: "BPN Credit Token",
         symbol: "BPNC",
         decimals: 18,
