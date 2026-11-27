@@ -1,6 +1,6 @@
 {
   "name": "@venusprotocol/isolated-pools",
-  "version": "4.6.0",
+  "version": "0.0.0-semantically-released",
   "description": "",
   "repository": {
     "type": "git",
@@ -74,8 +74,6 @@
     "@nomicfoundation/hardhat-verify": "^2.0.14",
     "@nomiclabs/hardhat-etherscan": "^3.0.3",
     "@openzeppelin/upgrades-core": "1.41.0",
-    "@semantic-release/changelog": "^6.0.3",
-    "@semantic-release/git": "^10.0.1",
     "@trivago/prettier-plugin-sort-imports": "3.4.0",
     "@typechain/ethers-v5": "^7.2.0",
     "@typechain/hardhat": "^2.3.1",
