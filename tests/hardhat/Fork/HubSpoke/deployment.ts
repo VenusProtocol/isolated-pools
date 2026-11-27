@@ -27,7 +27,7 @@ if (FORK && FORKED_NETWORK === "bscmainnet") {
       ({ deployer } = await getNamedAccounts());
       try {
         await deployments.fixture(["HubSpokeComptroller", "HubSpokeVTokenBeacon"], {
-          keepExistingDeployments: true,
+          keepExistingDeployments: false,
         });
       } catch (e) {
         scriptError = e as Error;
